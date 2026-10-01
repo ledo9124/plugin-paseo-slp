@@ -236,6 +236,31 @@ describe("handback and acceptance", () => {
     expect(host.sends[0]).toMatchObject({ agentId: peerAgentId, text: expect.stringContaining("Missing tests") });
   });
 
+  it("does not count a reassigned Peer's unrelated turn as a handback before the brief reaches it", async () => {
+    const { host, coordination, secretOf, idOf, group } = await setup();
+    const first = await coordination.delegate(host, secretOf("lead"), delegateInput);
+    const peer = first.peerAgentId!;
+    const done = { agentId: peer, workspaceId: "ws", outcome: { kind: "completed" }, lastReply: "Done." };
+    await coordination.onTurnEnded(host, done);
+    await coordination.accept(host, secretOf("lead"), { assignmentId: "A1", outcome: "accepted", reason: "ok" });
+
+    // The Peer is busy answering something else when A2 is assigned, so its brief is held.
+    host.agents.get(peer)!.status = "running";
+    await coordination.delegate(host, secretOf("lead"), { ...delegateInput, peerAgentId: peer });
+    expect(group().ledger.assignments[1].briefDeliveredAt).toBeNull();
+
+    host.sends.length = 0;
+    host.agents.get(peer)!.status = "idle";
+    await coordination.onTurnEnded(host, { ...done, lastReply: "Answer to an unrelated question." });
+    expect(group().ledger.assignments[1]).toMatchObject({ status: "assigned", handbacks: 0 });
+    expect(group().ledger.assignments[1].briefDeliveredAt).not.toBeNull();
+    expect(host.sends.map((s) => s.agentId).sort()).toEqual([idOf("lead"), peer].sort());
+    expect(host.sends.find((s) => s.agentId === idOf("lead"))!.text).toContain("Reply from");
+
+    await coordination.onTurnEnded(host, { ...done, lastReply: "A2 done." });
+    expect(group().ledger.assignments[1]).toMatchObject({ status: "handed-back", handbacks: 1 });
+  });
+
   it("ignores a canceled Peer turn", async () => {
     const { host, coordination, secretOf, group } = await setup();
     const { peerAgentId } = await coordination.delegate(host, secretOf("lead"), delegateInput);

@@ -23,6 +23,8 @@ export interface HeldMessage {
   toAgentId: string;
   kind: "message" | "handback" | "notice";
   text: string;
+  /** Set when the message carries an assignment's brief or rework request. */
+  assignmentId?: string;
   at: string;
 }
 
@@ -75,6 +77,7 @@ export class SlpStore {
       record.group.ledger ??= emptyLedger();
       record.group.held ??= [];
       record.group.events ??= [];
+      for (const assignment of record.group.ledger.assignments) assignment.briefDeliveredAt ??= assignment.createdAt;
     }
   }
 

@@ -114,6 +114,7 @@ export class Coordination {
         peerAgentId: null,
         status: "assigned",
         createdAt: this.deps.now(),
+        briefDeliveredAt: null,
         handbacks: 0,
         lastHandbackAt: null,
         acceptance: null,
@@ -142,6 +143,7 @@ export class Coordination {
             toAgentId: peer.agentId,
             kind: "message",
             text: renderBrief(assignment),
+            assignmentId: assignment.id,
           },
           "after-turn",
         );
@@ -193,6 +195,8 @@ export class Coordination {
         });
         member.agentId = agent.id;
         assignment.peerAgentId = agent.id;
+        // The brief is the new Peer's initial prompt.
+        assignment.briefDeliveredAt = this.deps.now();
       } catch (error) {
         caller.group.members = caller.group.members.filter((m) => m !== member);
         caller.group.ledger.assignments = caller.group.ledger.assignments.filter((a) => a !== assignment);
@@ -222,6 +226,7 @@ export class Coordination {
       }
       assignment.acceptance = { outcome: input.outcome, reason: input.reason, at: this.deps.now() };
       assignment.status = input.outcome === "rework" ? "assigned" : input.outcome;
+      if (input.outcome === "rework") assignment.briefDeliveredAt = null;
       if (input.outcome !== "accepted" && assignment.peerAgentId) {
         const verb = input.outcome === "rework" ? "needs rework" : "was dropped";
         await this.deliver(
@@ -233,6 +238,7 @@ export class Coordination {
             toAgentId: assignment.peerAgentId,
             kind: "message",
             text: `Assignment ${assignment.id} "${assignment.title}" ${verb}: ${input.reason}`,
+            ...(input.outcome === "rework" ? { assignmentId: assignment.id } : {}),
           },
           "after-turn",
         );
@@ -452,7 +458,7 @@ export class Coordination {
     if (event.outcome.kind === "failed") {
       text = `${peer.title ?? "Peer"} (${peer.agentId}) turn failed: ${event.outcome.error?.message ?? "unknown error"}`;
       kind = "notice";
-    } else if (assignment?.status === "assigned") {
+    } else if (assignment?.status === "assigned" && assignment.briefDeliveredAt) {
       assignment.status = "handed-back";
       assignment.handbacks += 1;
       assignment.lastHandbackAt = this.deps.now();
@@ -490,6 +496,7 @@ export class Coordination {
       }
     }
     await host.sendPrompt(message.toAgentId, renderMessages([full]), { activeTurnBehavior: "steer" });
+    this.markDelivered(group, [full]);
     const outcome = delivery === "steer" ? "steered" : "delivered";
     this.event(group, "message", { ...summary(full), delivery, outcome });
     return outcome;
@@ -505,8 +512,18 @@ export class Coordination {
       group.held.push(...pending);
       throw error;
     }
+    this.markDelivered(group, pending);
     this.event(group, "held-delivered", { to: agentId, count: pending.length });
     return pending.length;
+  }
+
+  private markDelivered(group: GroupRecord, messages: HeldMessage[]): void {
+    for (const message of messages) {
+      const assignment = message.assignmentId
+        ? group.ledger.assignments.find((a) => a.id === message.assignmentId)
+        : undefined;
+      if (assignment && assignment.status === "assigned") assignment.briefDeliveredAt = this.deps.now();
+    }
   }
 
   private async activePeers(host: PaseoHost, group: GroupRecord): Promise<MemberRecord[]> {

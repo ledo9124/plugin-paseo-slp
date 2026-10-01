@@ -89,6 +89,11 @@ export const AssignmentSchema = z.object({
   peerAgentId: z.string().nullable(),
   status: AssignmentStatusSchema,
   createdAt: z.string(),
+  /**
+   * When the Peer received the brief or the latest rework request. A Peer turn
+   * that ends before then is not a handback of this assignment.
+   */
+  briefDeliveredAt: z.string().nullable(),
   handbacks: z.number().int(),
   lastHandbackAt: z.string().nullable(),
   acceptance: z
