@@ -185,6 +185,18 @@ with commands and observed results.
     creation fails when the parent is not loaded.
   - Handback is relayed at `agent.turn_ended` either way.
 
+- 2026-10-01: Human accepts `daemon.mcp.injectIntoAgents: true` as a setup
+  requirement, as long as it does not change SLP lifecycle. Per-agent tool
+  separation would be a separate matter. Upstream has no per-agent tool
+  restriction, and v0.1 does not enforce (decision 0001).
+- 2026-10-01: Human runs agents in auto or bypass modes, not Claude's
+  default. Members must not depend on per-call Human permission prompts.
+  The plugin passes the member mode explicitly; slice 2 decides where it is
+  configured.
+  - The plan's rejection of Seatworks "permission bypass" covered its
+    deny-list and config-directory mechanism. It does not cover using a
+    provider's own permission mode.
+
 ## Slice 1 Results
 
 Environment for every probe unless noted:
@@ -317,9 +329,48 @@ grounds. The new constraints under "Open For Human" may still affect it.
   timeline.
 - Members inherit Human's global Claude MCP servers and settings.
 
+### Member Modes (Follow-Up, 2026-10-01)
+
+Human asked whether members must run in Claude's default mode, noting that
+they use auto or bypass themselves. Same environment as above.
+
+- A plugin-created agent does not get the app's default mode (`auto` for
+  Claude). With no `modeId`, the provider's own default applies, which for
+  Claude is `default` ("Always Ask"). All slice 1 probe agents ran that way,
+  which is why the built-in Paseo tools asked for permission.
+- `PaseoHost.createAgent` now takes `modeId`.
+- Mode ids at `v0.10.2`:
+  - Claude: `plan`, `default`, `acceptEdits`, `auto`, `bypassPermissions`;
+  - Codex: `auto` (Default Permissions), `auto-review`, `full-access`.
+- `mcp__paseo__list_agents` per Claude mode:
+
+  | Member | Mode | Model | Prompted |
+  | --- | --- | --- | --- |
+  | `p6-claude-bypass` | `bypassPermissions` | Haiku 4.5 | No |
+  | `p6-claude-auto-sonnet` | `auto` | Sonnet 5.5 | No (classifier approved) |
+  | `p6-claude-auto` | `auto` | Haiku 4.5 | Yes |
+
+- Conclusion: in `auto` with a classifier-capable model, or in
+  `bypassPermissions`, built-in Paseo tools run without Human prompts. The
+  plugin must pass the mode explicitly.
+
+### Codex Attempt (2026-10-01)
+
+- `p7-codex` was created with `codex/gpt-6-luna` and `full-access`.
+  - It connected to the plugin MCP endpoint (`initialize`, `tools/list`).
+  - Its first turn never reached the model: every request to
+    `http://127.0.0.1:8317/v1/responses` failed with "Connection failed",
+    because the proxy configured for Codex (ProxyPal, `cliproxyapi`) was not
+    running.
+- The turn was interrupted with `paseo stop`. Codex probes 2 and 4 wait for
+  the proxy.
+
 ### Open For Human
 
 1. **Built-in messaging prompts for permission and replaces busy turns.**
+   Update after the mode follow-up: the permission cost disappears when
+   members run in `bypassPermissions`, or in `auto` with a classifier-capable
+   model. The replace-on-busy cost remains.
    Decision 0001 keeps messaging on Paseo's built-in tools. Probe 4 shows two
    costs:
    - each built-in send needs a Human permission in default mode, and the
@@ -329,9 +380,10 @@ grounds. The new constraints under "Open For Human" may still affect it.
    A plugin-hosted send tool could be preapproved and could steer instead.
    It would change 0001's messaging layer, so it needs Human's decision.
    No edit was made.
-2. **Setup requirement.** SLP members need `injectIntoAgents: true`. That is
-   daemon-wide, so every agent on that daemon gets Paseo tools.
-3. **Codex.** Probes 2 and 4 remain unproven on Codex.
+2. **Setup requirement.** Settled: Human accepts `injectIntoAgents: true`
+   (see Decisions).
+3. **Codex.** Approved with `gpt-6-luna`. It is blocked until the Codex
+   proxy at `127.0.0.1:8317` is running.
 
 ## Validation
 

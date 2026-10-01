@@ -57,6 +57,7 @@ export class ProbeStore {
 export interface CreateMemberInput {
   key: string;
   provider: string;
+  modeId?: string;
   cwd: string;
   title?: string;
   systemPrompt?: string;
@@ -94,6 +95,7 @@ export class ProbeService {
     if (input.handback) labels[HANDBACK_LABEL] = "1";
     const agent = await host.createAgent({
       provider: input.provider,
+      modeId: input.modeId,
       cwd: input.cwd,
       title: input.title ?? `slp-probe ${input.key}`,
       systemPrompt: input.systemPrompt,

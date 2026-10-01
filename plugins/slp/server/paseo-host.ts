@@ -17,6 +17,8 @@ export interface HostAgent {
 export interface CreateAgentInput {
   /** `provider/model`, for example `claude/haiku`. */
   provider: string;
+  /** Provider mode id. Omitted, the provider's own default applies, not the app's. */
+  modeId?: string;
   cwd: string;
   title?: string;
   systemPrompt?: string;
@@ -69,6 +71,7 @@ export function createPaseoHost(paseo: PaseoApi): PaseoHost {
       const handle = await paseo.agents.create({
         config: {
           provider: input.provider,
+          modeId: input.modeId,
           systemPrompt: input.systemPrompt,
           mcpServers: input.mcpServers,
           toolPolicy: input.preapprovedTools

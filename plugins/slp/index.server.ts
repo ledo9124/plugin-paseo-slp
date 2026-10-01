@@ -30,6 +30,7 @@ const createMember = defineRpc({
   input: z.object({
     key: z.string().regex(/^[a-z0-9-]+$/),
     provider: z.string(),
+    modeId: z.string().optional(),
     cwd: z.string(),
     title: z.string().optional(),
     systemPrompt: z.string().optional(),
