@@ -4,8 +4,9 @@ Date: 2026-10-01
 
 ## Status
 
-Active. Slices 0-5 are complete; slice 6 (evaluation and field run) is
-next.
+Active. Slices 0-6 are complete. Before closing v0.1, Human must decide
+on the slice 6 observations: the Lead never delegated, and the Supervisor
+asked through Claude Code's `AskUserQuestion`.
 - Slice 1 ran probes 2 and 4 on both Claude and Codex.
 - Decision 0004 settled the messaging question, and decision 0005 replaced
   the free toggle.
@@ -202,6 +203,19 @@ with commands and observed results.
      Scenario N is a narrowed brief to enlarge a send history; scenario K is
      the control. Compare a narrowed brief with the slice 3 brief structure.
    - Then run one field run on a real project.
+   - Human's slice 6 choices (2026-10-01):
+     - the field run is the N/K experiment itself. An SLP group in
+       `repository-harness` designs it, registers it in advance, builds the
+       fixtures under `harness-experiments`, runs it, and records the
+       result in `repository-harness`. This covers both parts of slice 6;
+     - the group works in a Paseo worktree workspace of
+       `repository-harness`. Agents may commit on its branch, but never
+       push or open a PR; Human reviews and merges;
+     - budget: 5 runs per arm with fresh `sonnet` workers, which is N and K
+       times two brief formats, 20 runs. The stop rule is registered in
+       advance;
+     - Human answers the group's questions; the operating agent relays
+       them and does not answer for Human.
 
 ## Risks And Recovery
 
@@ -235,7 +249,9 @@ with commands and observed results.
   Slice 4 Results).
 - [x] Slice 5: telemetry: the process report in the panel and through
   `slp.report.get`. Proved live on `v0.10.2` (see Slice 5 Results).
-- [ ] Slice 6: brief-format evaluation and field run.
+- [x] Slice 6: brief-format evaluation and field run, done together as
+  the N/K experiment run by an SLP group in `repository-harness` (see
+  Slice 6 Results). Two SLP observations are open for Human.
 
 ## Decisions
 
@@ -313,6 +329,93 @@ with commands and observed results.
   - The plan's rejection of Seatworks "permission bypass" covered its
     deny-list and config-directory mechanism. It does not cover using a
     provider's own permission mode.
+
+## Slice 6 Results
+
+Environment: stock `v0.10.2`, isolated home, port 6768, default settings
+(every member in bypass mode). Workspace `rh-slp-nk`
+(`wks_8a928c9079d46ece`) is a Paseo worktree of `repository-harness`, on
+branch `slp/premise-narrowing-experiment` from `14e298e`. Human gave the
+goal and answered every question; the operating agent relayed them and
+did not answer for Human.
+
+The group's work product:
+- Branch `slp/premise-narrowing-experiment`, 8 commits ending at
+  `11cea6f`. It adds one file, `docs/plans/completed/slp-brief-premise-narrowing.md`.
+  Nothing was pushed and no PR was opened, and the main checkout stayed on
+  a clean `main`.
+- Fixtures, `check.py`, `scan-access.py`, `run-worker.sh`, 20 valid run
+  repositories with transcripts, and the void batch are under
+  `C:/code/my-project/harness-experiments/premise-narrowing/`.
+- The experiment ran 20 valid fresh `sonnet` workers (`claude -p` in
+  isolated run repositories), and the access scan was clean in all of them.
+  Results:
+
+  | Arm | Result |
+  | --- | --- |
+  | N-A (narrowed brief) | 1 pass. 3 shipped the history-only change while their reports called it insufficient. 1 shipped it as done |
+  | N-B (separated brief) | 5/5 pass |
+  | K-A, K-B (control) | 5/5 pass, no over-challenge |
+
+  - Registered reading: format B shows no measured benefit (N-A 4/5 vs
+    N-B 5/5). Strict reading, adopted by Human after the N-A data: B moves
+    N from 1/5 to 5/5.
+  - In the K control, 4/5 K-B workers also made unrequested changes of
+    36-90 lines, against 4-6 lines in K-A; the check could not penalize
+    them.
+  - The record's conclusion for SLP: the evidence supports the slice 3
+    brief structure, with that caveat.
+- Repository checks did not run on this machine.
+  `tests/docs/test-doc-contracts.sh` reports "Unsupported Harness CLI
+  platform: MINGW64_NT", and `scripts/validate-premerge.sh` reports that
+  `rustfmt` is not installed. The record says so. The change is docs only.
+
+Human decisions during the run (all from the panel, `source: human`):
+- **D2:** allow 5 extra launches after a void N-A batch (the worker shell
+  had no python).
+- **D3:** continue under a strict reading, labeled post-registration.
+
+The Supervisor settled D1 itself as an agent decision: the check judges
+the outcome, so a `SYNC` fix passes N. This widened the earlier record's
+sketch, and it was reported to Human.
+
+Process report (`slp.report.get`):
+- Human: 0 interventions, 1 message to the Supervisor, 2 panel decisions;
+- escalations: 2 raised, 2 answered from the panel;
+- member messages: 13 (Supervisor and Lead only); 7 held, 1 steered;
+- convention breaks: 0;
+- cost: Supervisor $0.94, Lead $2.84. The `claude -p` workers ran outside
+  SLP and are not counted.
+
+Observations about SLP (no change made):
+1. **The Lead never delegated.** It ran the experiment itself, with 0
+   assignments and 0 Peers. This is the third live run in which the Lead
+   worked alone. The role text allows it, but the field run did not
+   exercise briefs, Peer challenge, handback, or acceptance.
+2. **The Supervisor asked Human through Claude Code's own
+   `AskUserQuestion`,** twice, for D2 and D3, while the same choices were
+   pending decisions in the ledger. That native question:
+   - blocks the Supervisor's whole turn;
+   - does not appear in the panel or the ledger;
+   - left a Human panel answer held behind the blocked turn. The operating
+     agent unblocked it with `paseo permit allow --input` carrying Human's
+     answer.
+3. **The Supervisor's oversight changed the work.** It stopped 5 worker
+   launches that the Lead had started as Agent-tool subagents inside the
+   worktree, because they risked leaking the registered design to the
+   workers. It also required transcripts and an access scan before
+   scoring.
+4. **The group's record has two stale unchecked Progress items** (the
+   pre-registration placeholders under "If reproduced"). Human may want
+   them removed before merging.
+5. **Experiment cost lives mostly outside the group.** The report's token
+   table covers members only.
+
+Open for Human:
+- review and merge `slp/premise-narrowing-experiment` (the group's
+  question: should premerge be runnable here, with `rustup component add
+  rustfmt` and a supported shell, or should it be left to CI);
+- whether observations 1 and 2 need changes before v0.1 closes.
 
 ## Slice 5 Results
 
