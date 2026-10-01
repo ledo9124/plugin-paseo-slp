@@ -1,20 +1,35 @@
 import type { Mode, Role, WorkspaceView } from "../shared/contracts";
 import type { SlpSettings } from "../shared/settings";
 import type { HostAgent, PaseoHost } from "./paseo-host";
+import type { WorkspaceQueue } from "./queue";
 import { ROLE_TITLES, roleInstructions } from "./roles";
-import type { GroupRecord, MemberRecord, SlpStore, WorkspaceRecord } from "./store";
+import { emptyLedger, type GroupRecord, type MemberRecord, type SlpStore, type WorkspaceRecord } from "./store";
 
 export const GROUP_LABEL = "slp.group";
 export const ROLE_LABEL = "slp.role";
 export const MCP_SERVER_NAME = "slp";
-/** Plugin MCP tools every member may call without a permission prompt. */
-export const MEMBER_TOOLS = ["slp_group"] as const;
+/** Plugin MCP tools every member may call without a prompt; each tool checks the caller's role. */
+export const MEMBER_TOOLS = [
+  "slp_group",
+  "slp_ledger",
+  "slp_send",
+  "slp_finding",
+  "slp_delegate",
+  "slp_accept",
+  "slp_decide",
+] as const;
 
 const GROUP_ROLES: readonly Role[] = ["supervisor", "lead"];
 
+export function slpMcpServers(url: string) {
+  return { [MCP_SERVER_NAME]: { type: "http" as const, url, alwaysLoad: true } };
+}
+
+export const PREAPPROVED_TOOLS = MEMBER_TOOLS.map((tool) => ({ server: MCP_SERVER_NAME, tool }));
+
 export class SlpError extends Error {
   constructor(
-    readonly code: "locked" | "inject-disabled",
+    readonly code: "locked" | "inject-disabled" | "forbidden" | "invalid" | "limit",
     message: string,
   ) {
     super(message);
@@ -23,6 +38,7 @@ export class SlpError extends Error {
 
 export interface SlpServiceDeps {
   store: SlpStore;
+  queue: WorkspaceQueue;
   mcpUrl(secret: string): string;
   settings(): Promise<SlpSettings>;
   now(): string;
@@ -32,8 +48,6 @@ export interface SlpServiceDeps {
 
 // SLP mode, lock, and group lifecycle per workspace (decisions 0002, 0005).
 export class SlpService {
-  private readonly queues = new Map<string, Promise<unknown>>();
-
   constructor(private readonly deps: SlpServiceDeps) {}
 
   async view(host: PaseoHost, workspaceId: string): Promise<WorkspaceView> {
@@ -127,6 +141,9 @@ export class SlpService {
       startedAt: this.deps.now(),
       endedAt: null,
       members: GROUP_ROLES.map((role) => ({ role, secret: this.deps.newSecret(), agentId: null })),
+      ledger: emptyLedger(),
+      held: [],
+      events: [],
     };
     // Persist secrets before creating agents, so their first MCP call resolves.
     this.deps.store.put({ ...record, mode: "on", group });
@@ -157,15 +174,15 @@ export class SlpService {
     member: MemberRecord,
     settings: SlpSettings,
   ): Promise<HostAgent> {
-    const config = settings[member.role];
+    const config = settings[member.role as "supervisor" | "lead"];
     return host.createAgent({
       workspaceId,
       provider: config.provider,
       modeId: config.modeId,
       title: ROLE_TITLES[member.role],
       systemPrompt: roleInstructions(member.role),
-      mcpServers: { [MCP_SERVER_NAME]: { type: "http", url: this.deps.mcpUrl(member.secret), alwaysLoad: true } },
-      preapprovedTools: MEMBER_TOOLS.map((tool) => ({ server: MCP_SERVER_NAME, tool })),
+      mcpServers: slpMcpServers(this.deps.mcpUrl(member.secret)),
+      preapprovedTools: PREAPPROVED_TOOLS,
       labels: { [GROUP_LABEL]: group.id, [ROLE_LABEL]: member.role },
       idempotencyKey: `slp:${group.id}:${member.role}`,
     });
@@ -203,14 +220,7 @@ export class SlpService {
     };
   }
 
-  /** Runs workspace operations one at a time, so two switches cannot start two groups. */
   private serialize<T>(workspaceId: string, work: () => Promise<T>): Promise<T> {
-    const previous = this.queues.get(workspaceId) ?? Promise.resolve();
-    const next = previous.then(work, work);
-    this.queues.set(
-      workspaceId,
-      next.catch(() => undefined),
-    );
-    return next;
+    return this.deps.queue.run(workspaceId, work);
   }
 }

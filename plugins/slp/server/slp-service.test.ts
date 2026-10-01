@@ -4,11 +4,17 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { FakePaseoHost } from "./paseo-host.fake";
 import { GROUP_LABEL, ROLE_LABEL, SlpError, SlpService } from "./slp-service";
+import { WorkspaceQueue } from "./queue";
 import { SlpStore } from "./store";
 
 const SETTINGS = {
   supervisor: { provider: "claude/claude-opus-5-5", modeId: "auto" },
   lead: { provider: "claude/claude-sonnet-5-5", modeId: "auto" },
+  peers: {
+    models: ["claude/claude-sonnet-5-5", "codex/gpt-6-luna"],
+    maxActive: 2,
+    modes: { claude: "auto", codex: "full-access" },
+  },
 };
 
 function setup() {
@@ -16,6 +22,7 @@ function setup() {
   const store = new SlpStore(mkdtempSync(join(tmpdir(), "slp-service-")));
   const service = new SlpService({
     store,
+    queue: new WorkspaceQueue(),
     mcpUrl: (secret) => `http://mcp.test/mcp/${secret}`,
     settings: async () => SETTINGS,
     now: () => `2026-10-01T00:00:${String(counter++).padStart(2, "0")}Z`,
@@ -47,7 +54,8 @@ describe("SlpService.setMode", () => {
     expect(supervisor.labels?.[GROUP_LABEL]).toBe(view.group?.id);
     const secrets = store.get("ws-1")!.group!.members.map((member) => member.secret);
     expect(supervisor.mcpServers?.slp).toMatchObject({ type: "http", url: `http://mcp.test/mcp/${secrets[0]}` });
-    expect(supervisor.preapprovedTools).toEqual([{ server: "slp", tool: "slp_group" }]);
+    expect(supervisor.preapprovedTools).toContainEqual({ server: "slp", tool: "slp_group" });
+    expect(supervisor.preapprovedTools).toContainEqual({ server: "slp", tool: "slp_send" });
     expect(supervisor.prompt).toBeUndefined();
   });
 
