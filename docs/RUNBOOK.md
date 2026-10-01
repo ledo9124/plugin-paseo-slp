@@ -46,9 +46,10 @@ Claude and Codex. The steps were adapted from the sibling repository
   - `"daemon": { "listen": "127.0.0.1:6768", "mcp": { "injectIntoAgents": true } }`.
     Seed `listen` before the first boot, or the daemon defaults to 6767 and
     CLI calls silently target the installed app.
-- **`injectIntoAgents`** (slice 1 probe 0). Without it, agents get no
-  `mcp__paseo__*` tools. Human accepted enabling it. Decision 0004 moves SLP
-  messaging to a plugin tool, so slice 2 decides whether SLP still needs it.
+- **`injectIntoAgents` is required** (slice 1 probe 0; Human, 2026-10-01).
+  Without it, agents get no `mcp__paseo__*` tools, and SLP refuses to start
+  a group. Members use Paseo's `list_agents` and `get_agent_status`, but
+  message through the plugin tool (0004).
   It is daemon-wide: every agent on that daemon gets Paseo tools. Ask Human
   before enabling it on another home.
 - **MCP port.** The plugin's MCP endpoint listens on `127.0.0.1:6791`. Set

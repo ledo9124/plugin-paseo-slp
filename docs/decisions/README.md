@@ -17,8 +17,8 @@ documents here as real choices are accepted, then index them in this file.
   plugin SDK 0.10.2, read from upstream main `d30e99c85` and probed on
   `v0.10.2`; re-check after a Paseo upgrade.
 - [0002 An SLP Toggle Instead Of Modes](0002-slp-toggle-instead-of-modes.md):
-  Accepted. SLP is off by default and toggled per workspace; when it is on, a
-  group always has a Supervisor and a Lead.
+  Accepted, amended by 0005. SLP is off by default and chosen per workspace;
+  when it is on, a group always has a Supervisor and a Lead.
 - [0003 The Ledger Is Coordination State, Not Project Truth](0003-ledger-is-coordination-state-not-project-truth.md):
   Accepted. Lasting decisions go to the consumer project's own records; agent
   ledger entries are not Human authority.
@@ -26,3 +26,7 @@ documents here as real choices are accepted, then index them in this file.
   Accepted. Members message through a plugin tool that either steers into
   the recipient's running turn or delivers after it ends. Built-in
   `send_agent_prompt` is not used for SLP messaging.
+- [0005 The SLP Mode Locks At The First Message; Archiving Ends The Group](0005-slp-mode-locks-at-the-first-message.md):
+  Accepted. The mode can change only until Human's first message in the
+  workspace. Archiving the workspace ends the group. The controls are an
+  SLP panel and a header button.

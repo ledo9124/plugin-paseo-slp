@@ -6,6 +6,14 @@ Date: 2026-10-01
 
 Accepted by Human on 2026-10-01.
 
+Amended on 2026-10-01 by [0005](0005-slp-mode-locks-at-the-first-message.md):
+- the mode can change only before Human's first message in the workspace,
+  which then locks it;
+- archiving the workspace ends the group, replacing item 4 and the
+  separate end-group action.
+
+The rest of this decision stands.
+
 ## Context
 
 SLP suits large codebases with vertical dependencies, architectural

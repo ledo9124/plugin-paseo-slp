@@ -92,9 +92,9 @@ Tradeoffs:
 
 ## Follow-Up
 
-- Slice 2 decides whether SLP still requires `daemon.mcp.injectIntoAgents`
-  for anything besides messaging. Human accepted enabling it on
-  2026-10-01, but this decision removes the messaging reason.
+- Settled in slice 2 planning (Human, 2026-10-01): SLP still requires
+  `daemon.mcp.injectIntoAgents`. Members use Paseo's `list_agents` and
+  `get_agent_status`.
 - Slice 3 implements the tool, the held-message store, delivery at
   `agent.turn_ended`, and reconciliation. It also decides:
   - whether several held messages to one recipient arrive as one prompt or

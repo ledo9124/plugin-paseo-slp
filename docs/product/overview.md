@@ -3,8 +3,9 @@
 Status: not implemented. The approach is accepted in decisions
 [0001](../decisions/0001-slp-as-a-paseo-plugin.md),
 [0002](../decisions/0002-slp-toggle-instead-of-modes.md),
-[0003](../decisions/0003-ledger-is-coordination-state-not-project-truth.md), and
-[0004](../decisions/0004-member-messaging-through-a-plugin-send-tool.md).
+[0003](../decisions/0003-ledger-is-coordination-state-not-project-truth.md),
+[0004](../decisions/0004-member-messaging-through-a-plugin-send-tool.md), and
+[0005](../decisions/0005-slp-mode-locks-at-the-first-message.md).
 
 ## Outcome
 
@@ -26,13 +27,17 @@ user's problem.
 ## Turning SLP On And Off
 
 - SLP is off by default. With it off, Paseo agents behave normally.
-- Human turns SLP on for a workspace when the work fits. It suits large
-  codebases with vertical dependencies, architectural uncertainty, several
-  ownership boundaries, and discovery during implementation.
+- Human turns SLP on for a workspace when the work fits, before sending the
+  first message there. SLP suits:
+  - large codebases with vertical dependencies;
+  - architectural uncertainty;
+  - several ownership boundaries;
+  - discovery during implementation.
+- Human's first message in the workspace locks the choice, on or off.
+  Changing it afterwards needs a new workspace (decision 0005).
 - With SLP on, the workspace runs one group: a Supervisor as Human's
   counterpart, a Lead, and Peers the Lead creates on demand.
-- Turning SLP off stops new SLP work. Ending an active group is a separate,
-  explicit Human action.
+- Archiving the workspace ends the group.
 
 Keep SLP off for small changes that one agent can finish, and for work that
 needs continuous Human feedback, such as game feel or UI and UX tuning.

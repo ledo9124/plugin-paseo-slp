@@ -22,7 +22,9 @@ With SLP off, agents behave exactly as without the plugin.
   - 0001: coordination plugin on Paseo primitives;
   - 0002: toggle instead of modes;
   - 0003: the ledger is coordination state, not project truth;
-  - 0004: member messaging through a plugin send tool.
+  - 0004: member messaging through a plugin send tool;
+  - 0005: the SLP mode locks at the first message, and archiving the
+    workspace ends the group.
 - Method sources and prior analysis: `docs/research/sources.md`. The earlier
   `paseo-slp` fork is not a decision basis.
 
@@ -30,7 +32,7 @@ With SLP off, agents behave exactly as without the plugin.
 
 In scope:
 
-- Per-workspace toggle.
+- Per-workspace SLP mode that locks at Human's first message (0005).
 - Group start with a Supervisor and a Lead.
 - Role instructions and the brief structure.
 - A Lead-only delegate tool.
@@ -84,14 +86,22 @@ with commands and observed results.
       - Keep the approach if no member is lost.
 
    If 0, 2, or 3 fails, revisit decision 0001 before slice 2.
-2. **Toggle and group start.**
-   - Per-workspace toggle stored by the plugin.
-   - Turning it on creates a Supervisor and a Lead with their role
-     instructions.
-   - Turning it off stops new SLP work.
-   - An explicit end-group action.
+2. **SLP mode and group start** (decision 0005).
+   - A per-workspace SLP mode, stored by the plugin, switchable until
+     Human's first message in the workspace.
+   - That first message locks the mode, on or off.
+   - Switching on creates a Supervisor and a Lead with their role
+     instructions, in the workspace, using the configured provider, model,
+     and mode. Switching off before the lock archives them.
+   - Switching on is refused while `daemon.mcp.injectIntoAgents` is off.
+   - Archiving the workspace ends the group.
+   - An SLP workspace panel (mode switch, lock state, members) and a
+     workspace header button showing the mode.
+   - Plugin settings for the Supervisor and Lead provider, model, and mode.
    - Role instructions are written from the product overview, not copied
      from earlier SLP texts.
+   - Live proof: server behavior through RPCs on a dev daemon, and the
+     client panel and button in the web app.
 3. **Delegation, ledger, handback.**
    - The delegate tool requires the brief structure: goal, binding
      constraints with their source, current choice, uncertainties, and
@@ -199,11 +209,27 @@ with commands and observed results.
   restriction, and v0.1 does not enforce (decision 0001).
 - 2026-10-01: Human runs agents in auto or bypass modes, not Claude's
   default. Members must not depend on per-call Human permission prompts.
-  The plugin passes the member mode explicitly; slice 2 decides where it is
-  configured.
+  The plugin passes the member mode explicitly; plugin settings configure
+  it (slice 2).
+- 2026-10-01: Human's slice 2 defaults:
+  - Supervisor `claude/claude-opus-5-5`, mode `auto`;
+  - Lead `claude/claude-sonnet-5-5`, mode `auto`.
+  They are plugin settings that Human can change.
+- 2026-10-01: Human keeps `daemon.mcp.injectIntoAgents: true` required for
+  SLP: members use Paseo's own `list_agents` and `get_agent_status`, and the
+  plugin does not re-implement them. Messaging still goes through the plugin
+  tool (0004).
   - The plan's rejection of Seatworks "permission bypass" covered its
     deny-list and config-directory mechanism. It does not cover using a
     provider's own permission mode.
+
+## Slice 2 Progress
+
+- [x] Decision 0005 and the slice 2 scope.
+- [ ] Server: mode store, lock, group start and end, settings, role
+  instructions.
+- [ ] Client: SLP panel and header button.
+- [ ] Live proof on `v0.10.2`.
 
 ## Slice 1 Results
 
