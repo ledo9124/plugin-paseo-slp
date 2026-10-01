@@ -4,19 +4,61 @@ Date: 2026-10-01
 
 ## Status
 
-Active. Slices 0-6 are complete; slice 7 is in progress.
+Active. Slices 0-6 are complete; slice 7 trials are done, with live runs
+played by the agent. See Handoff.
 - Decision 0006 now blocks provider subagents for the Lead.
 - Decision 0007 records what SLP is: three jobs (complete the input,
   filter decisions by authority, keep Human in control), four layers, and
   independence from Repository Harness. Slice 7 tests the first ideas that
   serve it.
-- Open before closing v0.1:
-  - a live run with Human, on work with a choice that surfaces only
-    mid-run (slice 7);
-  - I4 and I5 (slice 7).
 - Settled in slice 7:
   - native questions: I2 kept;
-  - when a Lead delegates: the Lead's own judgment (Human).
+  - when a Lead delegates: the Lead's own judgment (Human);
+  - I1 not taken, I5 not built, I4 added as role text;
+  - read-back: only interpreted points, gated only when a misread is
+    costly;
+  - the Supervisor stops at the outcome and constraints;
+  - agent choices inside a delegation may be reported in messages.
+
+## Handoff (2026-10-01, end of session)
+
+Start here in a new session. Read, in order:
+1. `docs/product/overview.md` (outcome, layers, behaviors 1-12);
+2. `docs/decisions/0007-what-slp-is.md`;
+3. this plan's "Slice 7 Results";
+4. `docs/RUNBOOK.md` before running a daemon.
+
+State:
+- `main` holds everything; the working tree is clean.
+- Tests: 47 pass. Run them with `node node_modules/vitest/vitest.mjs run
+  --root plugins/slp` and `node node_modules/typescript/bin/tsc --noEmit
+  -p plugins/slp`.
+- No daemon is running. Port 6767 is the user's app; never touch it.
+- Live runs B-D used temporary repositories under
+  `%TEMP%/slp-live/` (helper scripts `cli.sh` and `rpc.sh` are there).
+  They are scratch, not records.
+
+Next steps, in priority order. None of these is decided policy; ask Human
+where a choice is open:
+1. **A live run with Human playing Human.** Parts B-D were played by the
+   operating agent, so their evidence is weak. Use real work with a choice
+   that surfaces only mid-run.
+2. **I4, the scope rule.** It is still not exercised, because the Lead
+   delegated only once. It needs a task large enough that the Lead
+   chooses to delegate. Do not force delegation (Human: the Lead judges).
+3. **Watch two deviations from Part D:**
+   - a mid-run question asked in chat instead of as a pending decision;
+   - a full read-back where the rule asks for only the interpreted
+     points.
+
+   Act only if they repeat, following the simple-and-effective principle.
+   Options: sharper Supervisor text, or a Process report count of chat
+   questions.
+4. **Minor:** agents wrote the delegation basis into `projectRecord`,
+   which is meant for a project file path. Either say in `slp_decide`'s
+   description where the basis goes, or accept it.
+5. **Closing v0.1:** when Human accepts the slice 7 results, move this
+   plan to `docs/plans/completed/` and record the result.
 - Slice 1 ran probes 2 and 4 on both Claude and Codex.
 - Decision 0004 settled the messaging question, and decision 0005 replaced
   the free toggle.
