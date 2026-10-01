@@ -7,6 +7,10 @@ Date: 2026-10-01
 Accepted by Human on 2026-10-01 ("follow the proposal, true to the existing
 context").
 
+Amended on 2026-10-01 by [0004](0004-member-messaging-through-a-plugin-send-tool.md):
+members now message through a plugin send tool instead of built-in
+`send_agent_prompt`. The rest of this decision stands.
+
 ## Context
 
 SLP is a way of organizing agent work: roles defined by responsibility,

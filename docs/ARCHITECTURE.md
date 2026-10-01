@@ -1,6 +1,6 @@
 # Architecture
 
-Status: approach accepted in decisions 0001-0003. Slice 1 platform probes ran
+Status: approach accepted in decisions 0001-0004. Slice 1 platform probes ran
 on stock Paseo `v0.10.2` with Claude, and probes 2 and 4 also ran with Codex.
 The code is a throwaway probe build plus
 the `PaseoHost` adapter; results are in the
@@ -33,20 +33,23 @@ dependencies for a directory source.
 2. **Coordination service** (plugin server process): group lifecycle, the
    delegate tool, the coordination ledger, telemetry, and the RPCs the client
    uses.
-3. **Messaging:** Paseo's own agent tools (`send_agent_prompt`,
-   `get_agent_status`, `list_agents`). The plugin does not replace them.
+3. **Messaging** (decision 0004): a plugin MCP send tool. It either steers
+   into the recipient's running turn, or holds the message and delivers it
+   when the recipient's turn ends. Built-in `send_agent_prompt` is not used
+   for SLP messaging.
 
 ```text
 Human ── Paseo app ── client entry: SLP toggle, ledger panel, Human decisions
                          │ typed RPC
 Paseo daemon ── plugin subprocess
    │                ├─ group store and ledger (plugin-owned files)
-   │                ├─ HTTP MCP endpoint: SLP tools, per-member secret
+   │                ├─ HTTP MCP endpoint: SLP tools incl. send, per-member secret
+   │                ├─ held-message store (deliver at turn end, or steer)
    │                ├─ lifecycle observers (agent.created, agent.turn_ended)
    │                └─ telemetry
    └─ members: Supervisor and Lead (created when SLP is turned on),
       Peers (created through the Lead's delegate tool),
-      all talking through Paseo's built-in agent tools
+      all messaging through the plugin send tool
 ```
 
 ## Capability Map
@@ -61,7 +64,8 @@ Read from source on `getpaseo/paseo` main at `d30e99c85`, and checked at the
 | Peer creation with a structured brief | Plugin MCP tool, Lead only, calling `agents.create` with the requested provider and model | Probed: `parent` sets `paseo.parent-agent-id`, archiving a parent archives its children, and creation needs the parent loaded. v0.1 keeps parentage in the ledger and does not pass `parent` |
 | Member identity for SLP tools | Plugin-hosted HTTP MCP server with a per-member secret in the URL | Probed on Claude: works on Claude and Codex, and the secret survives resume after a daemon restart and after `agent reload`. The port must stay fixed, because the URL is persisted with the agent. `toolPolicy.preapproved` covers the plugin's own tools |
 | Handback | Plugin relays the member's last message at `agent.turn_ended`, sending with `activeTurnBehavior: "steer"` | Probed: plugin-created children get no finish notification, and the relay works. After a reload, the event timeline also holds earlier turns, so relay the last assistant message only |
-| Messages between members | Built-in `send_agent_prompt` | Probed: needs `daemon.mcp.injectIntoAgents: true` (default `false`), which is daemon-wide. On Claude and Codex a busy recipient's turn is canceled and replaced. Prompts depend on the mode: Claude `default` asks Human every call, and plugins cannot preapprove the injected `paseo` server. Claude `bypassPermissions`, Claude `auto` with Sonnet 5.5, and Codex `full-access` ran without prompts; Claude `auto` with Haiku 4.5 still prompted |
+| Messages between members | Plugin send tool (decision 0004): steer now, or hold and deliver at the recipient's `agent.turn_ended` | Builds on probed `steer` and `turn_ended`. The held-message store and reconciliation come in slice 3 |
+| Built-in `send_agent_prompt` (not used by SLP) | Paseo injected tools | Probed: needs `daemon.mcp.injectIntoAgents: true` (default `false`), which is daemon-wide. On Claude and Codex a busy recipient's turn is canceled and replaced. Prompts depend on the mode: Claude `default` asks Human every call, and plugins cannot preapprove the injected `paseo` server. Claude `bypassPermissions`, Claude `auto` with Sonnet 5.5, and Codex `full-access` ran without prompts; Claude `auto` with Haiku 4.5 still prompted |
 | Steering a busy member | Plugin `agents.ref(id).send(text, {activeTurnBehavior: "steer"})` | Probed on Claude and Codex: the message joins the running turn. SDK 0.10.2 forwards the option but leaves it out of `PaseoAgentSendOptions`. A send without options interrupts. The app setting `sendBehavior` (`interrupt`, `steer`, or `queue`; default `steer`; `app/src/hooks/use-settings/storage.ts`) applies only to messages typed in the app composer. In `queue` mode, the app keeps queued messages in its own session store and sends them when the turn ends. The daemon has no queue: `activeTurnBehavior` accepts only `interrupt` or `steer`, and built-in `send_agent_prompt` (`paseo-tools.ts:1931`) ignores the setting and always replaces |
 | Ledger and Human steering | Plugin MCP tools for agents; RPCs and a panel for Human; plugin-owned files | The ledger records each assignment and role with `agentId` as its current occupant, not as its identity. The plugin has no Paseo API at startup, only inside hooks and RPCs, so reconciliation from files, labels, and `agents.list` runs at the first hook or RPC |
 | Agents created outside the delegate tool | `agent.created` with `parentAgentId` | Visible, not blocked |

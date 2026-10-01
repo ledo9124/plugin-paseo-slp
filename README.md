@@ -8,8 +8,8 @@ proposes. The agents doing the work may question a task's premise with
 evidence, while ownership, integration, and decision propagation stay
 structured.
 
-Status: early setup. Only a no-op plugin skeleton exists. The approach is
-accepted in `docs/decisions/0001-0003`. SLP is a per-workspace toggle: when it
+Status: early setup. Only a slice 1 probe build exists, with no SLP behavior
+yet. The approach is accepted in `docs/decisions/0001-0004`. SLP is a per-workspace toggle: when it
 is off, agents behave normally.
 
 - Product behavior: `docs/product/overview.md`

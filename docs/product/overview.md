@@ -2,8 +2,9 @@
 
 Status: not implemented. The approach is accepted in decisions
 [0001](../decisions/0001-slp-as-a-paseo-plugin.md),
-[0002](../decisions/0002-slp-toggle-instead-of-modes.md), and
-[0003](../decisions/0003-ledger-is-coordination-state-not-project-truth.md).
+[0002](../decisions/0002-slp-toggle-instead-of-modes.md),
+[0003](../decisions/0003-ledger-is-coordination-state-not-project-truth.md), and
+[0004](../decisions/0004-member-messaging-through-a-plugin-send-tool.md).
 
 ## Outcome
 

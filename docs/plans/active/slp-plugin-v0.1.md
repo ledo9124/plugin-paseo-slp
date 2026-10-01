@@ -5,7 +5,7 @@ Date: 2026-10-01
 ## Status
 
 Active. Slices 0 and 1 are complete, with probes 2 and 4 run on Claude and
-Codex. Slice 2 waits on the Human decision listed under slice 1 results.
+Codex. Decision 0004 settled the open messaging question. Slice 2 is next.
 
 ## Outcome
 
@@ -21,7 +21,8 @@ With SLP off, agents behave exactly as without the plugin.
 - Decisions:
   - 0001: coordination plugin on Paseo primitives;
   - 0002: toggle instead of modes;
-  - 0003: the ledger is coordination state, not project truth.
+  - 0003: the ledger is coordination state, not project truth;
+  - 0004: member messaging through a plugin send tool.
 - Method sources and prior analysis: `docs/research/sources.md`. The earlier
   `paseo-slp` fork is not a decision basis.
 
@@ -42,7 +43,8 @@ In scope:
 Out of scope for v0.1:
 
 - Runtime enforcement of ownership or routing.
-- Message queueing.
+- Paseo-side message queueing. Plugin-side delivery after a turn is in
+  scope (decision 0004).
 - Supervisor visibility across workspaces.
 - Handoff or context replacement.
 
@@ -97,6 +99,11 @@ with commands and observed results.
    - Ledger tools: ownership claims, findings (reopen, dependency, blocker),
      decisions with their source, and acceptance.
    - Handback reaches the Lead.
+   - The member send tool (decision 0004):
+     - two delivery kinds: steer, or after the recipient's turn;
+     - a held-message store in plugin files;
+     - delivery at `agent.turn_ended`, plus reconciliation for missed
+       events.
    - Reconciliation after a restart.
 4. **Human panel.**
    - Shows briefs, constraint sources, open findings and pending decisions,
@@ -395,7 +402,11 @@ live members, the Codex members included.
 
 ### Open For Human
 
-1. **Built-in messaging prompts for permission and replaces busy turns.**
+1. **Settled by decision 0004 (2026-10-01).** Human chose a plugin send tool
+   with two delivery kinds: steer into the running turn, or deliver after the
+   turn ends. Original note:
+
+   **Built-in messaging prompts for permission and replaces busy turns.**
    Update after the mode follow-up: the permission cost disappears when
    members run in `bypassPermissions`, or in `auto` with a classifier-capable
    model. The replace-on-busy cost remains.
