@@ -230,7 +230,8 @@ is a template choice (layer 4), not part of the roles.
 
 ## Development Principle
 
-Start simple, use SLP on real work, and adjust. Tune instructions toward more
+Start simple, use SLP on real work, and adjust. Prefer what is simple and
+effective over what is complex (Human's "smallest sufficient topology"). Tune instructions toward more
 room to question when agents only obey, and toward evidence-bound objections
 when they argue about everything. Improving the method can mean removing a
 mechanism.

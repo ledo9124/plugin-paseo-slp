@@ -239,9 +239,10 @@ with commands and observed results.
      2026-10-01:
      - whether the Lead edits itself or delegates is the Lead's own
        judgment;
-     - "the smallest sufficient topology" is a principle for how a project
-       deploys the Harness documentation framework. It is not a rule about
-       what the Lead or a Peer does.
+     - "the smallest sufficient topology" means building what is simple
+       and effective instead of what is complex. It guides how this
+       toolkit is built. It is not a rule about what the Lead or a Peer
+       does.
    - I4 and I5 come later.
    - **I3: intake read-back and explicit delegation** (behaviors 11 and
      12). Role text only.
@@ -314,7 +315,11 @@ with commands and observed results.
     request (see Slice 7 Results).
   - [ ] A live run with Human, on work with a mid-run choice.
   - [x] I1: not taken (Human: the Lead judges for itself).
-  - [ ] I4 and I5.
+  - [x] I4: briefs say what is out of scope; a Peer changes only what the
+    goal needs (role text). Live check in Part C.
+  - [x] I5: not built for now (see Slice 7 Results).
+  - [x] Part C live run (see Part C results). The read-back gate was
+    missed once.
 
 ## Decisions
 
@@ -595,6 +600,118 @@ Human's choices on the slice 7 observations (2026-10-01):
     (large work, effects outside the workspace, or changes hard to undo).
 
   The role text and behavior 11 were changed. Not yet run live.
+
+I4 and I5 (2026-10-01), judged by the simple-and-effective principle:
+- **I4, role text only.**
+  - Lead: a brief's scope says what the Peer may change, and what is out
+    of scope.
+  - Peer: change only what the goal needs, and put other improvements in
+    the handback as suggestions.
+  - The observed problem: K-B workers in slice 6 made 36-90 unrequested
+    lines. Those workers were not SLP Peers, and the slice 7 Peer stayed
+    in scope. So this is a cheap guard, not a measured fix.
+  - The N/K rerun was not repeated: 20 runs would cost far more than the
+    rule.
+- **I5, not built.**
+  - Slice 4 saw one misattribution. Since the instruction-only fix, there
+    have been 0 across the second slice 4 run and slice 7 (6 Human
+    decisions, each quoting Human).
+  - A text-match flag would misfire on short answers such as
+    "Markdown.", which is below the 20-character match.
+  - Revisit if a misattribution recurs.
+
+Part C protocol, registered before the run. Same environment as Parts A
+and B; the operating agent plays Human again.
+- Checks:
+  - the new read-back rule;
+  - the Supervisor's handoff without a design;
+  - I4 scope;
+  - a choice that may surface only mid-run.
+- Seed: the Part B notes CLI before export, at commit `487558a`. Note that
+  `add` gives `id = len(notes) + 1`, so deleting a note makes the next id
+  collide.
+- Human's first message: "Thêm lệnh xóa ghi chú nhé."
+- Human's answers, only to what is asked:
+  - how to pick the note: "Xóa theo id";
+  - ask before deleting: "Không cần hỏi lại";
+  - an unknown id: "Báo lỗi";
+  - anything about ids after a delete (renumbering, reuse, collisions),
+    whether asked at intake or as a pending decision: "Id đã cấp không bao
+    giờ đổi và không dùng lại";
+  - a read-back that asks for confirmation and matches: "Đúng rồi";
+  - technical details or anything else: "Các bạn tự quyết".
+- Observed:
+  - read-back present or skipped, and whether it lists only interpreted
+    points;
+  - any design in the Supervisor's handoff;
+  - the id collision: found or not; escalated, or decided under a
+    delegation;
+  - files changed outside the goal;
+  - suggestions in the handback;
+  - escalations and native questions;
+  - the final behavior, checked by the operating agent.
+
+Part C results (2026-10-01). Workspace `slp-s7c` (`wks_77a5c01626f31aa8`):
+- **Intake.** The Supervisor read `notes.py` and found the id collision
+  at intake. It asked 5 questions in one reply, each with a
+  recommendation. Q3 asked whether ids are kept and never reused, or
+  renumbered. Human's answers became D1-D6, all `source: "human"` and
+  quoting Human.
+- **Read-back, new rule.** It listed only the two points the Supervisor
+  interpreted:
+  - Q5 "Các bạn tự quyết" read as covering both commit and push;
+  - the error form for an unknown id left to the Lead.
+- **Read-back gate: not followed.**
+  - The push reading is an effect outside the workspace, so the rule
+    says to wait for Human's confirmation.
+  - The Supervisor sent the goal to the Lead in the same turn, and the
+    Lead tried to push before Human confirmed.
+  - No harm: git rejected the push, and the target was a local test
+    repository.
+  - Setup flaw by the operating agent: `s7c` was cloned from `s7b`, so
+    `origin` pointed at the Part B test repository.
+- **Handoff, new rule followed.** No design: "Open / your choice: design,
+  command naming/output, test coverage, how D4 is achieved". It also
+  listed what must come back to Human.
+- **Delegation.** The Lead worked alone, which is its own call (Human,
+  I1). So I4 was not exercised.
+- **The Lead's choices.** The store keeps a persistent `next_id` beside the
+  notes, and legacy files still load. The on-disk JSON format changed, and
+  this was reported to Human, not escalated.
+- **A choice that surfaced mid-run.** The rejected push.
+  - The Lead stopped rather than change another repository's config.
+  - The Supervisor checked `s7b` itself, and found and reported Human's
+    uncommitted files there.
+  - It raised pending D7 with three options and a recommendation, and
+    revised D7 once with the new fact.
+  - Human settled D7 from the panel ("Các bạn tự quyết"). The group then
+    pushed a new branch `notes-delete` to `s7b`, leaving `master`, the
+    uncommitted files, and the config untouched. The Supervisor checked
+    all of this.
+- **Report:**
+  - Human: 0 interventions, 3 messages, 1 panel decision, 6 relayed
+    decisions;
+  - escalations: 1 raised, 1 answered, 1 revised;
+  - native questions: 0;
+  - convention breaks: 0;
+  - cost: Supervisor $0.54, Lead $0.31.
+- **Independent check by the operating agent:**
+  - 10 tests OK;
+  - after add 1, add 2, delete 2, add, the list is `#1`, `#3`;
+  - deleting id 9 gives an error with rc 1;
+  - commit `c57564d` changes only `notes.py` and `test_notes.py`.
+- Cleanup: workspace archived, daemon stopped, 6767 untouched. The push
+  left a branch `notes-delete` in the temp repository `%TEMP%/slp-live/s7b`.
+
+Reading of Part C:
+- **Supervisor stops at outcome and constraints:** followed.
+- **Read-back content rule:** followed.
+- **Read-back gate:** missed once, on an effect outside the workspace.
+  Fixed in the Supervisor role text: while waiting, it holds the goal
+  back, or sends it with the costly part marked "not until Human
+  confirms". Not yet run live.
+- **Mid-run escalation:** worked. It came as a pending decision with
+  options, through the panel, with no native question.
 
 ## Slice 6 Results
 
