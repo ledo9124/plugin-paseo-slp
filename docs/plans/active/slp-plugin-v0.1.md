@@ -117,6 +117,23 @@ with commands and observed results.
      - delivery at `agent.turn_ended`, plus reconciliation for missed
        events.
    - Reconciliation after a restart.
+   - Human's slice 3 choices (2026-10-01):
+     - Peers use a provider/model from an allowlist in settings, with a
+       mode per provider;
+     - at most 4 active Peers per group (a setting);
+     - Peers live until the workspace is archived;
+     - handback reaches the Lead after the Lead's turn.
+   - Tools, gated by the caller's role (identity from the member secret):
+     - `slp_delegate` (Lead): create a Peer with a brief, or reassign a
+       Peer that has no open assignment;
+     - `slp_accept` (Lead): accept or reject a handed-back assignment;
+     - `slp_finding` (any member): record a reopen, dependency, blocker, or
+       other finding with evidence; the Lead is told;
+     - `slp_decide` (Lead, Supervisor): record a decision with its source,
+       pending or settled, linked to a finding and to the project record;
+     - `slp_send` (any member) and `slp_group` / `slp_ledger` (read).
+   - The ledger also keeps an append-only event list for slice 5
+     telemetry.
 4. **Human panel.**
    - Shows briefs, constraint sources, open findings and pending decisions,
      and ownership.
@@ -218,6 +235,11 @@ with commands and observed results.
   - Supervisor `claude/claude-opus-5-5`, mode `auto`;
   - Lead `claude/claude-sonnet-5-5`, mode `auto`.
   They are plugin settings that Human can change.
+- 2026-10-01: Agent decision for slice 3: Peers are never archived before
+  the workspace, and only 4 may be active, so `slp_delegate` can give a new
+  assignment to an existing Peer that has none open. This keeps the
+  adopted model: the ledger records assignments, with `agentId` as the
+  current occupant.
 - 2026-10-01: Human keeps `daemon.mcp.injectIntoAgents: true` required for
   SLP: members use Paseo's own `list_agents` and `get_agent_status`, and the
   plugin does not re-implement them. Messaging still goes through the plugin
@@ -225,6 +247,15 @@ with commands and observed results.
   - The plan's rejection of Seatworks "permission bypass" covered its
     deny-list and config-directory mechanism. It does not cover using a
     provider's own permission mode.
+
+## Slice 3 Progress
+
+- [x] Human choices and the tool list (above).
+- [ ] Server: ledger, delegate, send and held delivery, handback,
+  acceptance, findings, decisions, reconciliation, role instructions.
+- [ ] Live proof on `v0.10.2`: a Supervisor-to-Lead brief, a delegated
+  Peer, handback to a busy Lead, acceptance, and a finding through the full
+  chain.
 
 ## Slice 2 Results
 
