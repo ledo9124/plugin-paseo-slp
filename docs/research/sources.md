@@ -23,6 +23,29 @@ Paseo upstream, `getpaseo/paseo` main at `d30e99c85`, and plugin SDK 0.10.2,
 read from source on 2026-10-01. The facts are summarized in decision 0001 and
 `docs/ARCHITECTURE.md`.
 
+## Reference Only: Seatworks v3
+
+Seatworks (<https://github.com/sting9k/seatworks>, branch `v3` at
+`6d316b067d5f`, MIT) implements a Seat abstraction on Paseo: a role
+materialized into a runtime configuration, occupied by the current agent.
+It was reviewed on 2026-10-01 from a Human-supplied write-up about the
+deleted `v2` branch, then checked against `v3` code.
+
+- It informs these ideas: role identity separate from the current agent,
+  labels for reconciliation, and a thin adapter over the Paseo API. The plan
+  records which ideas were adopted, deferred, and rejected.
+- It is not a decision basis. It does not override `docs/product/overview.md`.
+- Its text is not copied. Its `NOTICE.md` marks some skills as derived from
+  unlicensed material.
+- `v3` requires Paseo `>=0.9.1 <0.10.0`. Its `rebuild` branch targets 0.10
+  and was not analyzed in depth.
+- The review surfaced three upstream facts, recorded in
+  `docs/ARCHITECTURE.md`:
+  - `daemon.mcp.injectIntoAgents` defaults to `false`;
+  - agents created by a plugin get no finish notification, and archiving a
+    `parent` cascades to its children;
+  - plugins get the Paseo API only inside hooks and RPCs.
+
 ## Not A Decision Basis
 
 The earlier fork `ledo9124/paseo-slp` (local `C:/code/my-project/paseo-slp`)

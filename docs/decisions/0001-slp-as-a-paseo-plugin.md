@@ -21,11 +21,16 @@ The earlier `paseo-slp` fork is not a basis for this decision.
 Paseo upstream (`getpaseo/paseo` main at `d30e99c85`, plugin SDK 0.10.2)
 offers the following, verified in source.
 
-Agents already have Paseo tools:
+Paseo can give agents built-in tools:
 - `create_agent`, which creates the caller's subagent and can notify the
   caller when it finishes;
 - `send_agent_prompt`, `get_agent_status`, and `list_agents`;
 - `cancel_agent`, `archive_agent`, and `update_agent`.
+
+Correction, 2026-10-01: these tools reach agents only when
+`daemon.mcp.injectIntoAgents` is enabled, and it defaults to `false`. Slice 1
+probe 0 checks this. If Human will not enable it, this decision must be
+revisited.
 
 A prompt sent to a busy agent either steers its running turn or replaces it.
 There is no queue.
