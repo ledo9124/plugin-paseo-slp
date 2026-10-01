@@ -4,8 +4,10 @@ Date: 2026-10-01
 
 ## Status
 
-Active. Slices 0 and 1 are complete, with probes 2 and 4 run on Claude and
-Codex. Decision 0004 settled the open messaging question. Slice 2 is next.
+Active. Slices 0-2 are complete; slice 3 is next.
+- Slice 1 ran probes 2 and 4 on both Claude and Codex.
+- Decision 0004 settled the messaging question, and decision 0005 replaced
+  the free toggle.
 
 ## Outcome
 
@@ -153,7 +155,8 @@ with commands and observed results.
   no-op skeleton.
 - [x] Slice 1: platform probes on stock Paseo v0.10.2. All probes ran on
   Claude; probes 2 and 4 also ran on Codex (`gpt-6-luna`). Results below.
-- [ ] Slice 2: toggle and group start.
+- [x] Slice 2: SLP mode, lock, and group start and end; panel, header button,
+  and settings. Proved live on `v0.10.2` (see Slice 2 Results).
 - [ ] Slice 3: delegation, ledger, handback, reconciliation.
 - [ ] Slice 4: Human panel.
 - [ ] Slice 5: telemetry.
@@ -223,13 +226,75 @@ with commands and observed results.
     deny-list and config-directory mechanism. It does not cover using a
     provider's own permission mode.
 
-## Slice 2 Progress
+## Slice 2 Results
 
-- [x] Decision 0005 and the slice 2 scope.
-- [ ] Server: mode store, lock, group start and end, settings, role
-  instructions.
-- [ ] Client: SLP panel and header button.
-- [ ] Live proof on `v0.10.2`.
+Environment: same as slice 1. Stock Paseo `v0.10.2`, isolated home, port
+6768, plugin from `plugins/slp`, RPCs through `scripts/plugin-rpc.mts`, and
+the web app on 8081 driven with `agent-browser`.
+
+Focused proof:
+- `npm run typecheck` passes.
+- `npm test` passes 15 tests: `SlpService` against `FakePaseoHost`, and the
+  MCP endpoint. They cover:
+  - start, and the configured model and mode per role;
+  - switching off before the lock, and starting again;
+  - refusal while injection is off;
+  - rollback of a half-started group, leaving no stored trace;
+  - two racing switches start one group;
+  - the lock in both directions, and the fallbacks for a missed event;
+  - group end on workspace archive, and secret resolution.
+
+Live proof, server, on workspace `slp-s2-ws1` (`wks_441bf083383e7066`):
+- `slp.workspace.get` returned `off`, unlocked, with `injectIntoAgents: true`.
+- `set-mode on` created `SLP Supervisor` (`claude-opus-5-5`, mode `auto`)
+  and `SLP Lead` (`claude-sonnet-5-5`, mode `auto`) in the workspace
+  directory. Both were idle, with no prompt.
+- `set-mode off` archived both. `set-mode on` started a new group, still
+  unlocked: the archived earlier members did not lock it.
+- **First message.** `paseo send` to the Supervisor locked the workspace
+  (`lockedAt 08:19:19`).
+  - The Supervisor called `mcp__slp__slp_group` without a prompt, stated
+    its role, gave the Lead's correct id, and proposed to ask Human for the
+    goal and constraints first.
+  - `set-mode off` was then refused: "SLP mode is locked on since Human's
+    first message...".
+- **Locked off.** Workspace `slp-s2-ws2` had an ordinary
+  `claude-haiku-4-5` run first. It locked off, and `set-mode on` was
+  refused.
+- **Restart.** After a daemon restart, the mode, lock, and group were kept.
+  The Lead called `slp_group` with its persisted secret and named the
+  Supervisor correctly. Members not yet reloaded report `closed`, which the
+  panel shows as "inactive".
+- **Archive.** `workspace archive` on `slp-s2-ws1` set `endedAt` and
+  archived both members. The ended group's secret then got 401.
+- **Bug found and fixed.** A start that failed for an unknown workspace id
+  left a stored record. A failed start now restores the earlier record, or
+  removes it.
+
+Live proof, client, on workspace `slp-s2-ws3`:
+- The header button showed "SLP off" and opened the SLP panel. The "SLP"
+  panel was also offered in the new-tab list.
+- **Switching on in the panel** started the group:
+  - the header changed to "SLP on";
+  - the panel listed `SLP Supervisor` and `SLP Lead` (`claude · idle`)
+    with Open buttons;
+  - the app opened tabs for both agents.
+- **First message from the app.** Sending one to the Supervisor from its
+  composer locked the mode:
+  - the panel showed "Locked on since your first message here...";
+  - the switch became disabled;
+  - the header tooltip read "SLP on (locked)".
+- The settings screen showed the defaults
+  (`claude/claude-opus-5-5`/`auto`, `claude/claude-sonnet-5-5`/`auto`).
+  Saving changed settings was not exercised.
+- Cleanup: the test workspaces were archived (ws3's group ended), Metro and
+  the daemon stopped, and 6767 was untouched.
+
+Not covered in slice 2:
+- messaging between members (`slp_send`), delegation, and the ledger
+  (slice 3);
+- the injection-off refusal live (unit-tested only);
+- Codex as a Supervisor or Lead.
 
 ## Slice 1 Results
 
@@ -241,7 +306,8 @@ Environment for every probe unless noted:
 - Provider `claude/claude-haiku-4-5`, default mode, cwd a scratch directory
   outside any repository.
 - Probe build: `plugins/slp` (`index.server.ts`, `server/`), driven by
-  `scripts/probe-rpc.mts` because the CLI has no plugin RPC command. Probe
+  `scripts/probe-rpc.mts` (renamed `scripts/plugin-rpc.mts` in slice 2),
+  because the CLI has no plugin RPC command. Probe
   events went to `<home>\plugin-data\slp-probe\events.jsonl`, which the
   observations below quote.
 

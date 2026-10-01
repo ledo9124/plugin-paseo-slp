@@ -1,10 +1,12 @@
 # Architecture
 
-Status: approach accepted in decisions 0001-0004. Slice 1 platform probes ran
-on stock Paseo `v0.10.2` with Claude, and probes 2 and 4 also ran with Codex.
-The code is a throwaway probe build plus
-the `PaseoHost` adapter; results are in the
-[active plan](plans/active/slp-plugin-v0.1.md#slice-1-results).
+Status: approach accepted in decisions 0001-0005.
+- Slice 1 platform probes ran on stock Paseo `v0.10.2` with Claude; probes 2
+  and 4 also ran with Codex.
+- Slice 2 implements the per-workspace SLP mode, the lock, group start and
+  end, the panel, the header button, and settings.
+
+Results are in the [active plan](plans/active/slp-plugin-v0.1.md).
 
 ## Repository Layout
 
@@ -12,14 +14,19 @@ the `PaseoHost` adapter; results are in the
   - `paseo-plugin.json`: manifest (`id`, `requirements.paseo`).
   - `index.server.ts`: server entry, run by Paseo in a forked Node
     subprocess.
-  - `index.client.tsx` (later): client entry, run inside every connected
-    Paseo app.
+  - `index.client.tsx`: client entry, run inside every connected Paseo app.
+    It adds the SLP workspace panel, the header button, and the settings
+    screen.
   - `server/`, `client/`, `shared/`: Paseo's compiler rejects imports across
     these boundaries and code modules at the plugin root.
+    - `server/`: `PaseoHost` and its fake, the SLP service, the state store,
+      role instructions, and the MCP endpoint.
+    - `shared/`: RPC contracts and settings used by both sides.
+  - Plugin state lives in `<PASEO_HOME>/plugin-data/slp/state.json`.
 - `docs/`: Harness core plus this repository's product, decisions, plans,
   runbook, and research notes.
 - `scripts/bin/harness(.exe)`: untracked Harness maintenance binary.
-- `scripts/probe-rpc.mts`: dev driver that calls plugin RPCs through a Paseo
+- `scripts/plugin-rpc.mts`: dev driver that calls plugin RPCs through a Paseo
   source checkout's CLI connection code (see [RUNBOOK.md](RUNBOOK.md)).
 
 Paseo compiles plugin TypeScript itself; there is no build step. Run
@@ -69,7 +76,8 @@ Read from source on `getpaseo/paseo` main at `d30e99c85`, and checked at the
 | Steering a busy member | Plugin `agents.ref(id).send(text, {activeTurnBehavior: "steer"})` | Probed on Claude and Codex: the message joins the running turn. SDK 0.10.2 forwards the option but leaves it out of `PaseoAgentSendOptions`. A send without options interrupts. The app setting `sendBehavior` (`interrupt`, `steer`, or `queue`; default `steer`; `app/src/hooks/use-settings/storage.ts`) applies only to messages typed in the app composer. In `queue` mode, the app keeps queued messages in its own session store and sends them when the turn ends. The daemon has no queue: `activeTurnBehavior` accepts only `interrupt` or `steer`, and built-in `send_agent_prompt` (`paseo-tools.ts:1931`) ignores the setting and always replaces |
 | Ledger and Human steering | Plugin MCP tools for agents; RPCs and a panel for Human; plugin-owned files | The ledger records each assignment and role with `agentId` as its current occupant, not as its identity. The plugin has no Paseo API at startup, only inside hooks and RPCs, so reconciliation from files, labels, and `agents.list` runs at the first hook or RPC |
 | Agents created outside the delegate tool | `agent.created` with `parentAgentId` | Visible, not blocked |
-| Per-workspace toggle | Plugin state per workspace and a client control | Exact control location decided in slice 2 |
+| Per-workspace SLP mode (0005) | Plugin state per workspace. The lock comes at the first `agent.turn_started` in the workspace, with a fallback to `lastUserMessageAt` and to agents SLP did not create. Group end at `workspace.archived` | Slice 2, proved live. Archiving a workspace archives its agents (`workspace-archive-service.ts`) |
+| Human controls | Client `addWorkspacePanel` (SLP panel), `addHeaderButton` per workspace (from `workspaces.list` and `workspaces.subscribe`), and `addSettingsScreen` | Slice 2, proved in the web app. The settings screen is reached from Settings, Plugins, then the `slp` actions menu |
 
 ## Known Limits
 

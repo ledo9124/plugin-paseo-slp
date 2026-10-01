@@ -93,17 +93,45 @@ npm install                     # in this repository, before every install or re
 
 ## Calling Plugin RPCs
 
-The CLI has no plugin RPC command. `scripts/probe-rpc.mts` reuses the CLI's
+The CLI has no plugin RPC command. `scripts/plugin-rpc.mts` reuses the CLI's
 connection code:
 
 ```bash
 PASEO_HOME='C:\code\my-project\paseo-upstream\.dev\paseo-home' \
   node C:/code/my-project/paseo-upstream/node_modules/tsx/dist/cli.mjs \
-  scripts/probe-rpc.mts probe.list '{}'
+  scripts/plugin-rpc.mts probe.list '{}'
 ```
 
 Under Git Bash, write Windows paths inside JSON arguments with forward
 slashes (`C:/Users/...`). Backslashes do not survive argument conversion.
+
+## Web App (Client Proof)
+
+Run the web app from the stock checkout, in PowerShell, while the dev daemon
+runs:
+
+```powershell
+$env:APP_VARIANT = "development"; $env:EXPO_PUBLIC_LOCAL_DAEMON = "localhost:6768"; $env:BROWSER = "none"
+npm run start:expo --workspace=@getpaseo/app -- --port 8081
+```
+
+- Metro prints `Web Bundled` after about a minute. Open
+  `http://localhost:8081`.
+- Plugin client code is served by the daemon, so client changes need
+  `plugin reload slp` and a page reload.
+- Slice 2 drove the app with `agent-browser`, in its own named session.
+
+## Test Workspaces
+
+`workspace create` needs `--isolation`:
+
+```bash
+<cli> workspace create --isolation local --path C:/Users/<you>/AppData/Local/Temp/<dir> --title <title> --json
+```
+
+The JSON output carries `workspaceId`. When finished, run
+`<cli> workspace archive <id>`; this also ends an SLP group in that
+workspace.
 
 ## Readiness
 
@@ -146,7 +174,8 @@ Read the exit code; do not treat filtered output as a pass.
 
 ## Stop
 
-- Archive the test agents this run created.
+- Archive the test workspaces and agents this run created.
+- Stop Metro if it was started.
 - Stop only the daemon this run started: `<cli> daemon stop`, with the same
   `--home`.
 - Leave the 6767 daemon alone.

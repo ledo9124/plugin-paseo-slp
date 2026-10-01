@@ -1,7 +1,7 @@
-// Slice 1 probe driver: Paseo's CLI has no command that invokes a plugin RPC,
+// Dev driver: Paseo's CLI has no command that invokes a plugin RPC,
 // so this reuses the CLI's own connection code from a Paseo source checkout.
 //
-//   node <paseo>/node_modules/tsx/dist/cli.mjs scripts/probe-rpc.mts <method> [json-input]
+//   node <paseo>/node_modules/tsx/dist/cli.mjs scripts/plugin-rpc.mts <method> [json-input]
 //
 // Env: PASEO_SOURCE (checkout, default ../paseo-upstream), PASEO_HOME (daemon home).
 import { pathToFileURL } from "node:url";
