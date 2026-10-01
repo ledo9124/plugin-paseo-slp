@@ -6,12 +6,15 @@ import type { McpServerConfig } from "@getpaseo/protocol/agent-types";
 
 export interface HostAgent {
   id: string;
+  workspaceId: string | null;
   provider: string;
   status: string;
   title: string | null;
   labels: Record<string, string>;
   parentAgentId: string | null;
   archivedAt: string | null;
+  /** Last message sent to the agent as a user turn, by Human or a client. */
+  lastUserMessageAt: string | null;
 }
 
 export interface CreateAgentInput {
@@ -19,7 +22,10 @@ export interface CreateAgentInput {
   provider: string;
   /** Provider mode id. Omitted, the provider's own default applies, not the app's. */
   modeId?: string;
-  cwd: string;
+  /** Place the agent in this workspace; Paseo then uses the workspace's directory. */
+  workspaceId?: string;
+  /** Required when no workspaceId is given. */
+  cwd?: string;
   title?: string;
   systemPrompt?: string;
   mcpServers?: Record<string, McpServerConfig>;
@@ -39,36 +45,42 @@ export interface PaseoHost {
   getAgent(agentId: string): Promise<HostAgent | null>;
   sendPrompt(agentId: string, text: string, options?: { activeTurnBehavior?: ActiveTurnBehavior }): Promise<void>;
   archiveAgent(agentId: string): Promise<void>;
+  /** Whether the daemon injects Paseo's own tools into agents. */
+  injectsPaseoTools(): Promise<boolean>;
 }
 
 const PARENT_LABEL = "paseo.parent-agent-id";
 
 type Snapshot = {
   id: string;
+  workspaceId?: string;
   provider: string;
   status: string;
   title?: string | null;
   labels?: Record<string, string>;
   archivedAt?: string | null;
+  lastUserMessageAt?: string | null;
 };
 
 function toHostAgent(snapshot: Snapshot): HostAgent {
   const labels = snapshot.labels ?? {};
   return {
     id: snapshot.id,
+    workspaceId: snapshot.workspaceId ?? null,
     provider: snapshot.provider,
     status: snapshot.status,
     title: snapshot.title ?? null,
     labels,
     parentAgentId: labels[PARENT_LABEL] ?? null,
     archivedAt: snapshot.archivedAt ?? null,
+    lastUserMessageAt: snapshot.lastUserMessageAt ?? null,
   };
 }
 
 export function createPaseoHost(paseo: PaseoApi): PaseoHost {
   return {
     async createAgent(input) {
-      const handle = await paseo.agents.create({
+      const options = {
         config: {
           provider: input.provider,
           modeId: input.modeId,
@@ -78,21 +90,34 @@ export function createPaseoHost(paseo: PaseoApi): PaseoHost {
             ? { preapproved: input.preapprovedTools.map((ref) => ({ kind: "mcp" as const, ...ref })) }
             : undefined,
         },
-        cwd: input.cwd,
         title: input.title,
         labels: input.labels,
         idempotencyKey: input.idempotencyKey,
         parent: input.parent,
         prompt: input.prompt,
-      });
+      };
+      let handle;
+      if (input.workspaceId) {
+        handle = await paseo.workspaces.ref(input.workspaceId).agents.create(options);
+      } else if (input.cwd) {
+        handle = await paseo.agents.create({ ...options, cwd: input.cwd });
+      } else {
+        throw new Error("createAgent needs a workspaceId or a cwd");
+      }
       const refreshed = await handle.refresh();
       if (!refreshed) throw new Error(`created agent ${handle.id} has no snapshot`);
       return toHostAgent(refreshed.agent);
     },
 
     async listAgents(filter) {
-      const result = await paseo.agents.list({ filter });
-      return result.entries.map((entry) => toHostAgent(entry.agent));
+      const agents: HostAgent[] = [];
+      let cursor: string | undefined;
+      do {
+        const result = await paseo.agents.list({ filter, page: { limit: 200, cursor } });
+        agents.push(...result.entries.map((entry) => toHostAgent(entry.agent)));
+        cursor = result.pageInfo.hasMore ? (result.pageInfo.nextCursor ?? undefined) : undefined;
+      } while (cursor);
+      return agents;
     },
 
     async getAgent(agentId) {
@@ -111,6 +136,11 @@ export function createPaseoHost(paseo: PaseoApi): PaseoHost {
 
     async archiveAgent(agentId) {
       await paseo.agents.ref(agentId).archive();
+    },
+
+    async injectsPaseoTools() {
+      const { config } = await paseo.config.get();
+      return config.mcp.enabled !== false && config.mcp.injectIntoAgents;
     },
   };
 }

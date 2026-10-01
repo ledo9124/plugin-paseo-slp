@@ -6,6 +6,7 @@
   "files": [
     "paseo-plugin.json",
     "index.server.ts",
+    "index.client.tsx",
     "server/",
     "shared/",
     "client/"
@@ -17,6 +18,9 @@
   "devDependencies": {
     "@getpaseo/plugin": "0.10.2",
     "@types/node": "^22.0.0",
+    "@types/react": "~19.2.0",
+    "react": "^19.1.0",
+    "react-native": "^0.81.5",
     "typescript": "^5.9.3",
     "vitest": "^3.2.4",
     "zod": "^4.4.3"

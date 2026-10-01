@@ -12,10 +12,17 @@ export class FakePaseoHost implements PaseoHost {
   readonly agents = new Map<string, HostAgent>();
   readonly created: CreateAgentInput[] = [];
   readonly sends: FakeSend[] = [];
+  injectIntoAgents = true;
+  /** Makes the next createAgent call whose title matches fail. */
+  failCreateFor: string | null = null;
   private readonly byKey = new Map<string, string>();
   private nextId = 1;
 
   async createAgent(input: CreateAgentInput): Promise<HostAgent> {
+    if (this.failCreateFor && input.title === this.failCreateFor) {
+      this.failCreateFor = null;
+      throw new Error(`create failed: ${input.title}`);
+    }
     const existing = input.idempotencyKey ? this.byKey.get(input.idempotencyKey) : undefined;
     if (existing) return this.agents.get(existing)!;
     this.created.push(input);
@@ -23,15 +30,34 @@ export class FakePaseoHost implements PaseoHost {
     if (input.parent) labels["paseo.parent-agent-id"] = input.parent;
     const agent: HostAgent = {
       id: `agent-${this.nextId++}`,
+      workspaceId: input.workspaceId ?? null,
       provider: input.provider.split("/")[0],
       status: "idle",
       title: input.title ?? null,
       labels,
       parentAgentId: input.parent ?? null,
       archivedAt: null,
+      lastUserMessageAt: input.prompt ? new Date(0).toISOString() : null,
     };
     this.agents.set(agent.id, agent);
     if (input.idempotencyKey) this.byKey.set(input.idempotencyKey, agent.id);
+    return agent;
+  }
+
+  /** Adds an agent the plugin did not create, as Human would in the app. */
+  addHumanAgent(workspaceId: string, options: { messaged?: boolean } = {}): HostAgent {
+    const agent: HostAgent = {
+      id: `agent-${this.nextId++}`,
+      workspaceId,
+      provider: "claude",
+      status: "idle",
+      title: "human agent",
+      labels: {},
+      parentAgentId: null,
+      archivedAt: null,
+      lastUserMessageAt: options.messaged === false ? null : new Date(0).toISOString(),
+    };
+    this.agents.set(agent.id, agent);
     return agent;
   }
 
@@ -59,5 +85,9 @@ export class FakePaseoHost implements PaseoHost {
     for (const child of this.agents.values()) {
       if (child.parentAgentId === agentId && child.archivedAt === null) await this.archiveAgent(child.id);
     }
+  }
+
+  async injectsPaseoTools(): Promise<boolean> {
+    return this.injectIntoAgents;
   }
 }
