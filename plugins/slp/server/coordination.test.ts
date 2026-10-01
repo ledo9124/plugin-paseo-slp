@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import type { Brief } from "../shared/contracts";
 import { Coordination } from "./coordination";
 import { FakePaseoHost } from "./paseo-host.fake";
+import { buildReport, renderReport } from "./report";
 import { WorkspaceQueue } from "./queue";
 import { SlpService } from "./slp-service";
 import { SlpStore } from "./store";
@@ -481,6 +482,128 @@ describe("Human decisions from the panel", () => {
     await expect(coordination.humanDecide(host, "other", { text: "y" })).rejects.toMatchObject({ code: "invalid" });
     await service.onWorkspaceArchived("ws");
     await expect(coordination.humanDecide(host, "ws", { text: "y" })).rejects.toMatchObject({ code: "invalid" });
+  });
+});
+
+describe("telemetry", () => {
+  const turn = (agentId: string, timeline: Array<Record<string, unknown>>, kind = "completed") => ({
+    agentId,
+    workspaceId: "ws",
+    outcome: { kind },
+    lastReply: null,
+    timeline: timeline as Array<{ type: string }>,
+  });
+
+  it("counts built-in sends and creates, Human messages, and usage once each, ignoring plugin prompts", async () => {
+    const { host, coordination, idOf, group } = await setup();
+    const lead = idOf("lead");
+    host.agents.get(lead)!.lastUsage = { inputTokens: 100, cachedInputTokens: 40, outputTokens: 20, totalCostUsd: 0.01 };
+    const timeline = [
+      { type: "user_message", text: "Please also check the README", messageId: "m1" },
+      { type: "user_message", text: "SLP message:\n\n<slp-message ...>", messageId: "m2" },
+      { type: "tool_call", callId: "c1", name: "mcp__paseo__send_agent_prompt", status: "completed" },
+      { type: "tool_call", callId: "c2", name: "paseo.create_agent", status: "completed" },
+      { type: "tool_call", callId: "c3", name: "mcp__slp__slp_send", status: "completed" },
+    ];
+    await coordination.onTurnEnded(host, turn(lead, timeline));
+    // A reload repeats earlier turns in the timeline; a canceled turn reports no usage.
+    await coordination.onTurnEnded(host, turn(lead, timeline, "canceled"));
+
+    const kinds = group().events.map((e) => e.kind);
+    expect(kinds.filter((k) => k === "human-message")).toHaveLength(1);
+    expect(kinds.filter((k) => k === "builtin-send")).toHaveLength(1);
+    expect(kinds.filter((k) => k === "builtin-create")).toHaveLength(1);
+    expect(group().events.filter((e) => e.kind === "usage")).toEqual([
+      expect.objectContaining({ data: expect.objectContaining({ role: "lead", inputTokens: 100, totalCostUsd: 0.01 }) }),
+    ]);
+  });
+
+  it("does not report built-in sends or Paseo notices as Human messages, and counts cumulative cost once", async () => {
+    const { host, coordination, idOf, group } = await setup();
+    const lead = idOf("lead");
+    const supervisor = idOf("supervisor");
+    // The recipient's turn can end before the sender's.
+    await coordination.onTurnEnded(host, turn(supervisor, [{ type: "user_message", text: "ping", messageId: "p1" }]));
+    host.agents.get(lead)!.lastUsage = { inputTokens: 10, outputTokens: 1, totalCostUsd: 0.1 };
+    await coordination.onTurnEnded(
+      host,
+      turn(lead, [
+        { type: "user_message", text: "<paseo-system>\nAgent x finished.\n</paseo-system>", messageId: "n1" },
+        {
+          type: "tool_call",
+          callId: "c9",
+          name: "mcp__paseo__send_agent_prompt",
+          detail: { type: "unknown", input: { agentId: supervisor.slice(0, 7), prompt: "ping" } },
+        },
+      ]),
+    );
+    host.agents.get(lead)!.lastUsage = { inputTokens: 20, outputTokens: 2, totalCostUsd: 0.25 };
+    await coordination.onTurnEnded(host, turn(lead, []));
+
+    const report = buildReport(group());
+    expect(report.humanMessagesToSupervisor).toBe(0);
+    expect(report.humanInterventions).toEqual({});
+    expect(report.busySendViolations).toEqual({ lead: 1 });
+    expect(report.usage.lead).toMatchObject({ turns: 2, inputTokens: 30, outputTokens: 3 });
+    expect(report.usage.lead.costUsd).toBeCloseTo(0.25);
+  });
+
+  it("records agents created in the workspace without the group label, not the group's own Peers", async () => {
+    const { host, coordination, secretOf, group } = await setup();
+    const { peerAgentId } = await coordination.delegate(host, secretOf("lead"), delegateInput);
+    await coordination.onAgentCreated(host, { id: peerAgentId!, workspaceId: "ws" });
+    const stray = host.addHumanAgent("ws");
+    await coordination.onAgentCreated(host, { id: stray.id, workspaceId: "ws" });
+
+    expect(group().events.filter((e) => e.kind === "outside-agent")).toEqual([
+      expect.objectContaining({ data: { agentId: stray.id, parentAgentId: null } }),
+    ]);
+  });
+
+  it("builds a per-group report from events and the ledger", async () => {
+    const { host, coordination, secretOf, idOf, group } = await setup();
+    await coordination.send(host, secretOf("supervisor"), { to: "lead", text: "goal" });
+    const { peerAgentId } = await coordination.delegate(host, secretOf("lead"), delegateInput);
+    host.agents.get(idOf("lead"))!.status = "running";
+    await coordination.onTurnEnded(host, turn(peerAgentId!, []));
+    host.agents.get(idOf("lead"))!.status = "idle";
+    await coordination.accept(host, secretOf("lead"), { assignmentId: "A1", outcome: "rework", reason: "tests" });
+    await coordination.finding(host, secretOf("peer"), { kind: "reopen", text: "t", evidence: "e" });
+    const d1 = await coordination.decide(host, secretOf("lead"), { text: "q1", source: "agent", status: "pending" });
+    const d2 = await coordination.decide(host, secretOf("lead"), { text: "q2", source: "agent", status: "pending" });
+    await coordination.decide(host, secretOf("lead"), { text: "q3", source: "agent", status: "pending" });
+    await coordination.humanDecide(host, "ws", { text: "a1", settles: d1.decisionId });
+    await coordination.decide(host, secretOf("supervisor"), {
+      text: "a2",
+      source: "human",
+      status: "settled",
+      settles: d2.decisionId,
+    });
+    await coordination.reviseDecision(host, secretOf("lead"), { decisionId: "D3", action: "withdraw", reason: "moot" });
+    host.agents.get(peerAgentId!)!.lastUsage = { inputTokens: 50, outputTokens: 5 };
+    await coordination.onTurnEnded(host, turn(peerAgentId!, [{ type: "user_message", text: "Human here", messageId: "h1" }]));
+
+    const report = buildReport(group());
+    expect(report.escalations).toEqual({
+      raised: 3,
+      answeredFromPanel: 1,
+      answeredThroughSupervisor: 1,
+      withdrawn: 1,
+      revised: 0,
+      open: 0,
+    });
+    expect(report.humanDecisions).toEqual({ fromPanel: 1, relayedBySupervisor: 1 });
+    expect(report.humanInterventions).toEqual({ peer: 1 });
+    expect(report.findings).toEqual({ byKind: { reopen: 1 }, byRole: { peer: 1 }, open: 1 });
+    // The Peer's turn after the rework request is its second handback.
+    expect(report.assignments).toMatchObject({ total: 1, handbacks: 2, outcomes: { rework: 1 } });
+    expect(report.messages["supervisor→lead"]).toBe(1);
+    expect(report.delivery.held).toBeGreaterThanOrEqual(1);
+    expect(report.usage.peer).toEqual({ turns: 1, inputTokens: 50, cachedInputTokens: 0, outputTokens: 5, costUsd: null });
+
+    const markdown = renderReport(report);
+    expect(markdown).toContain("Interventions (messages straight to the Lead or a Peer): 1 (peer 1)");
+    expect(markdown).toContain("| peer | 1 | 50 | 0 | 5 | not reported |");
   });
 });
 

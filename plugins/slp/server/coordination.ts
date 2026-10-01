@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import type { Assignment, Brief, Decision, Finding, Ledger, Role } from "../shared/contracts";
 import type { SlpSettings } from "../shared/settings";
 import type { PaseoHost } from "./paseo-host";
@@ -12,6 +13,18 @@ import type { GroupRecord, HeldMessage, MemberRecord, SlpStore, WorkspaceRecord 
 export type Delivery = "after-turn" | "steer";
 
 const BUSY_STATUSES = new Set(["running", "initializing"]);
+
+/** A turn timeline item; only the fields telemetry reads. */
+export interface TimelineEntry {
+  readonly type: string;
+}
+
+// Built-in Paseo tools members should not use (decision 0004): Claude names
+// them mcp__paseo__<tool>, Codex paseo.<tool>.
+const BUILTIN_TOOLS: ReadonlyArray<readonly [RegExp, string]> = [
+  [/(^|[._])send_agent_prompt$/, "builtin-send"],
+  [/(^|[._])create_agent$/, "builtin-create"],
+];
 
 export interface CoordinationDeps {
   store: SlpStore;
@@ -529,6 +542,7 @@ export class Coordination {
       workspaceId: string | null;
       outcome: { kind: string; error?: { message: string } };
       lastReply: string | null;
+      timeline?: readonly TimelineEntry[];
     },
   ): Promise<void> {
     if (!event.workspaceId) return;
@@ -539,10 +553,25 @@ export class Coordination {
       const member = group.members.find((m) => m.agentId === event.agentId);
       if (!member) return;
 
+      await this.observeTurn(host, group, member, event.outcome.kind, event.timeline ?? []);
       if (member.role === "peer" && event.outcome.kind !== "canceled") {
         await this.relayPeerReply(host, group, member, event);
       }
       await this.flush(host, group, event.agentId);
+      this.deps.store.put(record);
+    });
+  }
+
+  /** Records an agent created in a running SLP workspace without the group's label (slice 5). */
+  async onAgentCreated(host: PaseoHost, agent: { id: string; workspaceId: string | null }): Promise<void> {
+    if (!agent.workspaceId) return;
+    await this.deps.queue.run(agent.workspaceId, async () => {
+      const record = this.deps.store.get(agent.workspaceId!);
+      const group = record?.group;
+      if (!record || !group || group.endedAt) return;
+      const created = await host.getAgent(agent.id).catch(() => null);
+      if (!created || created.labels[GROUP_LABEL] === group.id) return;
+      this.event(group, "outside-agent", { agentId: agent.id, parentAgentId: created.parentAgentId });
       this.deps.store.put(record);
     });
   }
@@ -581,6 +610,60 @@ export class Coordination {
   }
 
   // ---- Internals ------------------------------------------------------------
+
+  /**
+   * Process data from one member turn (slice 5): built-in Paseo sends and
+   * creates, messages the plugin did not send (Human's), and the turn's usage.
+   */
+  private async observeTurn(
+    host: PaseoHost,
+    group: GroupRecord,
+    member: MemberRecord,
+    outcome: string,
+    timeline: readonly TimelineEntry[],
+  ): Promise<void> {
+    const seen = new Set(group.seen);
+    const first = (key: string) => {
+      if (seen.has(key)) return false;
+      seen.add(key);
+      group.seen.push(key);
+      return true;
+    };
+    const by = { role: member.role, agentId: member.agentId };
+    for (const entry of timeline) {
+      const item = entry as unknown as Record<string, unknown>;
+      if (item.type === "tool_call" && typeof item.name === "string" && typeof item.callId === "string") {
+        const builtin = BUILTIN_TOOLS.find(([pattern]) => pattern.test(item.name as string));
+        if (!builtin || !first(`tool:${item.callId}`)) continue;
+        // A built-in send arrives as a plain user message; the report uses
+        // its target and text to tell it apart from Human's messages.
+        const input = ((item.detail as { input?: unknown } | undefined)?.input ?? {}) as Record<string, unknown>;
+        this.event(group, builtin[1], {
+          ...by,
+          ...(typeof input.agentId === "string" ? { to: input.agentId } : {}),
+          ...(typeof input.prompt === "string" ? { textKey: textKey(input.prompt) } : {}),
+        });
+      } else if (item.type === "user_message" && typeof item.text === "string" && !isNotFromHuman(item.text)) {
+        const key = textKey(item.text);
+        const id = typeof item.messageId === "string" ? item.messageId : key;
+        if (first(`msg:${member.agentId}:${id}`)) {
+          this.event(group, "human-message", { to: member.role, agentId: member.agentId, textKey: key });
+        }
+      }
+    }
+    if (outcome !== "completed" || !member.agentId) return;
+    const usage = (await host.getAgent(member.agentId).catch(() => null))?.lastUsage;
+    if (usage) {
+      this.event(group, "usage", {
+        role: member.role,
+        agentId: member.agentId,
+        inputTokens: usage.inputTokens ?? null,
+        cachedInputTokens: usage.cachedInputTokens ?? null,
+        outputTokens: usage.outputTokens ?? null,
+        totalCostUsd: usage.totalCostUsd ?? null,
+      });
+    }
+  }
 
   private async relayPeerReply(
     host: PaseoHost,
@@ -719,20 +802,38 @@ function summary(message: HeldMessage) {
   return { from: message.fromRole, fromAgentId: message.fromAgentId, to: message.toAgentId, kind: message.kind };
 }
 
+const MESSAGE_INTRO = "SLP message:";
+const BATCH_INTRO = "SLP messages that arrived while you were working:";
+const BRIEF_INTRO = "SLP assignment ";
+
 export function renderMessages(messages: HeldMessage[]): string {
   const blocks = messages.map(
     (m) => `<slp-message from="${m.fromRole}${m.fromAgentId ? ` ${m.fromAgentId}` : ""}" kind="${m.kind}">\n${m.text}\n</slp-message>`,
   );
-  const intro =
-    messages.length > 1 ? "SLP messages that arrived while you were working:" : "SLP message:";
+  const intro = messages.length > 1 ? BATCH_INTRO : MESSAGE_INTRO;
   return `${intro}\n\n${blocks.join("\n\n")}`;
+}
+
+/**
+ * Whether a member's user message certainly did not come from Human: one the
+ * plugin sent (a message batch or a brief), or a Paseo system notice such as
+ * a built-in send's finish notification.
+ */
+export function isNotFromHuman(text: string): boolean {
+  const start = text.trimStart();
+  return [MESSAGE_INTRO, BATCH_INTRO, BRIEF_INTRO, "<paseo-system>"].some((prefix) => start.startsWith(prefix));
+}
+
+/** A short, stable key for matching a message's text without storing it. */
+export function textKey(text: string): string {
+  return createHash("sha256").update(text.trim()).digest("hex").slice(0, 16);
 }
 
 export function renderBrief(assignment: Assignment): string {
   const { brief } = assignment;
   const list = (items: string[]) => (items.length ? items.map((item) => `- ${item}`).join("\n") : "- none recorded");
   return [
-    `SLP assignment ${assignment.id}: ${assignment.title}`,
+    `${BRIEF_INTRO}${assignment.id}: ${assignment.title}`,
     `Kind: ${assignment.kind}`,
     `You own this scope until the Lead hands it elsewhere: ${assignment.scope}`,
     "",

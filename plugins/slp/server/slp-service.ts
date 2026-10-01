@@ -145,6 +145,7 @@ export class SlpService {
       ledger: emptyLedger(),
       held: [],
       events: [],
+      seen: [],
     };
     // Persist secrets before creating agents, so their first MCP call resolves.
     this.deps.store.put({ ...record, mode: "on", group });

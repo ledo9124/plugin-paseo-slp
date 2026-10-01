@@ -154,6 +154,58 @@ export const getLedger = defineRpc({
   }),
 });
 
+// Process report (slice 5, required behavior 10): which coordination
+// mechanisms ran and what they cost. Tokens are provider-reported estimates.
+
+const CountsSchema = z.record(z.string(), z.number().int());
+
+export const UsageTotalsSchema = z.object({
+  turns: z.number().int(),
+  inputTokens: z.number(),
+  cachedInputTokens: z.number(),
+  outputTokens: z.number(),
+  /** Null when no turn reported a cost (Codex reports none). */
+  costUsd: z.number().nullable(),
+});
+
+export const ReportSchema = z.object({
+  groupId: z.string(),
+  startedAt: z.string(),
+  endedAt: z.string().nullable(),
+  escalations: z.object({
+    raised: z.number().int(),
+    answeredFromPanel: z.number().int(),
+    answeredThroughSupervisor: z.number().int(),
+    withdrawn: z.number().int(),
+    revised: z.number().int(),
+    open: z.number().int(),
+  }),
+  humanDecisions: z.object({ fromPanel: z.number().int(), relayedBySupervisor: z.number().int() }),
+  /** Human messages straight to the Lead or a Peer, bypassing the Supervisor. */
+  humanInterventions: CountsSchema,
+  humanMessagesToSupervisor: z.number().int(),
+  findings: z.object({ byKind: CountsSchema, byRole: CountsSchema, open: z.number().int() }),
+  assignments: z.object({
+    total: z.number().int(),
+    handbacks: z.number().int(),
+    outcomes: CountsSchema,
+  }),
+  /** slp_send messages, keyed "from→to". */
+  messages: CountsSchema,
+  delivery: z.object({ delivered: z.number().int(), held: z.number().int(), steered: z.number().int() }),
+  notices: z.number().int(),
+  busySendViolations: CountsSchema,
+  outsideAgents: z.object({ created: z.number().int(), builtinCreateCalls: CountsSchema }),
+  usage: z.record(z.string(), UsageTotalsSchema),
+});
+export type Report = z.infer<typeof ReportSchema>;
+
+export const getReport = defineRpc({
+  name: "slp.report.get",
+  input: z.object({ workspaceId: z.string() }),
+  output: z.object({ report: ReportSchema.nullable(), markdown: z.string().nullable() }),
+});
+
 /**
  * Human records a decision from the SLP panel: settles a pending one, or
  * records a new one, optionally on a finding. Only the Supervisor is told; it

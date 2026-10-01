@@ -15,6 +15,15 @@ export interface HostAgent {
   archivedAt: string | null;
   /** Last message sent to the agent as a user turn, by Human or a client. */
   lastUserMessageAt: string | null;
+  /** Usage the provider reported for the agent's latest turn, if any. */
+  lastUsage?: HostUsage | null;
+}
+
+export interface HostUsage {
+  inputTokens?: number;
+  cachedInputTokens?: number;
+  outputTokens?: number;
+  totalCostUsd?: number;
 }
 
 export interface CreateAgentInput {
@@ -60,6 +69,7 @@ type Snapshot = {
   labels?: Record<string, string>;
   archivedAt?: string | null;
   lastUserMessageAt?: string | null;
+  lastUsage?: HostUsage | null;
 };
 
 function toHostAgent(snapshot: Snapshot): HostAgent {
@@ -74,6 +84,7 @@ function toHostAgent(snapshot: Snapshot): HostAgent {
     parentAgentId: labels[PARENT_LABEL] ?? null,
     archivedAt: snapshot.archivedAt ?? null,
     lastUserMessageAt: snapshot.lastUserMessageAt ?? null,
+    lastUsage: snapshot.lastUsage ?? null,
   };
 }
 

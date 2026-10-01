@@ -43,6 +43,8 @@ export interface GroupRecord {
   ledger: Ledger;
   held: HeldMessage[];
   events: EventRecord[];
+  /** Timeline tool-call and message keys already counted (slice 5); timelines can repeat turns. */
+  seen: string[];
 }
 
 export function emptyLedger(): Ledger {
@@ -77,6 +79,7 @@ export class SlpStore {
       record.group.ledger ??= emptyLedger();
       record.group.held ??= [];
       record.group.events ??= [];
+      record.group.seen ??= [];
       for (const assignment of record.group.ledger.assignments) assignment.briefDeliveredAt ??= assignment.createdAt;
     }
   }

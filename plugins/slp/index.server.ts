@@ -3,12 +3,13 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import type { PaseoApi } from "@getpaseo/client";
 import type { PluginServerContext } from "@getpaseo/plugin/server";
-import { getLedger, getWorkspace, humanDecide, listWorkspaceModes, setWorkspaceMode } from "./shared/contracts";
+import { getLedger, getReport, getWorkspace, humanDecide, listWorkspaceModes, setWorkspaceMode } from "./shared/contracts";
 import { slpSettings } from "./shared/settings";
 import { startMcpHttp, type McpHttpHandle } from "./server/mcp-http";
 import { Coordination } from "./server/coordination";
 import { createPaseoHost, type PaseoHost } from "./server/paseo-host";
 import { WorkspaceQueue } from "./server/queue";
+import { buildReport, renderReport } from "./server/report";
 import { lastAssistantText } from "./server/timeline";
 import { memberTools } from "./server/tools";
 import { MCP_SERVER_NAME, SlpError, SlpService } from "./server/slp-service";
@@ -93,7 +94,13 @@ export default function contribute(server: PluginServerContext) {
   );
   server.handle(listWorkspaceModes, () => ({ workspaces: service.listModes() }));
   server.handle(getLedger, ({ workspaceId }) => coordination.ledgerView(workspaceId));
-  server.handle(humanDecide, ({ workspaceId, ...input }, { paseo }) =>
+  server.handle(getReport, ({ workspaceId }) => {
+    const group = deps.store.get(workspaceId)?.group;
+    if (!group) return { report: null, markdown: null };
+    const report = buildReport(group);
+    return { report, markdown: renderReport(report) };
+  });
+  server.handle(humanDecide,({ workspaceId, ...input }, { paseo }) =>
     userFacing(() => coordination.humanDecide(bind(paseo), workspaceId, input)),
   );
 
@@ -108,8 +115,10 @@ export default function contribute(server: PluginServerContext) {
         workspaceId: agent.workspaceId,
         outcome,
         lastReply: lastAssistantText(timeline),
+        timeline,
       }),
     ),
+    server.on("agent.created", ({ agent }, { paseo }) => coordination.onAgentCreated(bind(paseo), agent)),
     server.on("workspace.archived", ({ workspace }) => service.onWorkspaceArchived(workspace.id)),
   ];
 

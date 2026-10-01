@@ -6,15 +6,18 @@ import { ScrollView } from "@getpaseo/plugin/client/react-native";
 import { SettingsAction, SettingsRow, SettingsSection, SettingsSwitch } from "@getpaseo/plugin/client/ui";
 import {
   getLedger,
+  getReport,
   getWorkspace,
   setWorkspaceMode,
   type Ledger,
   type MemberView,
   type Mode,
+  type Report,
   type WorkspaceView,
 } from "../shared/contracts";
 import { headerModeSink } from "./header-buttons";
 import { LedgerSections } from "./ledger-sections";
+import { ProcessSection } from "./process-section";
 
 const REFRESH_MS = 5000;
 
@@ -36,9 +39,11 @@ function holding(member: MemberView, ledger: Ledger | null): string | null {
 export function SlpPanel({ workspaceId, navigation, theme }: PluginWorkspacePanelProps) {
   const fetchView = useRpc(getWorkspace);
   const fetchLedger = useRpc(getLedger);
+  const fetchReport = useRpc(getReport);
   const sendMode = useRpc(setWorkspaceMode);
   const [view, setView] = useState<WorkspaceView | null>(null);
   const [ledger, setLedger] = useState<Ledger | null>(null);
+  const [report, setReport] = useState<{ report: Report; markdown: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -52,13 +57,18 @@ export function SlpPanel({ workspaceId, navigation, theme }: PluginWorkspacePane
 
   const refresh = useCallback(async () => {
     try {
-      const [nextView, nextLedger] = await Promise.all([fetchView({ workspaceId }), fetchLedger({ workspaceId })]);
+      const [nextView, nextLedger, nextReport] = await Promise.all([
+        fetchView({ workspaceId }),
+        fetchLedger({ workspaceId }),
+        fetchReport({ workspaceId }),
+      ]);
       apply(nextView);
       setLedger(nextLedger.groupId ? nextLedger.ledger : null);
+      setReport(nextReport.report && nextReport.markdown ? { report: nextReport.report, markdown: nextReport.markdown } : null);
     } catch (cause) {
       setError(String(cause instanceof Error ? cause.message : cause));
     }
-  }, [apply, fetchView, fetchLedger, workspaceId]);
+  }, [apply, fetchView, fetchLedger, fetchReport, workspaceId]);
 
   useEffect(() => {
     void refresh();
@@ -137,6 +147,8 @@ export function SlpPanel({ workspaceId, navigation, theme }: PluginWorkspacePane
           onChanged={() => void refresh()}
         />
       ) : null}
+
+      {view.group && report ? <ProcessSection report={report.report} markdown={report.markdown} /> : null}
 
       {view.group ? null : (
         <Text style={muted}>

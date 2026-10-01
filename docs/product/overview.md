@@ -1,6 +1,6 @@
 # SLP For Paseo: Product Overview
 
-Status: partly implemented (slices 1-4 of the active plan). The approach is
+Status: partly implemented (slices 1-5 of the active plan). The approach is
 accepted in decisions
 [0001](../decisions/0001-slp-as-a-paseo-plugin.md),
 [0002](../decisions/0002-slp-toggle-instead-of-modes.md),
@@ -145,7 +145,7 @@ mechanism.
 ## Proof
 
 Live runs on stock Paseo `v0.10.2`, recorded in the
-[active plan](../plans/active/slp-plugin-v0.1.md) slice 3 and slice 4 results:
+[active plan](../plans/active/slp-plugin-v0.1.md) slice 3, 4, and 5 results:
 
 - Behaviors 1, 5, 6, 8, and 9: a Human-reserved choice went through the
   Supervisor and back with source "human". A reopen finding with evidence
@@ -157,8 +157,12 @@ Live runs on stock Paseo `v0.10.2`, recorded in the
 - Behavior 9 (slice 4): a Peer recorded a wrong finding after misreading a
   file's encoding. The Lead checked the real file, kept the plan in a
   recorded decision, and asked for rework.
-- Behavior 10: the ledger keeps an append-only event list. Reporting is
-  slice 5.
+- Behavior 10 (slice 5): the panel's "Process" section reports each
+  group's process data, and can copy it as Markdown. It covers Human
+  interventions, escalations, findings, acceptance, message rounds by
+  pair, convention breaks (built-in sends, agents created outside the
+  delegate tool), and estimated tokens and cost per role. A live run
+  checked the counts against the ledger and each agent's reported cost.
 - Behavior 7 (Human visibility without transcripts), slice 4 results: the
   SLP panel shows each assignment's brief with constraint sources, the
   Lead's current choice marked "not binding", findings, pending and settled

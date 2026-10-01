@@ -4,7 +4,8 @@ Date: 2026-10-01
 
 ## Status
 
-Active. Slices 0-4 are complete; slice 5 (telemetry) is next.
+Active. Slices 0-5 are complete; slice 6 (evaluation and field run) is
+next.
 - Slice 1 ran probes 2 and 4 on both Claude and Codex.
 - Decision 0004 settled the messaging question, and decision 0005 replaced
   the free toggle.
@@ -166,6 +167,34 @@ with commands and observed results.
 5. **Telemetry.** Counts of escalations, reopens, acceptance outcomes,
    message rounds, busy-send violations, agents created outside the delegate
    tool, and Human interventions, with a readable per-group report.
+   - Human's slice 5 choices (2026-10-01):
+     - the report is a "Process" section of the SLP panel, with a "Copy"
+       action for a Markdown version, plus a `slp.report.get` RPC. Nothing
+       is written into the project;
+     - a Human intervention is a message Human sends straight to the Lead
+       or a Peer, bypassing the Supervisor. Human decisions and Human
+       messages to the Supervisor are reported on their own lines, not as
+       interventions;
+     - tokens and cost per role are included and labeled as estimates.
+   - Agent definitions:
+     - escalations: pending decisions raised, then how each ended
+       (answered by Human from the panel or through the Supervisor,
+       withdrawn, still pending);
+     - message rounds: `slp_send` messages per sender and recipient role,
+       with delivery kind (after-turn delivered, held, steer). Plugin
+       notices and handbacks are counted separately;
+     - busy-send violations: a member's call to Paseo's built-in
+       `send_agent_prompt`, which replaces a busy recipient's turn
+       (decision 0004). Plugin steers are allowed and counted separately;
+     - agents created outside the delegate tool: an agent created in an SLP
+       workspace without the group's label, and a member's call to the
+       built-in `create_agent`;
+     - Human messages: user messages in a member's turn timeline that the
+       plugin did not send. Tool calls and messages are deduplicated by id,
+       because a timeline can repeat earlier turns;
+     - tokens: the agent's `lastUsage` after each completed turn, summed
+       per role. Claude reports per-turn usage and cost; Codex reports the
+       last turn's tokens and no cost.
 6. **Evaluation.**
    - Run the deferred premise-narrowing brief experiment, recorded in
      `repository-harness`
@@ -204,7 +233,8 @@ with commands and observed results.
 - [x] Slice 4: Human panel: ledger views and Human decisions to the
   Supervisor. Proved live on `v0.10.2` in the web app and through RPCs (see
   Slice 4 Results).
-- [ ] Slice 5: telemetry.
+- [x] Slice 5: telemetry: the process report in the panel and through
+  `slp.report.get`. Proved live on `v0.10.2` (see Slice 5 Results).
 - [ ] Slice 6: brief-format evaluation and field run.
 
 ## Decisions
@@ -275,6 +305,99 @@ with commands and observed results.
   - The plan's rejection of Seatworks "permission bypass" covered its
     deny-list and config-directory mechanism. It does not cover using a
     provider's own permission mode.
+
+## Slice 5 Results
+
+Implementation:
+- `Coordination.observeTurn` runs at each member's `agent.turn_ended` and
+  records:
+  - `builtin-send` and `builtin-create` events, for built-in Paseo tool
+    calls (Claude `mcp__paseo__*`, Codex `paseo.*`). A send also records its
+    target and a hash of its text;
+  - `human-message`, for a user message the plugin did not send (it starts
+    with no SLP intro and no `<paseo-system>` envelope);
+  - `usage` (the agent's `lastUsage`), after a completed turn.
+  Each tool call and message is counted once, keyed by `group.seen`.
+- An `agent.created` hook records `outside-agent` for an agent created in a
+  running SLP workspace without the group's label.
+- `server/report.ts` builds the report from events and the ledger, and
+  renders Markdown.
+  - A "Human" message whose recipient and text hash match a built-in send
+    is dropped, whichever turn ended first.
+  - Cost counts the growth of each agent's cumulative session cost; a drop
+    counts as a new session.
+- `slp.report.get` RPC. The panel's "Process" section shows the numbers and
+  a "Copy" action that copies the Markdown.
+
+Focused proof:
+- `tsc` passes.
+- `vitest` passes 43 tests, including 4 telemetry tests:
+  - built-in sends and creates, Human messages, and usage are each
+    counted once across a repeated timeline; plugin prompts are ignored;
+    a canceled turn reports no usage;
+  - built-in sends and Paseo notices are not counted as Human messages;
+    cumulative cost is counted once;
+  - unlabeled agents are counted, and the group's own Peers are not;
+  - a full report: escalations, Human decisions, interventions, findings,
+    acceptance, messages, and usage, plus the Markdown.
+
+Live proof, on stock `v0.10.2`, isolated home, port 6768. Workspace
+`slp-s5-ws1` (`wks_9a92803e12f98076`). The Supervisor was
+`claude-opus-5-5`, the Lead `claude-sonnet-5-5`, and the Peer the Lead
+chose was `claude/claude-haiku-4-5` (mode `auto`).
+- Human sent the goal to the Supervisor, then two messages straight to the
+  Lead. Human settled one pending decision from the panel.
+- To exercise the detectors on purpose:
+  - Human asked the Lead to call the built-in `send_agent_prompt` twice;
+  - an agent was created in the workspace with `paseo run --workspace`.
+- **Bugs found live and fixed:**
+  1. Claude's `totalCostUsd` is cumulative per session (Supervisor:
+     0.188, 0.238, 0.286, ... 0.409). The first build summed it. Cost now
+     counts the growth.
+  2. The Lead's first built-in send reached the Supervisor as a plain user
+     message, and was counted as a Human message.
+     - The raw timeline shows `detail.input = {agentId, prompt}`, so the
+       send now records its target and a text hash.
+     - The report drops the matching message.
+     - Paseo's finish notifications (`<paseo-system>`) are skipped too.
+  - After `plugin reload slp`, the second send (`textKey 3c30…`) was
+    matched and not counted. The first send, recorded before the fix, has
+    no key, so this group still counts it as a Supervisor message.
+- Final report, in the panel and from `slp.report.get`:
+  - Human interventions 2 (lead 2); messages to the Supervisor 2 (one is
+    the pre-fix send); 1 decision from the panel;
+  - escalations raised 1, revised 1, answered from the panel 1;
+  - 1 assignment, 2 handbacks, accepted;
+  - 15 member messages by pair; delivery 8 at once, 12 held, 0 steered;
+    3 plugin notices;
+  - convention breaks 3: 2 built-in sends (lead) and 1 outside agent;
+  - tokens and cost per role (estimates):
+    - Supervisor: 8 turns, $0.4087;
+    - Lead: 12 turns, $0.5170;
+    - Peer: 5 turns, $0.3440.
+    Each cost equals that agent's last reported cumulative cost.
+- "Copy" showed the toast "Process report copied as Markdown."
+- Archiving the workspace set the report's `endedAt` and archived all its
+  agents, including the outside one.
+- Cleanup: the browser was closed, Metro and the daemon stopped, and 6767
+  was untouched.
+
+Observation for Human (no change made):
+- **The Haiku Peer in `auto` asked permission for every edit.** The Lead
+  picked `claude-haiku-4-5` from the allowlist, with the Claude Peer mode
+  `auto`. As slice 1 found, Haiku in `auto` still prompts. The Peer waited
+  on 18 permission prompts, which this run approved by hand.
+- The Peer defaults are Human's choices (slice 3). Possible fixes:
+  - drop Haiku from the Peer models;
+  - use `bypassPermissions` for Claude Peers;
+  - set the mode per model rather than per provider.
+
+Not covered live in slice 5:
+- a built-in `create_agent` call by a member (unit-tested);
+- a finish notification with `notifyOnFinish` left on (the Lead's log
+  shows none arrived). The `<paseo-system>` skip is unit-tested;
+- findings and steers in a report (both 0 in this run; unit-tested);
+- Codex usage live (no Codex member in this run).
 
 ## Slice 4 Results
 
