@@ -1,108 +1,109 @@
-# 0001 SLP As A Paseo Plugin
+# 0001 SLP As A Coordination Plugin On Paseo Primitives
 
 Date: 2026-10-01
 
 ## Status
 
-Proposed. Awaiting Human acceptance. Nothing beyond a no-op plugin skeleton
-may be built on it until then.
+Accepted by Human on 2026-10-01 ("follow the proposal, true to the existing
+context").
 
 ## Context
 
-SLP currently exists as a fork, `ledo9124/paseo-slp` (branch
-`sync/upstream-2026-09-14`, HEAD `9c89de81a`). The fork carries about 21,000
-changed lines against upstream Paseo across 207 files. These include about
-4,800 lines of daemon orchestration code, about 1,500 lines of edits to core
-server and protocol files, about 3,200 lines of app UI and integration, and a
-separate product identity (`paseo-slp` executables, home, port, desktop app
-identity). Every upstream release must be merged into the fork.
+SLP is a way of organizing agent work: roles defined by responsibility,
+authority, and information flow, not personas. Its source articles describe it
+as an organization built on the room, session, and messaging primitives Paseo
+already provides, not as a replacement runtime. They also recommend starting
+simple, using the method on real work, and adjusting. Better-SLP treats
+removing a mechanism as a valid improvement.
 
-The Human wants SLP delivered as a plugin for Paseo instead.
+The earlier `paseo-slp` fork is not a basis for this decision.
 
-The fork's own `docs/slp/architecture.md` rejects "a plugin subprocess as the
-lifecycle owner". Its gates run synchronously inside daemon lanes:
-- non-cancelling turn admission;
-- refusing turns to retired generations;
-- an execution policy pushed into provider sessions;
-- per-caller filtering of Paseo MCP tools;
-- interception of `create_agent`.
+Paseo upstream (`getpaseo/paseo` main at `d30e99c85`, plugin SDK 0.10.2)
+offers the following, verified in source.
 
-Paseo plugins run in a separate subprocess with asynchronous hooks.
+Agents already have Paseo tools:
+- `create_agent`, which creates the caller's subagent and can notify the
+  caller when it finishes;
+- `send_agent_prompt`, `get_agent_status`, and `list_agents`;
+- `cancel_agent`, `archive_agent`, and `update_agent`.
 
-The Paseo 0.10.2 plugin API (`@getpaseo/plugin`) does provide:
-- `agents.create` with `systemPrompt`, `labels`, `mcpServers`, `toolPolicy`,
-  and provider options;
-- `send`, `run`, `waitForFinish`, and timeline access on agent handles;
-- `agent.turn_ended` events carrying the timeline;
-- typed RPCs, host settings, an unsandboxed Node subprocess, and client
-  panels, header buttons, settings screens, and timeline rows.
+A prompt sent to a busy agent either steers its running turn or replaces it.
+There is no queue.
 
-It does not provide:
-- cancel, close, or label and prompt updates on a live agent;
-- a hook on sends or tool calls;
-- per-agent hiding of built-in tools, except through the fork-only per-agent
-  `paseoTools` narrowing at `ledo9124/paseo` branch `per-agent-paseo-tools`;
-- durable event delivery;
-- composer takeover.
+Plugins get:
+- `agents.create` with `systemPrompt`, `labels`, and `mcpServers`, and their
+  own Node subprocess that can host an MCP server;
+- `agent.created`, which carries `parentAgentId`, and `agent.turn_ended`,
+  which carries the timeline;
+- RPCs, settings, client panels, and storage.
 
-## Decision (proposed)
+Plugins cannot:
+- change an agent's system prompt after creation;
+- tell from `before("agent.create")` who is creating an agent;
+- restrict Paseo tools per agent. Upstream has only a global switch and
+  per-provider policy.
 
-Build SLP v0.1 as a pure plugin (option 1), with these rules:
+## Decision
 
-1. The plugin server process owns group state, membership, mailboxes, and
-   role instruction composition. State is stored as plugin-owned files and
-   reconciled from `agents.list` and timelines on startup.
-2. The plugin creates every member through `agents.create`. That call sets
-   the composed role system prompt, SLP labels, and a plugin-hosted HTTP MCP
-   server. The MCP server's URL carries a per-member secret, so caller
-   identity is issued by the plugin, not self-asserted.
-3. Members coordinate only through plugin MCP tools, for example a Lead-only
-   delegate tool and a routed send tool. Built-in `create_agent` and
-   `send_agent_prompt` are narrowed away per member through `paseoTools`.
-4. A Peer's handback is its last message at `agent.turn_ended`. The plugin
-   delivers mail only at a recipient's turn boundary, never interrupting a
-   running turn. It accepts a small race window, documented as a known
-   limitation.
-5. Role enforcement is policy, not a trust boundary.
-6. v0.1 leaves out these fork features: handoff and receive-only preparation,
-   destructive-operation gates, composer takeover, and fork branding.
+Build SLP as a coordination plugin in two layers. Messaging stays on Paseo's
+built-in tools.
+
+1. **Conventions:** role instructions for Supervisor, Lead, and Peer, and a
+   brief structure. The brief separates the goal, binding constraints with
+   their source, the current design choice, open uncertainties, and the
+   evidence that would reopen the direction.
+2. **Coordination service:** the plugin server process provides:
+   - group lifecycle;
+   - a Lead-only delegate tool that creates each Peer with its role
+     instructions;
+   - a coordination ledger exposed as plugin MCP tools, recording ownership
+     claims, briefs, findings, decisions with their source, and acceptance;
+   - a client panel where Human sees the ledger and records decisions;
+   - process telemetry.
+3. **No runtime enforcement in v0.1.** Ownership and routing rules are
+   conventions. Violations are made visible through the ledger and
+   `parentAgentId`, not blocked.
+4. **Enforcement needs evidence.** A rule is promoted to enforcement only
+   when telemetry or an evaluation shows that conventions fail and prompts
+   cannot fix it. Promotion needs a new decision.
 
 ## Alternatives Considered
 
-1. **Pure plugin (proposed).**
-   - No fork maintenance; installs into stock Paseo.
-   - Depends on the `paseoTools` patch until it lands upstream.
-   - Weaker atomicity than the fork.
-2. **Plugin plus a small upstream core seam.** Upstream PRs for the hooks a
-   plugin cannot replicate: non-cancelling send, a turn-admission veto, and
-   per-agent tool narrowing.
-   - Stronger guarantees.
-   - Depends on upstream review, and the patches must be maintained until
-     they merge.
-   - Can follow option 1 once evidence shows which hooks matter.
-3. **Keep the fork.**
-   - Strongest guarantees and the most complete feature set.
-   - Highest maintenance cost, and the Human chose to move away from it.
+1. **Conventions only:** role prompts, brief template, and skills.
+   - Cheapest, and uses only upstream features.
+   - Fails two requirements: Human visibility and steering, and the process
+     data Better-SLP needs.
+   - Kept as the first layer of the chosen approach.
+2. **Runtime-controlled routing:** plugin-owned mailboxes, disabled built-in
+   tools, and identity gating.
+   - Needs per-agent tool restriction, which upstream lacks, and still races
+     with built-in sends.
+   - Contradicts the thin-layer intent.
+   - Revisit only on evidence.
 
 ## Consequences
 
 Positive:
 
-- SLP follows Paseo releases through the plugin API instead of fork merges.
-- It matches the SLP principle of starting with prompts and simple
-  boundaries, and moving behavior into runtime only on evidence.
+- Runs on stock Paseo with no fork patches, and follows upstream through the
+  plugin API.
+- Human sees which brief each agent follows, which constraints came from
+  Human, which choices an agent made, and what is unresolved.
 
 Tradeoffs:
 
-- Mail delivery checks idleness, then sends, so a turn may start in between.
-- Members can still use provider-native subagents unless provider settings
-  or permission answers stop them.
-- Events missed while the plugin is down must be reconciled.
-- Plugin timeline rows do not survive a daemon restart.
-- The per-agent `paseoTools` dependency is fork-only until upstreamed.
+- Rules are policy, not a trust boundary. An agent can bypass them with
+  built-in tools; the ledger shows that but does not prevent it.
+- Sending to a busy agent steers or replaces its turn. The convention is to
+  message a Peer after its handback; telemetry measures violations.
+- Lifecycle events are best-effort, so the plugin reconciles state on
+  startup.
 
 ## Follow-Up
 
-- Human: accept, revise, or reject this proposal.
-- If it is accepted, verify the `paseoTools` dependency and the HTTP MCP route
-  in slice 1 of the active plan before building on them.
+- Slice 1 of `docs/plans/active/slp-plugin-v0.1.md` proves four things:
+  - the plugin-hosted MCP route;
+  - Peer creation with role instructions;
+  - handback delivery;
+  - busy-send behavior on each target provider.
+- Revisit this decision if any of those fail.

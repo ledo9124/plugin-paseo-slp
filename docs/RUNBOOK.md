@@ -7,9 +7,16 @@ must prove them here before any result relies on them.
 
 ## Prerequisites And Ownership
 
-- A Paseo source checkout at `C:\code\my-project\paseo`, on branch
-  `per-agent-paseo-tools` (Paseo 0.10.2 plus the per-agent `paseoTools`
-  patch). Run `npm run build:server-deps` there first.
+- A Paseo source checkout at `C:\code\my-project\paseo`. Run
+  `npm run build:server-deps` there first.
+  - This plugin targets stock Paseo 0.10.2 or later and must not rely on fork
+    patches.
+  - The checkout is shared with the sibling `paseo-plugin` repository and may
+    sit on its fork branch `per-agent-paseo-tools`.
+  - A result obtained on that branch proves behavior on stock Paseo only if
+    it does not touch the patched area. Run each slice's acceptance proof at
+    least once on an upstream checkout (`origin/main` or a release tag) in a
+    separate worktree.
 - Two daemons can exist on this machine:
   - **6767:** the installed Paseo app, home `~\.paseo`. It is not owned by
     this workflow. Never stop or restart it, and never install this plugin

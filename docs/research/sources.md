@@ -3,7 +3,7 @@
 Research notes, not authority. Accepted product behavior lives in
 `docs/product/`; accepted choices live in `docs/decisions/`.
 
-## Method Sources
+## Method Sources (Decision Basis)
 
 - Vũ Hà Lâm, "Bàn về multi-agent orchestration và mô hình SLP" (2026-09-27),
   <https://vhlam.com/article/agent-orchestration-multi-agent-slp>. Origin of
@@ -13,25 +13,31 @@ Research notes, not authority. Accepted product behavior lives in
   learning the domain before building, avoidable intermediate phases, and
   plans that prescribe implementation instead of contracts.
 - A supplementary summary the Human provided on 2026-10-01. It frames the
-  core failure as lossy decomposition: user goal → main agent's
-  interpretation → chosen solution → subtask scoped around that solution →
-  the next subtask treating the solution as a requirement. It also describes
-  Better-SLP, which uses process telemetry to keep, revise, or remove
-  orchestration mechanisms.
-- The Human's SLP definition and fork documents:
-  `C:/code/my-project/paseo-slp/docs/slp/` (`core-definition-v0.1.md`,
-  `roles/*`, `architecture.md`, `evidence.md`, `implementation-plan.md`) and
-  the Lead-only skill `skills-slp/slp-cross-review/SKILL.md`, at fork HEAD
-  `9c89de81a`.
+  target failure as lossy decomposition, describes the
+  finding-to-verification chain, and describes Better-SLP, which uses
+  process telemetry to keep, revise, or remove mechanisms.
+
+## Platform Facts (Decision Basis)
+
+Paseo upstream, `getpaseo/paseo` main at `d30e99c85`, and plugin SDK 0.10.2,
+read from source on 2026-10-01. The facts are summarized in decision 0001 and
+`docs/ARCHITECTURE.md`.
+
+## Not A Decision Basis
+
+The earlier fork `ledo9124/paseo-slp` (local `C:/code/my-project/paseo-slp`)
+implemented SLP inside Paseo. By Human direction on 2026-10-01, its design,
+role texts, and definitions do not decide anything for this plugin. It may
+be consulted later as an example of failure modes to test, but only after a
+requirement in `docs/product/overview.md` calls for that test.
 
 ## Prior Analysis (2026-10-01)
 
 - **Repository Harness compatibility.** Harness provides repository truth,
   durable memory, and authority and proof boundaries. SLP provides runtime
   coordination. They do not conflict if:
-  - SLP room state stays in Paseo or this plugin;
-  - durable results go to the consumer's single active plan and decisions;
-  - one writer owns a plan;
+  - SLP coordination state stays in this plugin;
+  - lasting decisions go to the consumer project's records (decision 0003);
   - agent messages are never treated as authority for new externally
     observable policy.
 - **Harness experiment "product-outcomes"** (`repository-harness`,
@@ -40,17 +46,6 @@ Research notes, not authority. Accepted product behavior lives in
     unflagged product behavior (0/5 in each of two scenarios).
   - That measured contradiction detection, not premise narrowing across
     delegation, so it is not evidence about SLP's target failure.
-- **Deferred brief-format experiment.** Scenarios N and K, recorded in that
-  same record, test premise narrowing through narrowed briefs. They are slice
-  6 of the active plan.
-- **Fork field run** (`evidence.md`, about 8 hours, supervised, Claude).
-  Findings fixed in the fork:
-  - cancelled Peer turns were reported as returned;
-  - delegated agents raised attention flags;
-  - retired generations could be revived;
-  - interactive questions reached members;
-  - archiving the last member did not end the group;
-  - mail waits were not logged;
-  - reports piled up.
-
-  These are candidate regression checks for the plugin.
+- **Deferred brief-format experiment.** Scenarios N and K, in that same
+  record, test premise narrowing through narrowed briefs. They are slice 6 of
+  the active plan.

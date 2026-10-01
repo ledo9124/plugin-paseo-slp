@@ -1,6 +1,6 @@
 {
   "id": "slp",
-  "description": "Supervisor-Lead-Peer multi-agent orchestration (early setup; no behavior yet).",
+  "description": "Supervisor-Lead-Peer coordination for Paseo agents (early setup; no behavior yet).",
   "requirements": {
     "paseo": ">=0.10.2"
   }

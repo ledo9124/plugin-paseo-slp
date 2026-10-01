@@ -9,8 +9,8 @@ evidence, while ownership, integration, and decision propagation stay
 structured.
 
 Status: early setup. Only a no-op plugin skeleton exists. The approach is
-proposed in `docs/decisions/0001-slp-as-a-paseo-plugin.md` and awaits
-acceptance.
+accepted in `docs/decisions/0001-0003`. SLP is a per-workspace toggle: when it
+is off, agents behave normally.
 
 - Product behavior: `docs/product/overview.md`
 - Architecture and plugin capability map: `docs/ARCHITECTURE.md`

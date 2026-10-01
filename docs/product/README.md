@@ -10,8 +10,9 @@ files after actual product domains, such as `overview.md`, `billing.md`,
 
 ## Current Product Contract
 
-- [overview.md](overview.md): SLP for Paseo. Roles, modes, required behavior,
-  and non-goals. Not implemented; scope proposed in decision 0001.
+- [overview.md](overview.md): SLP for Paseo. The toggle, roles, required
+  behavior, non-goals, and deferred items. Not implemented; approach accepted
+  in decisions 0001-0003.
 
 ## Update Rule
 

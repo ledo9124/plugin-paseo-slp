@@ -30,5 +30,5 @@ decision into `docs/decisions/`; keep task-local choices in the plan.
 
 ## Active Plans
 
-- [SLP plugin v0.1](active/slp-plugin-v0.1.md): slice 0 done; blocked on
-  Human acceptance of decision 0001.
+- [SLP plugin v0.1](active/slp-plugin-v0.1.md): slice 0 done; slice 1
+  (platform probes on stock Paseo) next.

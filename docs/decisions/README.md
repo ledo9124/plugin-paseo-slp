@@ -11,8 +11,14 @@ documents here as real choices are accepted, then index them in this file.
 
 ## Index
 
-- [0001 SLP As A Paseo Plugin](0001-slp-as-a-paseo-plugin.md): **Proposed**,
-  awaiting Human acceptance. A pure plugin on the Paseo plugin API instead of
-  the `paseo-slp` fork. Rests on per-agent `paseoTools` narrowing and
-  plugin-hosted HTTP MCP; revisit if slice 1 of the v0.1 plan disproves
-  either.
+- [0001 SLP As A Coordination Plugin On Paseo Primitives](0001-slp-as-a-paseo-plugin.md):
+  Accepted. Conventions plus a plugin coordination service, using Paseo's
+  built-in agent messaging; no runtime enforcement without evidence. Rests on
+  plugin SDK 0.10.2 and upstream main `d30e99c85`; re-check after a Paseo
+  upgrade or if slice 1 probes fail.
+- [0002 An SLP Toggle Instead Of Modes](0002-slp-toggle-instead-of-modes.md):
+  Accepted. SLP is off by default and toggled per workspace; when it is on, a
+  group always has a Supervisor and a Lead.
+- [0003 The Ledger Is Coordination State, Not Project Truth](0003-ledger-is-coordination-state-not-project-truth.md):
+  Accepted. Lasting decisions go to the consumer project's own records; agent
+  ledger entries are not Human authority.
