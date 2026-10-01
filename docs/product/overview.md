@@ -1,6 +1,7 @@
 # SLP For Paseo: Product Overview
 
-Status: not implemented. The approach is accepted in decisions
+Status: partly implemented (slices 1-3 of the active plan). The approach is
+accepted in decisions
 [0001](../decisions/0001-slp-as-a-paseo-plugin.md),
 [0002](../decisions/0002-slp-toggle-instead-of-modes.md),
 [0003](../decisions/0003-ledger-is-coordination-state-not-project-truth.md),
@@ -143,4 +144,19 @@ mechanism.
 
 ## Proof
 
-None yet. See the [active plan](../plans/active/slp-plugin-v0.1.md).
+Live runs on stock Paseo `v0.10.2`, recorded in the
+[active plan](../plans/active/slp-plugin-v0.1.md) slice 3 results:
+
+- Behaviors 1, 5, 6, 8, and 9: a Human-reserved choice went through the
+  Supervisor and back with source "human". A reopen finding with evidence
+  led to a Lead decision, propagation, changed work, and re-run tests.
+  Briefs kept Human's constraints apart from the Lead's choices. The Lead
+  re-checked results before accepting, and once asked for rework.
+- Behavior 4 (observed once): a reviewing Peer recorded no challenge when
+  its evidence did not support one.
+- Behavior 10: the ledger keeps an append-only event list. Reporting is
+  slice 5.
+- Behavior 7 (Human visibility without transcripts): the ledger is
+  readable through an RPC; the Human panel is slice 4.
+- Behaviors 2 and 3: each assignment has one Peer and a recorded scope. No
+  live test yet challenged a scope edit.

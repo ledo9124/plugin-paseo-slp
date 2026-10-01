@@ -4,7 +4,7 @@ Date: 2026-10-01
 
 ## Status
 
-Active. Slices 0-2 are complete; slice 3 is next.
+Active. Slices 0-3 are complete; slice 4 (Human panel) is next.
 - Slice 1 ran probes 2 and 4 on both Claude and Codex.
 - Decision 0004 settled the messaging question, and decision 0005 replaced
   the free toggle.
@@ -174,7 +174,9 @@ with commands and observed results.
   Claude; probes 2 and 4 also ran on Codex (`gpt-6-luna`). Results below.
 - [x] Slice 2: SLP mode, lock, and group start and end; panel, header button,
   and settings. Proved live on `v0.10.2` (see Slice 2 Results).
-- [ ] Slice 3: delegation, ledger, handback, reconciliation.
+- [x] Slice 3: messaging, delegation, ledger, handback, acceptance, findings,
+  decisions, and reconciliation. Proved live on `v0.10.2` with Claude members
+  and a Codex Peer (see Slice 3 Results).
 - [ ] Slice 4: Human panel.
 - [ ] Slice 5: telemetry.
 - [ ] Slice 6: brief-format evaluation and field run.
@@ -248,14 +250,82 @@ with commands and observed results.
     deny-list and config-directory mechanism. It does not cover using a
     provider's own permission mode.
 
-## Slice 3 Progress
+## Slice 3 Results
 
-- [x] Human choices and the tool list (above).
-- [ ] Server: ledger, delegate, send and held delivery, handback,
-  acceptance, findings, decisions, reconciliation, role instructions.
-- [ ] Live proof on `v0.10.2`: a Supervisor-to-Lead brief, a delegated
-  Peer, handback to a busy Lead, acceptance, and a finding through the full
-  chain.
+Environment: same as slice 2. The Supervisor was `claude-opus-5-5`
+(`auto`), the Lead `claude-sonnet-5-5` (`auto`), and the Peer the Lead chose
+was `codex/gpt-6-luna` (`full-access`). Workspace `slp-s3-ws4` held a small
+seeded project: `reports.json`, and `config.json` with `maxRows: 50`. Human
+spoke through `paseo send` to the Supervisor. The ledger and events were read
+from `slp.ledger.get` and the state file.
+
+Focused proof: `npm run typecheck` passes, and `npm test` passes 33 tests.
+`Coordination` against `FakePaseoHost` covers:
+- send, both delivery kinds, held batches, and refusing self or unknown
+  recipients;
+- delegate: Lead-only, the default model, mode per provider, the allowlist,
+  the cap, reassignment, and refusing a Peer with an open assignment;
+- handback held for a busy Lead;
+- accept: no acceptance before a handback, and rework;
+- canceled turns;
+- the finding, decision, and propagation chain; pending decisions for Human;
+  Human-only sources;
+- reconcile, and ended groups.
+
+**Trial 1** (goal "export.py with `export_csv`, stdlib only; streaming is a
+suggestion") took about a minute end to end:
+- The Supervisor briefed the Lead with `slp_send`.
+- The Lead called `slp_delegate`. Its brief listed "stdlib only (source:
+  Human)" as a constraint and put Human's streaming suggestion under
+  current choice, "not a requirement" (required behavior 6).
+- The Peer handed back, and the Lead re-read the code and re-ran the test
+  before `slp_accept` (behaviors 8 and 9).
+- Independent check: `python test_export.py` passed.
+
+**Trial 2** (a review of `export.py` against `config.json`, plus a call
+reserved for Human):
+- The Lead reassigned the same Peer (`reused: true`).
+- The Lead recorded the Human-reserved question as pending decision D1. The
+  Supervisor got it as a notice and put the options to Human.
+- A Lead message to the busy Supervisor was held, then delivered when the
+  Supervisor's turn ended (`held` → `held-delivered`).
+- The Peer found no evidence against streaming and recorded no finding; the
+  Lead accepted (behavior 4: no manufactured challenge).
+- The Supervisor flagged a cross-scope dependency on its own: streaming
+  rested on "input unbounded", which D1 decides.
+
+**Trial 3** (Human answers D1 with "hard cap, no partial file"):
+- The Supervisor settled D1 with `source: human`, and the Lead was told.
+- The Lead recorded reopen finding F1 with evidence, then decision D2
+  ("drop write-time streaming; read at most maxRows+1"). D2 resolved F1 and
+  was propagated to the Peer and the Supervisor.
+- A3 went to the same Peer, with constraint sources "Human (D1)", "Human",
+  and "Lead, derived from Human D1 wording".
+- The Lead asked for rework once, then accepted after re-running 4 tests.
+  This is the full chain of required behavior 5: finding, evidence, decision,
+  propagation, changed work, new evidence.
+- Independent check: `python -m unittest` ran 4 tests OK. 51 rows raised
+  `ValueError` with no file created; 50 rows wrote 51 lines.
+
+**Bug found and fixed.** A3's first "handback" was false. The Peer's turn
+answering the D2 notice ended while A3's brief was still held for it, and
+the plugin counted that turn as A3's handback. The Lead caught it and asked
+for rework.
+- Assignments now record `briefDeliveredAt`. A Peer turn counts as a
+  handback only after its brief, or a rework request, was delivered.
+- A regression test covers the race.
+- Older stored assignments get `briefDeliveredAt` from their creation time
+  when loaded. A plugin reload with the fix loaded this group's state.
+
+Ledger at the end: 3 assignments accepted, 1 finding (resolved), 2
+decisions (one Human, one agent), 0 held messages, 39 events. Archiving the
+workspace ended the group and archived the Supervisor, Lead, and Peer.
+
+Not covered live in slice 3:
+- reconciliation of a held message across a daemon restart (unit-tested);
+- the fixed handback race (unit-tested);
+- the Peer cap and allowlist refusals (unit-tested);
+- a Peer-recorded finding (here the Lead recorded the reopen).
 
 ## Slice 2 Results
 
