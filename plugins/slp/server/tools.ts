@@ -36,7 +36,10 @@ const DecideInput = z.object({
   source: z.enum(["human", "agent"]),
   status: z.enum(["pending", "settled"]),
   findingId: z.string().optional(),
-  projectRecord: z.string().optional(),
+  projectRecord: z
+    .string()
+    .optional()
+    .describe("Path of the project file that records this decision. Not its basis: the basis goes in text."),
   settles: z.string().optional(),
   notify: z.array(z.string()).optional(),
 });
