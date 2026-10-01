@@ -189,8 +189,11 @@ is a template choice (layer 4), not part of the roles.
     delegate a class of choices. The delegation is recorded as a Human
     decision with its scope. An agent decision inside it names the
     delegation. Anything outside it reaches Human through the Supervisor,
-    as a pending decision Human can see and answer, with options,
-    consequences, and a recommendation. Two errors count against this
+    as a question Human can see and answer, with options, consequences,
+    and a recommendation. After intake, the Supervisor asks it through its
+    provider's question tool, which the panel shows while it waits; without
+    such a tool, the pending decision in the panel is the question. A Lead
+    or Peer never asks Human directly. Two errors count against this
     behavior:
     - asking Human what records or a delegation already answer;
     - deciding silently what should have reached Human.
@@ -225,7 +228,6 @@ is a template choice (layer 4), not part of the roles.
 - Who writes a durable plan when the project keeps one.
 - Whether the ledger keeps earning its place.
 - The scope of decision 0006.
-- The Supervisor's use of native question tools.
 - When a Lead should delegate to Peers.
 
 ## Development Principle
@@ -279,5 +281,9 @@ Live runs on stock Paseo `v0.10.2`, recorded in the
   - **Native questions.** A native question asked on Human's explicit
     request showed in the ledger view and the report until it was
     answered.
-  - **Not yet shown:** a run with Human, and a choice that surfaces only
-    mid-run.
+  - **The Supervisor's question tool** (slice 7 Part F, agent-played
+    Human): all 3 questions to Human, at intake, mid-run, and for a push,
+    came through `AskUserQuestion` with a marked recommendation. The panel
+    showed them, and the report counted them as escalations. One was a
+    choice that surfaced only mid-run.
+  - **Not yet shown:** a run with Human.

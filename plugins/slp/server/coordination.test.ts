@@ -645,7 +645,21 @@ describe("native questions (slice 7, I2)", () => {
     expect(coordination.ledgerView("ws").nativeQuestions).toEqual([]);
     const report = buildReport(deps.store.get("ws")!.group!);
     expect(report.nativeQuestions).toEqual({ byRole: { supervisor: 1 }, unanswered: 0 });
-    expect(renderReport(report)).toContain("Questions to Human through a provider's own tool: 1 (supervisor 1); unanswered 0");
+    expect(renderReport(report)).toContain("Asked through the Supervisor's question tool: 1; unanswered native questions 0");
+    expect(renderReport(report)).toContain("Questions to Human through a provider's own tool, by the Lead or a Peer: 0 (none)");
+  });
+
+  it("counts a Lead's native question as a convention break, not as the Supervisor asking", async () => {
+    const { coordination, idOf, group } = await setup();
+    await coordination.onPermissionRequested({
+      agentId: idOf("lead"),
+      workspaceId: "ws",
+      request: askUserQuestion("perm-4"),
+    });
+
+    const markdown = renderReport(buildReport(group()));
+    expect(markdown).toContain("Asked through the Supervisor's question tool: 0; unanswered native questions 1");
+    expect(markdown).toContain("Questions to Human through a provider's own tool, by the Lead or a Peer: 1 (lead 1)");
   });
 
   it("ignores tool permissions, agents outside the group, and resolutions it never recorded", async () => {

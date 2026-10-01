@@ -15,7 +15,9 @@ Status: approach accepted in decisions 0001-0007.
   and `agent.created`, shown in the panel and through `slp.report.get`.
 - Slice 7 (in progress) records members' native questions to Human from
   `agent.permission_requested`, shows open ones in the panel, and counts
-  them in the report.
+  them in the report. After intake, the Supervisor asks Human through its
+  question tool; the report counts those under escalations, and a Lead's or
+  Peer's as convention breaks.
 
 Results are in the [active plan](plans/active/slp-plugin-v0.1.md).
 
@@ -94,7 +96,7 @@ Read from source on `getpaseo/paseo` main at `d30e99c85`, and checked at the
 | Ledger and Human steering | Plugin MCP tools for agents; RPCs and a panel for Human; plugin-owned files | The ledger records each assignment and role with `agentId` as its current occupant, not as its identity. The plugin has no Paseo API at startup, only inside hooks and RPCs, so reconciliation from files, labels, and `agents.list` runs at the first hook or RPC |
 | Agents created outside the delegate tool | `agent.created` in a running SLP workspace for an agent without the group label; built-in `create_agent` calls in member timelines | Slice 5, proved live for `agent.created`: visible in the report, not blocked |
 | Process telemetry (slice 5) | At each member `agent.turn_ended`: tool calls named `*send_agent_prompt` / `*create_agent` (with `detail.input` target and text), user messages without an SLP intro or `<paseo-system>` envelope (Human's), and `lastUsage` after completed turns. Deduplicated by call and message id. `slp.report.get` builds the report from events and the ledger | Slice 5, proved live. A built-in send reaches its recipient as a plain user message; the report matches it by target and text hash. Claude's `totalCostUsd` is cumulative per session; Codex reports last-turn tokens and no cost |
-| Native questions to Human (slice 7, I2) | `agent.permission_requested` with `request.kind: "question"` from a group member records a `native-question` event (role, request id, question text from Claude's `AskUserQuestion` `questions`). `agent.permission_resolved` with the same id records `native-question-resolved`. `slp.ledger.get` returns the open ones; the report counts them per role | Observe only; nothing is denied (0001). Read from `v0.10.2` source: the Claude provider maps `AskUserQuestion` to kind `question`, and the plugin lifecycle emits both events. Not yet observed live |
+| Native questions to Human (slice 7, I2) | `agent.permission_requested` with `request.kind: "question"` from a group member records a `native-question` event (role, request id, question text from Claude's `AskUserQuestion` `questions`). `agent.permission_resolved` with the same id records `native-question-resolved`. `slp.ledger.get` returns the open ones; the report counts the Supervisor's under escalations and the Lead's or a Peer's as convention breaks | Observe only; nothing is denied (0001). Observed live in slice 7 Part A: the Claude provider maps `AskUserQuestion` to kind `question`, and the plugin lifecycle emits both events |
 | Per-workspace SLP mode (0005) | Plugin state per workspace. The lock comes at the first `agent.turn_started` in the workspace, with a fallback to `lastUserMessageAt` and to agents SLP did not create. Group end at `workspace.archived` | Slice 2, proved live. Archiving a workspace archives its agents (`workspace-archive-service.ts`) |
 | Human controls | Client `addWorkspacePanel` (SLP panel), `addHeaderButton` per workspace (from `workspaces.list` and `workspaces.subscribe`), and `addSettingsScreen` | Slice 2, proved in the web app. The settings screen is reached from Settings, Plugins, then the `slp` actions menu. Slice 4 adds the ledger views and decision forms to the same panel, polling `slp.workspace.get` and `slp.ledger.get` every 5 s |
 

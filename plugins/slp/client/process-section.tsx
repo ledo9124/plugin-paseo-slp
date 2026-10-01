@@ -1,7 +1,7 @@
 import { copyText, useToast } from "@getpaseo/plugin/client/react-native";
 import { SettingsAction, SettingsRow, SettingsSection } from "@getpaseo/plugin/client/ui";
 import type { Report } from "../shared/contracts";
-import { counts, total } from "../shared/format";
+import { counts, nativeQuestionBreaks, total } from "../shared/format";
 
 // The group's process report (slice 5, required behavior 10): which
 // coordination mechanisms ran and what they cost. Tokens are estimates.
@@ -27,7 +27,7 @@ export function ProcessSection({ report, markdown }: { report: Report; markdown:
       />
       <SettingsRow
         label={`Escalations: ${e.raised}`}
-        hint={`Answered from the panel ${e.answeredFromPanel}, through the Supervisor ${e.answeredThroughSupervisor}; withdrawn ${e.withdrawn}; revised ${e.revised}; still open ${e.open}.`}
+        hint={`Answered from the panel ${e.answeredFromPanel}, through the Supervisor ${e.answeredThroughSupervisor}; withdrawn ${e.withdrawn}; revised ${e.revised}; still open ${e.open}. Asked through the Supervisor's question tool ${report.nativeQuestions.byRole.supervisor ?? 0}; unanswered native questions ${report.nativeQuestions.unanswered}.`}
         testID="slp-process-escalations"
       />
       <SettingsRow
@@ -47,9 +47,9 @@ export function ProcessSection({ report, markdown }: { report: Report; markdown:
           total(report.busySendViolations) +
           report.outsideAgents.created +
           total(report.outsideAgents.builtinCreateCalls) +
-          total(report.nativeQuestions.byRole)
+          total(nativeQuestionBreaks(report.nativeQuestions.byRole))
         }`}
-        hint={`Questions to Human through a provider's own tool ${total(report.nativeQuestions.byRole)} (${counts(report.nativeQuestions.byRole)}; unanswered ${report.nativeQuestions.unanswered}); built-in send_agent_prompt calls ${total(report.busySendViolations)} (${counts(report.busySendViolations)}); agents created outside slp_delegate ${report.outsideAgents.created}; built-in create_agent calls ${total(report.outsideAgents.builtinCreateCalls)}.`}
+        hint={`Questions to Human through a provider's own tool by the Lead or a Peer ${total(nativeQuestionBreaks(report.nativeQuestions.byRole))} (${counts(nativeQuestionBreaks(report.nativeQuestions.byRole))}); built-in send_agent_prompt calls ${total(report.busySendViolations)} (${counts(report.busySendViolations)}); agents created outside slp_delegate ${report.outsideAgents.created}; built-in create_agent calls ${total(report.outsideAgents.builtinCreateCalls)}.`}
         testID="slp-process-breaks"
       />
       {Object.entries(report.usage).map(([role, usage]) => (

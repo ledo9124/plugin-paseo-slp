@@ -1,5 +1,5 @@
 import type { Report } from "../shared/contracts";
-import { counts, total } from "../shared/format";
+import { counts, nativeQuestionBreaks, total } from "../shared/format";
 import { openNativeQuestions } from "./coordination";
 import type { GroupRecord } from "./store";
 
@@ -154,6 +154,7 @@ export function renderReport(report: Report): string {
     "## Escalations",
     `- Raised: ${e.raised}; answered from the panel ${e.answeredFromPanel}, through the Supervisor ${e.answeredThroughSupervisor}; withdrawn ${e.withdrawn}; still open ${e.open}`,
     `- Revised while pending: ${e.revised}`,
+    `- Asked through the Supervisor's question tool: ${report.nativeQuestions.byRole.supervisor ?? 0}; unanswered native questions ${report.nativeQuestions.unanswered}`,
     "",
     "## Findings and acceptance",
     `- Findings: ${counts(report.findings.byKind)}; by ${counts(report.findings.byRole)}; open ${report.findings.open}`,
@@ -165,7 +166,7 @@ export function renderReport(report: Report): string {
     `- Plugin notices: ${report.notices}`,
     "",
     "## Convention breaks",
-    `- Questions to Human through a provider's own tool: ${total(report.nativeQuestions.byRole)} (${counts(report.nativeQuestions.byRole)}); unanswered ${report.nativeQuestions.unanswered}`,
+    `- Questions to Human through a provider's own tool, by the Lead or a Peer: ${total(nativeQuestionBreaks(report.nativeQuestions.byRole))} (${counts(nativeQuestionBreaks(report.nativeQuestions.byRole))})`,
     `- Busy-send violations (built-in send_agent_prompt): ${total(report.busySendViolations)} (${counts(report.busySendViolations)})`,
     `- Agents created outside slp_delegate: ${report.outsideAgents.created}; built-in create_agent calls ${total(report.outsideAgents.builtinCreateCalls)} (${counts(report.outsideAgents.builtinCreateCalls)})`,
     "",
