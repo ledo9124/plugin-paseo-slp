@@ -3,7 +3,7 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import type { PaseoApi } from "@getpaseo/client";
 import type { PluginServerContext } from "@getpaseo/plugin/server";
-import { getLedger, getWorkspace, listWorkspaceModes, setWorkspaceMode } from "./shared/contracts";
+import { getLedger, getWorkspace, humanDecide, listWorkspaceModes, setWorkspaceMode } from "./shared/contracts";
 import { slpSettings } from "./shared/settings";
 import { startMcpHttp, type McpHttpHandle } from "./server/mcp-http";
 import { Coordination } from "./server/coordination";
@@ -93,6 +93,9 @@ export default function contribute(server: PluginServerContext) {
   );
   server.handle(listWorkspaceModes, () => ({ workspaces: service.listModes() }));
   server.handle(getLedger, ({ workspaceId }) => coordination.ledgerView(workspaceId));
+  server.handle(humanDecide, ({ workspaceId, ...input }, { paseo }) =>
+    userFacing(() => coordination.humanDecide(bind(paseo), workspaceId, input)),
+  );
 
   const unsubscribers = [
     server.on("agent.turn_started", ({ agent }, { paseo }) => {

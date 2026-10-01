@@ -346,6 +346,82 @@ describe("findings and decisions", () => {
   });
 });
 
+describe("Human decisions from the panel", () => {
+  it("settles a pending decision as Human's and tells only the Supervisor", async () => {
+    const { host, coordination, secretOf, idOf, group } = await setup();
+    const pending = await coordination.decide(host, secretOf("lead"), {
+      text: "Should exports include archived reports?",
+      source: "agent",
+      status: "pending",
+    });
+    host.sends.length = 0;
+
+    const result = await coordination.humanDecide(host, "ws", {
+      text: "Exclude archived reports",
+      settles: pending.decisionId,
+    });
+
+    expect(result).toEqual({ decisionId: pending.decisionId, notified: [idOf("supervisor")] });
+    expect(group().ledger.decisions[0]).toMatchObject({
+      source: "human",
+      status: "settled",
+      text: "Exclude archived reports",
+      by: { role: "human", agentId: null },
+    });
+    expect(host.sends).toEqual([
+      { agentId: idOf("supervisor"), text: expect.stringContaining("Exclude archived reports"), activeTurnBehavior: "steer" },
+    ]);
+    expect(host.sends[0].text).toContain('from="human"');
+    expect(group().events.filter((e) => e.kind === "decision").at(-1)).toMatchObject({
+      data: { by: "human", settled: true },
+    });
+  });
+
+  it("records a new decision on a finding, resolves it, and holds the notice for a busy Supervisor", async () => {
+    const { host, coordination, secretOf, idOf, group } = await setup();
+    await coordination.delegate(host, secretOf("lead"), delegateInput);
+    const { findingId } = await coordination.finding(host, secretOf("peer"), {
+      kind: "reopen",
+      text: "Streaming is not needed",
+      evidence: "maxRows=5000",
+    });
+    host.sends.length = 0;
+    host.agents.get(idOf("supervisor"))!.status = "running";
+
+    const result = await coordination.humanDecide(host, "ws", { text: "Keep streaming anyway", findingId });
+
+    expect(group().ledger.decisions.at(-1)).toMatchObject({
+      id: result.decisionId,
+      source: "human",
+      status: "settled",
+      findingId,
+    });
+    expect(group().ledger.findings[0]).toMatchObject({ status: "resolved", resolvedBy: result.decisionId });
+    expect(host.sends).toEqual([]);
+    expect(group().held).toEqual([expect.objectContaining({ toAgentId: idOf("supervisor"), fromRole: "human" })]);
+  });
+
+  it("refuses unknown or settled decisions, unknown findings, both targets, and ended groups", async () => {
+    const { host, coordination, service, secretOf } = await setup();
+    const settled = await coordination.decide(host, secretOf("lead"), { text: "x", source: "agent", status: "settled" });
+    await expect(coordination.humanDecide(host, "ws", { text: "y", settles: settled.decisionId })).rejects.toMatchObject({
+      code: "invalid",
+    });
+    await expect(coordination.humanDecide(host, "ws", { text: "y", settles: "D9" })).rejects.toMatchObject({
+      code: "invalid",
+    });
+    await expect(coordination.humanDecide(host, "ws", { text: "y", findingId: "F9" })).rejects.toMatchObject({
+      code: "invalid",
+    });
+    await expect(
+      coordination.humanDecide(host, "ws", { text: "y", settles: settled.decisionId, findingId: "F1" }),
+    ).rejects.toMatchObject({ code: "invalid" });
+    await expect(coordination.humanDecide(host, "other", { text: "y" })).rejects.toMatchObject({ code: "invalid" });
+    await service.onWorkspaceArchived("ws");
+    await expect(coordination.humanDecide(host, "ws", { text: "y" })).rejects.toMatchObject({ code: "invalid" });
+  });
+});
+
 describe("reconcile and lifecycle", () => {
   it("delivers held messages whose recipient became idle without a turn event, and drops archived ones", async () => {
     const { host, coordination, secretOf, idOf, group } = await setup();

@@ -77,7 +77,8 @@ export type Brief = z.infer<typeof BriefSchema>;
 export const AssignmentKindSchema = z.enum(["investigate", "design", "implement", "review", "benchmark", "audit"]);
 export const AssignmentStatusSchema = z.enum(["assigned", "handed-back", "accepted", "dropped"]);
 
-const ActorSchema = z.object({ role: RoleSchema, agentId: z.string().nullable() });
+/** "human" when Human acted from the SLP panel (slice 4); agentId is then null. */
+const ActorSchema = z.object({ role: z.union([RoleSchema, z.literal("human")]), agentId: z.string().nullable() });
 
 export const AssignmentSchema = z.object({
   id: z.string(),
@@ -119,7 +120,7 @@ export type Finding = z.infer<typeof FindingSchema>;
 export const DecisionSchema = z.object({
   id: z.string(),
   text: z.string(),
-  /** "human" only when the Supervisor relays Human's own choice. */
+  /** "human" only for Human's own choice: from the panel, or relayed by the Supervisor. */
   source: z.enum(["human", "agent"]),
   /** Pending decisions wait for Human through the Supervisor. */
   status: z.enum(["pending", "settled"]),
@@ -147,4 +148,20 @@ export const getLedger = defineRpc({
     heldMessages: z.number().int(),
     events: z.array(z.object({ at: z.string(), kind: z.string(), data: z.record(z.string(), z.unknown()) })),
   }),
+});
+
+/**
+ * Human records a decision from the SLP panel: settles a pending one, or
+ * records a new one, optionally on a finding. Only the Supervisor is told; it
+ * decides who else needs it.
+ */
+export const humanDecide = defineRpc({
+  name: "slp.ledger.decide",
+  input: z.object({
+    workspaceId: z.string(),
+    text: z.string().trim().min(1),
+    settles: z.string().optional(),
+    findingId: z.string().optional(),
+  }),
+  output: z.object({ decisionId: z.string(), notified: z.array(z.string()) }),
 });

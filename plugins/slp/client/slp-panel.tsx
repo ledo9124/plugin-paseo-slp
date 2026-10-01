@@ -4,8 +4,17 @@ import type { PluginWorkspacePanelProps } from "@getpaseo/plugin/client";
 import { useRpc } from "@getpaseo/plugin/client";
 import { ScrollView } from "@getpaseo/plugin/client/react-native";
 import { SettingsAction, SettingsRow, SettingsSection, SettingsSwitch } from "@getpaseo/plugin/client/ui";
-import { getWorkspace, setWorkspaceMode, type MemberView, type Mode, type WorkspaceView } from "../shared/contracts";
+import {
+  getLedger,
+  getWorkspace,
+  setWorkspaceMode,
+  type Ledger,
+  type MemberView,
+  type Mode,
+  type WorkspaceView,
+} from "../shared/contracts";
 import { headerModeSink } from "./header-buttons";
+import { LedgerSections } from "./ledger-sections";
 
 const REFRESH_MS = 5000;
 
@@ -16,10 +25,20 @@ function memberState(member: MemberView): string | null {
   return member.status;
 }
 
+/** The assignment a member owns now, so Human sees ownership at a glance. */
+function holding(member: MemberView, ledger: Ledger | null): string | null {
+  const open = ledger?.assignments.find(
+    (a) => a.peerAgentId === member.agentId && (a.status === "assigned" || a.status === "handed-back"),
+  );
+  return open ? `owns ${open.id} (${open.status})` : null;
+}
+
 export function SlpPanel({ workspaceId, navigation, theme }: PluginWorkspacePanelProps) {
   const fetchView = useRpc(getWorkspace);
+  const fetchLedger = useRpc(getLedger);
   const sendMode = useRpc(setWorkspaceMode);
   const [view, setView] = useState<WorkspaceView | null>(null);
+  const [ledger, setLedger] = useState<Ledger | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -33,11 +52,13 @@ export function SlpPanel({ workspaceId, navigation, theme }: PluginWorkspacePane
 
   const refresh = useCallback(async () => {
     try {
-      apply(await fetchView({ workspaceId }));
+      const [nextView, nextLedger] = await Promise.all([fetchView({ workspaceId }), fetchLedger({ workspaceId })]);
+      apply(nextView);
+      setLedger(nextLedger.groupId ? nextLedger.ledger : null);
     } catch (cause) {
       setError(String(cause instanceof Error ? cause.message : cause));
     }
-  }, [apply, fetchView, workspaceId]);
+  }, [apply, fetchView, fetchLedger, workspaceId]);
 
   useEffect(() => {
     void refresh();
@@ -93,19 +114,31 @@ export function SlpPanel({ workspaceId, navigation, theme }: PluginWorkspacePane
           title={view.group.endedAt ? "Group (ended with the workspace)" : "Group"}
           info={<Text style={muted}>Started {new Date(view.group.startedAt).toLocaleString()}</Text>}
         >
-          {view.group.members.map((member) => (
+          {view.group.members.map((member, index) => (
             <SettingsAction
-              key={member.role}
+              key={member.agentId ?? `${member.role}-${index}`}
               label={member.title ?? member.role}
-              hint={[member.provider, memberState(member)].filter(Boolean).join(" · ")}
+              hint={[member.provider, memberState(member), holding(member, ledger)].filter(Boolean).join(" · ")}
               actionLabel="Open"
               disabled={!member.agentId || !navigation}
               onPress={() => member.agentId && navigation?.openAgent({ agentId: member.agentId })}
-              testID={`slp-member-${member.role}`}
+              testID={member.role === "peer" ? `slp-member-peer-${index}` : `slp-member-${member.role}`}
             />
           ))}
         </SettingsSection>
-      ) : (
+      ) : null}
+
+      {view.group && ledger ? (
+        <LedgerSections
+          workspaceId={workspaceId}
+          ledger={ledger}
+          members={view.group.members}
+          running={!view.group.endedAt}
+          onChanged={() => void refresh()}
+        />
+      ) : null}
+
+      {view.group ? null : (
         <Text style={muted}>
           {view.mode === "on" ? "Starting the group…" : "SLP is off. Agents in this workspace behave normally."}
         </Text>

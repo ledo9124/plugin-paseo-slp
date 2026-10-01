@@ -8,6 +8,9 @@ Status: approach accepted in decisions 0001-0005.
 - Slice 3 implements the member tools: send, delegate, accept, finding,
   decide, ledger, and group. It also implements held delivery, handback,
   and reconciliation.
+- Slice 4 extends the SLP panel with the ledger (briefs, constraint
+  sources, findings, decisions, ownership) and Human decisions, which go
+  only to the Supervisor.
 
 Results are in the [active plan](plans/active/slp-plugin-v0.1.md).
 
@@ -50,7 +53,7 @@ dependencies for a directory source.
    for SLP messaging.
 
 ```text
-Human ── Paseo app ── client entry: SLP toggle, ledger panel, Human decisions
+Human ── Paseo app ── client entry: SLP toggle, ledger panel, Human decisions (to the Supervisor)
                          │ typed RPC
 Paseo daemon ── plugin subprocess
    │                ├─ group store and ledger (plugin-owned files)
@@ -77,13 +80,14 @@ Read from source on `getpaseo/paseo` main at `d30e99c85`, and checked at the
 | Handback (platform) | Plugin relays the member's last message at `agent.turn_ended` | Probed: plugin-created children get no finish notification. After a reload, the event timeline also holds earlier turns, so relay the last assistant message only |
 | Messages between members | `slp_send` (decision 0004): steer now, or hold while the recipient is busy and deliver at its `agent.turn_ended` | Slice 3, proved live, including held then delivered. Delivery always steers, so a recipient that just became busy keeps its turn. Reconciliation every 30 s, and at first contact, delivers held messages for idle recipients |
 | Handback and acceptance | Relay each completed Peer turn to the Lead (after-turn). It counts as the assignment's handback only after its brief or rework request was delivered (`briefDeliveredAt`). The Lead uses `slp_accept` | Slice 3, proved live. A false handback race was found live and fixed |
-| Ledger | `slp_delegate`, `slp_accept`, `slp_finding`, `slp_decide`, and `slp_ledger`, role-checked from the member secret; `slp.ledger.get` RPC for clients | Slice 3, proved live. `source: "human"`, and settling a pending decision, are for the Supervisor only |
+| Ledger | `slp_delegate`, `slp_accept`, `slp_finding`, `slp_decide`, and `slp_ledger`, role-checked from the member secret; `slp.ledger.get` RPC for clients | Slice 3, proved live. Among members, `source: "human"` and settling a pending decision are for the Supervisor only |
+| Human decisions (slice 4) | `slp.ledger.decide` RPC from the SLP panel: settle a pending decision, or record a new one, optionally on a finding. Recorded as `source: "human"`, `by.role: "human"`, settled; a settled decision resolves its open finding. Only the Supervisor is told (after its turn) and decides who else needs it | Slice 4, proved live in the web app and through RPCs. Refused for a decision that is not pending, an unknown finding, both targets at once, or a group that has ended |
 | Built-in `send_agent_prompt` (not used by SLP) | Paseo injected tools | Probed: needs `daemon.mcp.injectIntoAgents: true` (default `false`), which is daemon-wide. On Claude and Codex a busy recipient's turn is canceled and replaced. Prompts depend on the mode: Claude `default` asks Human every call, and plugins cannot preapprove the injected `paseo` server. Claude `bypassPermissions`, Claude `auto` with Sonnet 5.5, and Codex `full-access` ran without prompts; Claude `auto` with Haiku 4.5 still prompted |
 | Steering a busy member | Plugin `agents.ref(id).send(text, {activeTurnBehavior: "steer"})` | Probed on Claude and Codex: the message joins the running turn. SDK 0.10.2 forwards the option but leaves it out of `PaseoAgentSendOptions`. A send without options interrupts. The app setting `sendBehavior` (`interrupt`, `steer`, or `queue`; default `steer`; `app/src/hooks/use-settings/storage.ts`) applies only to messages typed in the app composer. In `queue` mode, the app keeps queued messages in its own session store and sends them when the turn ends. The daemon has no queue: `activeTurnBehavior` accepts only `interrupt` or `steer`, and built-in `send_agent_prompt` (`paseo-tools.ts:1931`) ignores the setting and always replaces |
 | Ledger and Human steering | Plugin MCP tools for agents; RPCs and a panel for Human; plugin-owned files | The ledger records each assignment and role with `agentId` as its current occupant, not as its identity. The plugin has no Paseo API at startup, only inside hooks and RPCs, so reconciliation from files, labels, and `agents.list` runs at the first hook or RPC |
 | Agents created outside the delegate tool | `agent.created` with `parentAgentId` | Visible, not blocked |
 | Per-workspace SLP mode (0005) | Plugin state per workspace. The lock comes at the first `agent.turn_started` in the workspace, with a fallback to `lastUserMessageAt` and to agents SLP did not create. Group end at `workspace.archived` | Slice 2, proved live. Archiving a workspace archives its agents (`workspace-archive-service.ts`) |
-| Human controls | Client `addWorkspacePanel` (SLP panel), `addHeaderButton` per workspace (from `workspaces.list` and `workspaces.subscribe`), and `addSettingsScreen` | Slice 2, proved in the web app. The settings screen is reached from Settings, Plugins, then the `slp` actions menu |
+| Human controls | Client `addWorkspacePanel` (SLP panel), `addHeaderButton` per workspace (from `workspaces.list` and `workspaces.subscribe`), and `addSettingsScreen` | Slice 2, proved in the web app. The settings screen is reached from Settings, Plugins, then the `slp` actions menu. Slice 4 adds the ledger views and decision forms to the same panel, polling `slp.workspace.get` and `slp.ledger.get` every 5 s |
 
 ## Known Limits
 

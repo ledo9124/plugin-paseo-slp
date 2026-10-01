@@ -19,7 +19,7 @@ export interface MemberRecord {
 export interface HeldMessage {
   id: string;
   fromAgentId: string | null;
-  fromRole: Role | "plugin";
+  fromRole: Role | "plugin" | "human";
   toAgentId: string;
   kind: "message" | "handback" | "notice";
   text: string;

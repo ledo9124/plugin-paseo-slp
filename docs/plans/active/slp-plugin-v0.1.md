@@ -4,7 +4,7 @@ Date: 2026-10-01
 
 ## Status
 
-Active. Slices 0-3 are complete; slice 4 (Human panel) is next.
+Active. Slices 0-4 are complete; slice 5 (telemetry) is next.
 - Slice 1 ran probes 2 and 4 on both Claude and Codex.
 - Decision 0004 settled the messaging question, and decision 0005 replaced
   the free toggle.
@@ -139,6 +139,17 @@ with commands and observed results.
      and ownership.
    - A Human decision is written to the ledger and sent to the affected
      owner.
+   - Human's slice 4 choices (2026-10-01):
+     - the ledger views extend the existing SLP workspace panel; there is no
+       second panel;
+     - from the panel, Human can settle a pending decision or record a new
+       one, optionally on an open finding. Both are recorded as
+       `source: human`, settled, and a settled decision resolves its open
+       finding;
+     - a panel decision is sent only to the Supervisor. The Supervisor
+       decides whether and how to tell the Lead and Peers;
+     - the panel offers no other actions in v0.1: no findings, ownership
+       changes, or acceptance by Human.
 5. **Telemetry.** Counts of escalations, reopens, acceptance outcomes,
    message rounds, busy-send violations, agents created outside the delegate
    tool, and Human interventions, with a readable per-group report.
@@ -177,7 +188,9 @@ with commands and observed results.
 - [x] Slice 3: messaging, delegation, ledger, handback, acceptance, findings,
   decisions, and reconciliation. Proved live on `v0.10.2` with Claude members
   and a Codex Peer (see Slice 3 Results).
-- [ ] Slice 4: Human panel.
+- [x] Slice 4: Human panel: ledger views and Human decisions to the
+  Supervisor. Proved live on `v0.10.2` in the web app and through RPCs (see
+  Slice 4 Results).
 - [ ] Slice 5: telemetry.
 - [ ] Slice 6: brief-format evaluation and field run.
 
@@ -249,6 +262,105 @@ with commands and observed results.
   - The plan's rejection of Seatworks "permission bypass" covered its
     deny-list and config-directory mechanism. It does not cover using a
     provider's own permission mode.
+
+## Slice 4 Results
+
+Implementation:
+- `slp.ledger.decide` RPC and `Coordination.humanDecide`. It settles a
+  pending decision, or records a new one, optionally on a finding. The
+  decision is recorded as `source: "human"`, `by: {role: "human"}`,
+  settled, and a settled decision resolves its open finding.
+- The notice goes only to the Supervisor (`from="human"`), after its turn.
+- The `decision` event now carries `by` (`human`, `lead`, or
+  `supervisor`), so slice 5 can count Human interventions.
+- The Supervisor's role text says a panel decision is already in the
+  ledger, and that the Supervisor decides who needs it.
+- The SLP panel adds these sections:
+  - "Waiting for you": pending decisions, each with a settle form;
+  - open findings with evidence;
+  - assignments with owner, status, and scope, plus an expandable brief
+    (goal, constraints with source, the Lead's current choice marked "not
+    binding", uncertainties, reopen evidence, acceptance);
+  - settled decisions, showing who made each: "Human, from the panel",
+    "Human, relayed by the Supervisor", or "agent choice";
+  - "Record a decision", with an optional open finding.
+- Member rows show the assignment each Peer owns. The duplicate React key
+  for Peer rows is fixed.
+
+Focused proof:
+- `tsc --noEmit` passes.
+- `vitest` passes 36 tests, including 3 new `humanDecide` tests:
+  - settling a pending decision tells only the Supervisor;
+  - a new decision on a finding resolves it, and the notice is held while
+    the Supervisor is busy;
+  - refusals: not pending, unknown decision or finding, both targets, an
+    unknown workspace, and an ended group.
+
+Live proof, on stock `v0.10.2`, isolated home, port 6768. Workspace
+`slp-s4-ws1` (`wks_a0604e3c8922606c`) held a seeded `titles.json`. The
+Supervisor was `claude-opus-5-5`, the Lead `claude-sonnet-5-5`, and the
+Lead's Peer `codex/gpt-6-luna`. Human spoke through `paseo send`, and the
+panel ran in the web app on 8081 (driven by `agent-browser`, session
+`slp-s4`).
+
+- Before any decision existed, `slp.ledger.decide` with `settles: D1` was
+  refused ("D1 is not a pending decision").
+- **Pending decisions.** Human's first message reserved the non-ASCII
+  choice. The Lead recorded pending D1 with options, then pending D2 to
+  correct D1's examples. The panel showed "Waiting for you (2)".
+- **Settling from the panel.** Human settled D1 in the web app.
+  - The panel listed it as "D1: Human, from the panel".
+  - Events showed `decision {by: "human", settled: true}`, then a single
+    `message {from: "human", to: Supervisor}`.
+  - The Supervisor passed it to the Lead with `slp_send`, and the Lead
+    changed `slug.py` and its tests.
+- **A refused settle.** The Supervisor settled D2 itself as moot, with
+  `source: "human"`. The panel's later "Settle D2" was refused ("D2 is not
+  a pending decision") and D2 left the waiting list.
+- **A new decision.** Human recorded D3 ("empty title returns
+  `untitled`") from "Record a decision".
+  - The Supervisor was busy, so its notice was held, then delivered.
+  - The Supervisor relayed it to the Lead, which implemented it and added
+    tests.
+- **Brief and ownership.** For the review Human asked for, the Lead
+  delegated A1 to a Codex Peer. The panel showed:
+  - A1's owner, status, and scope;
+  - its brief, with sources such as "Human decision D1 (settled)", and
+    the Lead's choices under "Current choice (the Lead's, not binding)";
+  - the Peer row as `codex · running · owns A1 (assigned)`.
+- **Peer finding.** The Peer recorded finding F1 itself. Pending since
+  slice 3. F1 claimed mojibake fixtures, because the Peer read the file as
+  cp1252.
+  - The Lead checked the real bytes and recorded D5 (agent, kept the plan,
+    resolves F1). It then sent A1 back for rework.
+  - The panel showed "Open findings (0)" and "D5: agent choice (Lead)".
+- **Group end.** Archiving the workspace ended the group (`endedAt` set,
+  all three members archived). `slp.ledger.decide` was then refused ("This
+  workspace has no running SLP group").
+- Cleanup: the browser session was closed, Metro and the daemon were
+  stopped, and 6767 was untouched.
+
+Observations for Human (no change made):
+- **No way to amend a pending decision.** The Lead recorded D2 only to
+  correct D1, which left Human two items to settle.
+- **An agent's inference recorded as Human's.** The Supervisor recorded
+  D2 as `source: "human"` because it inferred D2 from Human's D1; Human
+  never answered D2. A1's brief also listed "Do not invent a length limit;
+  Human set none" with source "Human (review request)", which Human did not
+  say. Required behavior 1 is at risk where agents attribute inferences to
+  Human. Possible fixes are tuning the instructions or limiting
+  `source: "human"`; both need Human's call.
+- **The Lead implemented the first goal itself, without delegating.** The
+  role text allows this, and the task was small.
+
+Not covered live in slice 4:
+- **An open finding in the panel.** F1 was resolved within seconds, so the
+  open-finding rows and the finding picker in "Record a decision" were
+  never seen populated live. Unit tests cover deciding on a finding.
+- **The panel of an ended group.** The workspace was archived and left
+  the app's list. The RPC refusal was proved instead.
+- **Inline error display.** The refused "Settle D2" form unmounted at the
+  next refresh. The refusal was seen in the daemon log.
 
 ## Slice 3 Results
 

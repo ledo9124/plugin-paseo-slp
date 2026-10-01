@@ -375,9 +375,89 @@ export class Coordination {
         status: decision.status,
         findingId: decision.findingId,
         settled: Boolean(input.settles),
+        by: caller.member.role,
       });
       this.save(caller);
       return { decisionId: decision.id, status: decision.status, notified: [...recipients] };
+    });
+  }
+
+  // ---- Human panel (slice 4) ------------------------------------------------
+
+  /**
+   * Human's decision from the SLP panel: settles a pending decision or records
+   * a new one. Only the Supervisor is told; it decides who else needs it.
+   */
+  humanDecide(host: PaseoHost, workspaceId: string, input: { text: string; settles?: string; findingId?: string }) {
+    return this.deps.queue.run(workspaceId, async () => {
+      const record = this.deps.store.get(workspaceId);
+      const group = record?.group;
+      if (!record || !group || group.endedAt) throw new SlpError("invalid", "This workspace has no running SLP group.");
+      if (input.settles && input.findingId) {
+        throw new SlpError("invalid", "Settle a pending decision or decide on a finding, not both.");
+      }
+      const ledger = group.ledger;
+      const by = { role: "human" as const, agentId: null };
+
+      let decision: Decision;
+      if (input.settles) {
+        const pending = ledger.decisions.find((d) => d.id === input.settles);
+        if (!pending || pending.status !== "pending") {
+          throw new SlpError("invalid", `${input.settles} is not a pending decision.`);
+        }
+        Object.assign(pending, { text: input.text, source: "human", status: "settled", by, at: this.deps.now() });
+        decision = pending;
+      } else {
+        const finding = input.findingId ? ledger.findings.find((f) => f.id === input.findingId) : undefined;
+        if (input.findingId && !finding) throw new SlpError("invalid", `No finding ${input.findingId}.`);
+        decision = {
+          id: this.shortId("D", ledger.decisions.length),
+          text: input.text,
+          source: "human",
+          status: "settled",
+          by,
+          findingId: finding?.id ?? null,
+          projectRecord: null,
+          at: this.deps.now(),
+        };
+        ledger.decisions.push(decision);
+      }
+      const resolved = ledger.findings.find((f) => f.id === decision.findingId);
+      if (resolved?.status === "open") {
+        resolved.status = "resolved";
+        resolved.resolvedBy = decision.id;
+      }
+      this.event(group, "decision", {
+        decisionId: decision.id,
+        source: "human",
+        status: "settled",
+        findingId: decision.findingId,
+        settled: Boolean(input.settles),
+        by: "human",
+      });
+      this.deps.store.put(record);
+
+      const supervisor = group.members.find((m) => m.role === "supervisor");
+      const notified: string[] = [];
+      if (supervisor?.agentId) {
+        await this.deliver(
+          host,
+          group,
+          {
+            fromAgentId: null,
+            fromRole: "human",
+            toAgentId: supervisor.agentId,
+            kind: "notice",
+            text:
+              `${renderDecision(decision)}\n` +
+              "Human recorded this in the SLP panel; it is already in the ledger. Decide who needs it and tell them.",
+          },
+          "after-turn",
+        );
+        notified.push(supervisor.agentId);
+        this.deps.store.put(record);
+      }
+      return { decisionId: decision.id, notified };
     });
   }
 
