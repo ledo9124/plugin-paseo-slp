@@ -4,12 +4,19 @@ Date: 2026-10-01
 
 ## Status
 
-Active. Slices 0-6 are complete.
+Active. Slices 0-6 are complete; slice 7 is in progress.
 - Decision 0006 now blocks provider subagents for the Lead.
+- Decision 0007 records what SLP is: three jobs (complete the input,
+  filter decisions by authority, keep Human in control), four layers, and
+  independence from Repository Harness. Slice 7 tests the first ideas that
+  serve it.
 - Open before closing v0.1:
-  - the Supervisor's use of Claude Code's `AskUserQuestion`;
-  - when a Lead should delegate to Peers (Human postponed it for
-    analysis).
+  - a live run with Human, on work with a choice that surfaces only
+    mid-run (slice 7);
+  - I4 and I5 (slice 7).
+- Settled in slice 7:
+  - native questions: I2 kept;
+  - when a Lead delegates: the Lead's own judgment (Human).
 - Slice 1 ran probes 2 and 4 on both Claude and Codex.
 - Decision 0004 settled the messaging question, and decision 0005 replaced
   the free toggle.
@@ -32,7 +39,8 @@ With SLP off, agents behave exactly as without the plugin.
   - 0004: member messaging through a plugin send tool;
   - 0005: the SLP mode locks at the first message, and archiving the
     workspace ends the group;
-  - 0006: the SLP Lead cannot use its provider's own subagents.
+  - 0006: the SLP Lead cannot use its provider's own subagents;
+  - 0007: what SLP is, its layers, and its independence from Harness.
 - Method sources and prior analysis: `docs/research/sources.md`. The earlier
   `paseo-slp` fork is not a decision basis.
 
@@ -221,6 +229,49 @@ with commands and observed results.
      - Human answers the group's questions; the operating agent relays
        them and does not answer for Human.
 
+7. **Outcome trials (decision 0007).**
+   - Each trial is an idea that passed 0007 item 5 (see
+     `docs/research/sources.md`). It is a small, reversible experiment with
+     a Keep or Remove signal.
+   - Human asked, on 2026-10-01, to record the outcome first and then
+     start. The order I3, I2 was the agent's proposal.
+   - I1 (the Lead does not edit the repository) is not taken. Human,
+     2026-10-01:
+     - whether the Lead edits itself or delegates is the Lead's own
+       judgment;
+     - "the smallest sufficient topology" is a principle for how a project
+       deploys the Harness documentation framework. It is not a rule about
+       what the Lead or a Peer does.
+   - I4 and I5 come later.
+   - **I3: intake read-back and explicit delegation** (behaviors 11 and
+     12). Role text only.
+     - The Supervisor asks its intake questions together, then reads back:
+       the outcome, constraints with sources, Human's decisions, what
+       Human delegates, and what is open.
+     - A delegation is recorded as a Human decision with its scope.
+     - An agent decision names the delegation or record it rests on, or
+       it stays pending.
+     - Keep if every agent decision traces to a delegation or a record, or
+       goes to Human. Remove if the read-back adds a round and changes no
+       decision.
+   - **I2: native questions made visible** (behaviors 7 and 12). Observe
+     only; nothing is blocked (decision 0001).
+     - The plugin records a member's `agent.permission_requested` of kind
+       `question`, and its `agent.permission_resolved`.
+     - The panel shows each unanswered native question. The process report
+       counts them per role.
+     - Role text: intake questions are asked in the conversation, and
+       mid-run choices for Human are pending decisions. Neither uses the
+       provider's own question tool.
+     - Keep if no member turn waits on a native question, and every
+       question to Human is visible in the panel. Remove if Human prefers
+       the native question UI.
+   - Live proof needs Human:
+     - one group whose goal Human writes with incomplete input on purpose;
+     - observed: the read-back, the recorded delegation, whether each
+       agent decision names its basis, any native questions, and questions
+       from the Lead that intake should have settled.
+
 ## Risks And Recovery
 
 - **The plugin MCP route or Peer creation fails on a provider.** Slice 1
@@ -256,6 +307,14 @@ with commands and observed results.
 - [x] Slice 6: brief-format evaluation and field run, done together as
   the N/K experiment run by an SLP group in `repository-harness` (see
   Slice 6 Results). Two SLP observations are open for Human.
+- [ ] Slice 7: outcome trials (decision 0007).
+  - [x] I3: intake read-back and delegation (role text).
+  - [x] I2: native questions visible (event, panel, report, role text).
+  - [x] Live run, with the operating agent playing Human at Human's
+    request (see Slice 7 Results).
+  - [ ] A live run with Human, on work with a mid-run choice.
+  - [x] I1: not taken (Human: the Lead judges for itself).
+  - [ ] I4 and I5.
 
 ## Decisions
 
@@ -333,6 +392,209 @@ with commands and observed results.
   - The plan's rejection of Seatworks "permission bypass" covered its
     deny-list and config-directory mechanism. It does not cover using a
     provider's own permission mode.
+
+## Slice 7 Results
+
+Docs (2026-10-01):
+- Decision 0007 records what SLP is.
+- `docs/product/overview.md` takes the three jobs, the four layers, and
+  behaviors 11 and 12.
+- `docs/product/slp-and-harness.md` states the boundary with Harness.
+- `docs/research/sources.md` records the v0.2 draft and the second
+  Seatworks read.
+
+I3, intake read-back and delegation (role text only, `server/roles.ts`):
+- Shared rule: authority decides who decides, not reversibility. An agent
+  decision names what it rests on. Members do not ask Human through the
+  provider's own question tool.
+- Supervisor: intake comes first. It asks its questions together, ends
+  with a read-back (outcome, constraints with sources, Human's decisions,
+  delegations with scope, open items), and records each decision and
+  delegation as `source: "human"`. It gives the Lead the delegation ids.
+  It settles a choice itself only inside a recorded delegation or record.
+- Lead: sorts every question into three kinds. A pending decision carries
+  options, consequences, and a recommendation.
+- The `slp_decide` description says an agent decision names its basis.
+
+I2, native questions (observe only):
+- `Coordination.onPermissionRequested` and `onPermissionResolved`, wired to
+  `agent.permission_requested` and `agent.permission_resolved`.
+- `slp.ledger.get` returns `nativeQuestions`, the open ones.
+- The panel shows "Asked in a member's chat (n)", with an "Open" action
+  per question.
+- The report adds "Questions to Human through a provider's own tool" under
+  convention breaks.
+
+Focused proof:
+- `tsc --noEmit` passes.
+- `vitest` passes 47 tests, including 2 new ones:
+  - a member's question is listed until it is resolved, and the report
+    counts it per role, with the unanswered count;
+  - tool permissions, agents outside the group, and unknown resolutions
+    are ignored.
+- `harness status` and `doctor` pass.
+
+Live run protocol, registered before the run (2026-10-01):
+- Human asked the operating agent to run the test itself ("Mày tự test
+  đi"). So the agent plays Human, following a script fixed here. The agent
+  wrote the trials and knows what they look for, so this is weaker
+  evidence than a run with Human.
+- Environment: stock `v0.10.2`, isolated home, port 6768, default settings:
+  - Supervisor `claude/claude-opus-5-5`;
+  - Lead `claude/claude-sonnet-5-5`;
+  - every member in bypass mode.
+- **Part A, I2 mechanism.**
+  - Scratch group: Human asks the Supervisor to use its own
+    `AskUserQuestion` tool once.
+  - Expected: `slp.ledger.get` lists the question. After
+    `permit allow --input`, the list is empty and the report counts 1 for
+    the Supervisor.
+- **Part B, I3 and I2 behavior.**
+  - A new group in a seeded Python project: a notes CLI with `add` and
+    `list`, a JSON store, and `unittest` tests.
+  - Human's first message, rough on purpose: "Thêm chức năng export ghi
+    chú ra file trong project này nhé."
+  - Human's answers, only to what is asked:
+    - export format: "Markdown";
+    - which notes: "Tất cả ghi chú";
+    - what the group may decide, or anything about naming, layout,
+      sorting, encoding, or other technical details: "Phần đó các bạn tự
+      quyết";
+    - what happens if the output file already exists, whether asked at
+      intake or raised as a pending decision: "Không ghi đè; báo lỗi nếu
+      file đã tồn tại";
+    - a read-back that matches: "Đúng rồi, làm đi". One that does not: a
+      correction of the wrong point only;
+    - any other question: "Các bạn tự quyết".
+
+    Pending decisions are answered from the panel RPC with the same rules.
+  - Observed:
+    - intake questions asked together, or one at a time;
+    - the read-back's five parts;
+    - delegation and Human decisions recorded as `source: "human"`;
+    - agent decisions that name their basis;
+    - overwrite behavior: escalated, or decided silently (under-escalation);
+    - questions on delegated points (over-escalation);
+    - native questions;
+    - questions from the Lead that intake should have settled;
+    - the final behavior, checked by running the tests and the CLI.
+- Stop: the work is accepted by the Lead, or 45 minutes pass. Cleanup:
+  archive both workspaces and stop the daemon. Port 6767 is untouched.
+
+Live results (2026-10-01). Stock `v0.10.2`, isolated home, port 6768.
+The operating agent played Human from the script above, and sent its
+messages through `paseo send`.
+
+Part A, I2 mechanism. Workspace `slp-s7a` (`wks_58d110a8b34c91d8`):
+- Human asked the Supervisor to use `AskUserQuestion` once. The Supervisor
+  **refused**, citing the new rule, and asked in its reply instead.
+- Human then allowed it explicitly, once, as a test. The Supervisor's
+  `AskUserQuestion` appeared in `permit ls`, and `slp.ledger.get` listed it
+  under `nativeQuestions`: role `supervisor`, text "Mau yeu thich cua toi la
+  gi? (Xanh / Do)".
+- `permit allow --input '{"answers":{...:"Xanh"}}'` resolved it:
+  - events show `native-question`, then `native-question-resolved` with
+    the same request id;
+  - the list was empty, the report showed `supervisor 1, unanswered 0`,
+    and the Supervisor replied with "Xanh".
+- Passed. The panel rows themselves were not opened in the web app; the
+  same RPC feeds them.
+
+Part B, I3 and I2 behavior. Workspace `slp-s7b` (`wks_58b84b5e15d921d9`),
+seeded notes CLI:
+- **Intake (behavior 11).** To the rough first message, the Supervisor
+  read the project, then asked 5 questions in one reply, each with a
+  recommendation:
+  - format;
+  - scope;
+  - purpose;
+  - **an existing output file**;
+  - edit scope and commit.
+
+  It proposed that technical details be delegated. No question came later
+  in the run.
+- **Recording.** After Human's answers, the Supervisor recorded D1-D3
+  (Markdown, all notes, no overwrite) and D4-D6 (delegations: content and
+  purpose, edit scope and commit, technical details). All six are
+  `source: "human"`, each quoting Human's words.
+- **Read-back.** It had all five parts: outcome, constraints with sources,
+  Human's decisions, delegations with scope, and open items. The
+  Supervisor sent the goal to the Lead in the same turn, before Human
+  confirmed the read-back. The read-back informed Human; it did not gate
+  the work.
+- **Brief.** The brief to the Lead listed D1-D3 as binding, D4-D6 as
+  delegations, and its own design as "đề xuất của Supervisor, KHÔNG bắt
+  buộc".
+  - The Supervisor proposed a mechanism (`export <path>`, mode `x`) for
+    the Lead, marked as not binding.
+  - The Lead's brief to the Peer gave constraint sources such as "Human
+    (D1)" and "Lead, derived from Human D5 delegation".
+- **Delegation.** The Lead delegated A1 to a Peer: the first Peer
+  delegation in any live run after slice 3.
+- **Handback and acceptance.** The Peer handed back with evidence. The
+  Lead re-ran the tests, checked `git status` and the diff, and accepted
+  A1.
+- **Escalation (behavior 12).**
+  - 0 pending decisions: overwrite behavior was settled at intake.
+  - No question on a delegated point, so no over-escalation.
+  - The agents' choices (layout, empty store gives `# Notes` with exit
+    0, no Markdown escaping, no parent directory creation, no commit)
+    were reported to Human under D4, D5, and D6.
+  - None was recorded with `slp_decide`; they appear only in messages.
+- **Native questions:** 0.
+- **Report:**
+  - Human: 0 interventions, 3 messages to the Supervisor, 6 decisions
+    relayed by the Supervisor;
+  - escalations: 0;
+  - member messages: 3;
+  - convention breaks: 0;
+  - cost: Supervisor $0.39, Lead $0.23, Peer $0.21.
+- **Independent check by the operating agent:**
+  - `python -m unittest` ran 7 tests, OK;
+  - export wrote the expected Markdown with Vietnamese text;
+  - an existing file was refused with rc 1, and its content was kept.
+
+Cleanup: both workspaces archived and the 6768 daemon stopped; 6767 was
+untouched. The seeded project stays at
+`%TEMP%/slp-live/s7b`.
+
+Reading against the Keep or Remove signals (one run, agent-played Human):
+- **I3: Keep for now.**
+  - Intake front-loaded every question.
+  - Every Human decision and delegation was recorded and quoted.
+  - Every agent choice traced to a delegation.
+  - Nothing reached Human mid-run.
+  - Open: whether the read-back should wait for Human's confirmation
+    before the Lead starts.
+- **I2: Keep for now.**
+  - The mechanism works end to end.
+  - The role text alone stopped a native question until Human overrode
+    it.
+  - No blocked turn occurred.
+- **Limits:**
+  - one task, small and with a clear structure;
+  - Human was played by the agent that wrote the trials;
+  - the scripted answers made under-escalation hard to provoke after
+    intake.
+
+  A run with Human, on work with a choice that surfaces only mid-run, is
+  still needed.
+
+Human's choices on the slice 7 observations (2026-10-01):
+- **The Supervisor's design proposal.** The Supervisor stops at the
+  outcome and constraints. Its handoff proposes no design, not even a
+  non-binding one. The Supervisor role text and the overview were changed
+  to say so.
+- **Agent choices inside a delegation.** Reporting them in messages, as
+  in the run, is enough. They need no `slp_decide` record.
+- **Read-back.** Human accepted the agent's proposal:
+  - a read-back lists only what the Supervisor interpreted (a reading of
+    rough words, an inferred constraint, a filled gap, or a delegation
+    boundary it drew), and is skipped when it interpreted nothing;
+  - it waits for Human's confirmation only when a misread would be costly
+    (large work, effects outside the workspace, or changes hard to undo).
+
+  The role text and behavior 11 were changed. Not yet run live.
 
 ## Slice 6 Results
 

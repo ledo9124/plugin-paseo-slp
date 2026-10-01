@@ -143,12 +143,28 @@ export const LedgerSchema = z.object({
 });
 export type Ledger = z.infer<typeof LedgerSchema>;
 
+/**
+ * A member asking Human through its provider's own question tool (slice 7,
+ * I2). It blocks the member's turn and is answered in that agent's chat, so
+ * the panel shows it. Recorded, not blocked (decision 0001).
+ */
+export const NativeQuestionSchema = z.object({
+  requestId: z.string(),
+  role: RoleSchema,
+  agentId: z.string(),
+  text: z.string(),
+  at: z.string(),
+});
+export type NativeQuestion = z.infer<typeof NativeQuestionSchema>;
+
 export const getLedger = defineRpc({
   name: "slp.ledger.get",
   input: z.object({ workspaceId: z.string() }),
   output: z.object({
     groupId: z.string().nullable(),
     ledger: LedgerSchema,
+    /** Native questions still waiting for an answer. */
+    nativeQuestions: z.array(NativeQuestionSchema),
     heldMessages: z.number().int(),
     events: z.array(z.object({ at: z.string(), kind: z.string(), data: z.record(z.string(), z.unknown()) })),
   }),
@@ -195,6 +211,8 @@ export const ReportSchema = z.object({
   delivery: z.object({ delivered: z.number().int(), held: z.number().int(), steered: z.number().int() }),
   notices: z.number().int(),
   busySendViolations: CountsSchema,
+  /** Questions to Human through a provider's own tool (slice 7, I2), by role. */
+  nativeQuestions: z.object({ byRole: CountsSchema, unanswered: z.number().int() }),
   outsideAgents: z.object({ created: z.number().int(), builtinCreateCalls: CountsSchema }),
   usage: z.record(z.string(), UsageTotalsSchema),
 });

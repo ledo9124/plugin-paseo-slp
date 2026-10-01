@@ -8,9 +8,15 @@ proposes. The agents doing the work may question a task's premise with
 evidence, while ownership, integration, and decision propagation stay
 structured.
 
-Status: early setup. Only a slice 1 probe build exists, with no SLP behavior
-yet. The approach is accepted in `docs/decisions/0001-0005`. SLP is a per-workspace toggle: when it
-is off, agents behave normally.
+SLP exists so Human can care about the outcome only. The Supervisor
+completes Human's rough input before work starts. Agents decide what their
+authority covers, and only what really matters reaches Human. Human can see
+and redirect the work without reading transcripts.
+
+Status: partly implemented (slices 1-6 of the active plan, proved live on
+Paseo `v0.10.2`). Accepted in `docs/decisions/0001-0007`. SLP is a
+per-workspace toggle: when it is off, agents behave normally. SLP does not
+depend on Repository Harness (`docs/product/slp-and-harness.md`).
 
 - Product behavior: `docs/product/overview.md`
 - Architecture and plugin capability map: `docs/ARCHITECTURE.md`

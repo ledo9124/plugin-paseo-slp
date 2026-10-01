@@ -609,6 +609,64 @@ describe("telemetry", () => {
   });
 });
 
+describe("native questions (slice 7, I2)", () => {
+  const askUserQuestion = (id: string) => ({
+    id,
+    kind: "question",
+    name: "AskUserQuestion",
+    input: {
+      questions: [
+        { question: "Allow 5 extra runs?", options: [{ label: "Yes" }, { label: "No" }] },
+        { question: "Keep the strict reading?" },
+      ],
+    },
+  });
+
+  it("records a member's native question until it is resolved, and counts it in the report", async () => {
+    const { coordination, deps, idOf, group } = await setup();
+    await coordination.onPermissionRequested({
+      agentId: idOf("supervisor"),
+      workspaceId: "ws",
+      request: askUserQuestion("perm-1"),
+    });
+
+    expect(coordination.ledgerView("ws").nativeQuestions).toEqual([
+      {
+        requestId: "perm-1",
+        role: "supervisor",
+        agentId: idOf("supervisor"),
+        text: "Allow 5 extra runs? (Yes / No)\nKeep the strict reading?",
+        at: expect.any(String),
+      },
+    ]);
+    expect(buildReport(group()).nativeQuestions).toEqual({ byRole: { supervisor: 1 }, unanswered: 1 });
+
+    await coordination.onPermissionResolved({ agentId: idOf("supervisor"), workspaceId: "ws", requestId: "perm-1" });
+    expect(coordination.ledgerView("ws").nativeQuestions).toEqual([]);
+    const report = buildReport(deps.store.get("ws")!.group!);
+    expect(report.nativeQuestions).toEqual({ byRole: { supervisor: 1 }, unanswered: 0 });
+    expect(renderReport(report)).toContain("Questions to Human through a provider's own tool: 1 (supervisor 1); unanswered 0");
+  });
+
+  it("ignores tool permissions, agents outside the group, and resolutions it never recorded", async () => {
+    const { coordination, idOf, group } = await setup();
+    await coordination.onPermissionRequested({
+      agentId: idOf("lead"),
+      workspaceId: "ws",
+      request: { id: "perm-2", kind: "tool", name: "Bash" },
+    });
+    await coordination.onPermissionRequested({
+      agentId: "stranger",
+      workspaceId: "ws",
+      request: askUserQuestion("perm-3"),
+    });
+    await coordination.onPermissionResolved({ agentId: idOf("lead"), workspaceId: "ws", requestId: "perm-2" });
+
+    expect(group().events.filter((e) => e.kind.startsWith("native-question"))).toEqual([]);
+    expect(coordination.ledgerView("ws").nativeQuestions).toEqual([]);
+  });
+});
+
 describe("reconcile and lifecycle", () => {
   it("delivers held messages whose recipient became idle without a turn event, and drops archived ones", async () => {
     const { host, coordination, secretOf, idOf, group } = await setup();

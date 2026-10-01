@@ -119,6 +119,13 @@ export default function contribute(server: PluginServerContext) {
       }),
     ),
     server.on("agent.created", ({ agent }, { paseo }) => coordination.onAgentCreated(bind(paseo), agent)),
+    server.on("agent.permission_requested", ({ agent, request }, { paseo }) => {
+      bind(paseo);
+      return coordination.onPermissionRequested({ agentId: agent.id, workspaceId: agent.workspaceId, request });
+    }),
+    server.on("agent.permission_resolved", ({ agent, requestId }) =>
+      coordination.onPermissionResolved({ agentId: agent.id, workspaceId: agent.workspaceId, requestId }),
+    ),
     server.on("workspace.archived", ({ workspace }) => service.onWorkspaceArchived(workspace.id)),
   ];
 

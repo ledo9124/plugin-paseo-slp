@@ -12,6 +12,7 @@ import {
   type Ledger,
   type MemberView,
   type Mode,
+  type NativeQuestion,
   type Report,
   type WorkspaceView,
 } from "../shared/contracts";
@@ -43,6 +44,7 @@ export function SlpPanel({ workspaceId, navigation, theme }: PluginWorkspacePane
   const sendMode = useRpc(setWorkspaceMode);
   const [view, setView] = useState<WorkspaceView | null>(null);
   const [ledger, setLedger] = useState<Ledger | null>(null);
+  const [nativeQuestions, setNativeQuestions] = useState<NativeQuestion[]>([]);
   const [report, setReport] = useState<{ report: Report; markdown: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -64,6 +66,7 @@ export function SlpPanel({ workspaceId, navigation, theme }: PluginWorkspacePane
       ]);
       apply(nextView);
       setLedger(nextLedger.groupId ? nextLedger.ledger : null);
+      setNativeQuestions(nextLedger.nativeQuestions);
       setReport(nextReport.report && nextReport.markdown ? { report: nextReport.report, markdown: nextReport.markdown } : null);
     } catch (cause) {
       setError(String(cause instanceof Error ? cause.message : cause));
@@ -133,6 +136,24 @@ export function SlpPanel({ workspaceId, navigation, theme }: PluginWorkspacePane
               disabled={!member.agentId || !navigation}
               onPress={() => member.agentId && navigation?.openAgent({ agentId: member.agentId })}
               testID={member.role === "peer" ? `slp-member-peer-${index}` : `slp-member-${member.role}`}
+            />
+          ))}
+        </SettingsSection>
+      ) : null}
+
+      {view.group && nativeQuestions.length ? (
+        // Slice 7, I2: a question through a provider's own tool blocks the
+        // member's turn and is answered in its chat, not in this panel.
+        <SettingsSection title={`Asked in a member's chat (${nativeQuestions.length})`} testID="slp-native-questions">
+          {nativeQuestions.map((question) => (
+            <SettingsAction
+              key={question.requestId}
+              label={`The ${question.role} is waiting on you`}
+              hint={`${question.text}\nAsked through its provider's own question tool, which blocks its turn. Answer it in the agent's chat.`}
+              actionLabel="Open"
+              disabled={!navigation}
+              onPress={() => navigation?.openAgent({ agentId: question.agentId })}
+              testID={`slp-native-question-${question.requestId}`}
             />
           ))}
         </SettingsSection>

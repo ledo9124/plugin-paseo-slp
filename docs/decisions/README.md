@@ -34,3 +34,8 @@ documents here as real choices are accepted, then index them in this file.
 - [0006 The SLP Lead Cannot Use Its Provider's Own Subagents](0006-slp-lead-cannot-use-provider-subagents.md):
   Accepted, amends 0001 item 3 for this rule only. A Claude Lead is created
   with its subagent tool disallowed. The rule applies within SLP only.
+- [0007 What SLP Is: Purpose, Layers, And Independence From Harness](0007-what-slp-is.md):
+  Accepted. SLP completes Human's input, filters decisions by authority
+  (including explicit delegation), and keeps Human in control. Four layers:
+  core, coordination contracts, runtime, templates; templates are not SLP.
+  SLP and Repository Harness stay independent.

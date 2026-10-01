@@ -1,5 +1,6 @@
 import type { Report } from "../shared/contracts";
 import { counts, total } from "../shared/format";
+import { openNativeQuestions } from "./coordination";
 import type { GroupRecord } from "./store";
 
 // Per-group process report (slice 5, required behavior 10), derived from the
@@ -32,6 +33,7 @@ export function buildReport(group: GroupRecord): Report {
     delivery: { delivered: 0, held: 0, steered: 0 },
     notices: 0,
     busySendViolations: {},
+    nativeQuestions: { byRole: {}, unanswered: 0 },
     outsideAgents: { created: 0, builtinCreateCalls: {} },
     usage: {},
   };
@@ -86,6 +88,9 @@ export function buildReport(group: GroupRecord): Report {
       case "builtin-send":
         bump(report.busySendViolations, String(data.role));
         break;
+      case "native-question":
+        bump(report.nativeQuestions.byRole, String(data.role));
+        break;
       case "builtin-create":
         bump(report.outsideAgents.builtinCreateCalls, String(data.role));
         break;
@@ -124,6 +129,7 @@ export function buildReport(group: GroupRecord): Report {
     else report.humanDecisions.relayedBySupervisor += 1;
   }
   report.findings.open = group.ledger.findings.filter((f) => f.status === "open").length;
+  report.nativeQuestions.unanswered = openNativeQuestions(group).length;
   return report;
 }
 
@@ -159,6 +165,7 @@ export function renderReport(report: Report): string {
     `- Plugin notices: ${report.notices}`,
     "",
     "## Convention breaks",
+    `- Questions to Human through a provider's own tool: ${total(report.nativeQuestions.byRole)} (${counts(report.nativeQuestions.byRole)}); unanswered ${report.nativeQuestions.unanswered}`,
     `- Busy-send violations (built-in send_agent_prompt): ${total(report.busySendViolations)} (${counts(report.busySendViolations)})`,
     `- Agents created outside slp_delegate: ${report.outsideAgents.created}; built-in create_agent calls ${total(report.outsideAgents.builtinCreateCalls)} (${counts(report.outsideAgents.builtinCreateCalls)})`,
     "",

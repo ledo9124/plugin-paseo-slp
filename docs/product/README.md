@@ -10,9 +10,12 @@ files after actual product domains, such as `overview.md`, `billing.md`,
 
 ## Current Product Contract
 
-- [overview.md](overview.md): SLP for Paseo. The toggle, roles, required
-  behavior, non-goals, and deferred items. Not implemented; approach accepted
-  in decisions 0001-0005.
+- [overview.md](overview.md): SLP for Paseo. The outcome (three jobs),
+  what SLP is (four layers), the toggle, roles, required behavior,
+  non-goals, and open items. Partly implemented; accepted in decisions
+  0001-0007.
+- [slp-and-harness.md](slp-and-harness.md): the boundary between SLP and
+  Repository Harness, and how they run together (decision 0007).
 
 ## Update Rule
 

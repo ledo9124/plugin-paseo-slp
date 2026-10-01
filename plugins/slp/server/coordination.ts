@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import type { Assignment, Brief, Decision, Finding, Ledger, Role } from "../shared/contracts";
+import type { Assignment, Brief, Decision, Finding, Ledger, NativeQuestion, Role } from "../shared/contracts";
 import type { SlpSettings } from "../shared/settings";
 import type { PaseoHost } from "./paseo-host";
 import type { WorkspaceQueue } from "./queue";
@@ -51,6 +51,16 @@ export interface DelegateInput {
   model?: string;
   /** Give the assignment to this existing Peer instead of creating one. */
   peerAgentId?: string;
+}
+
+/** A provider permission request; only the fields SLP reads. */
+export interface PermissionRequest {
+  id: string;
+  kind: string;
+  name: string;
+  title?: string;
+  description?: string;
+  input?: unknown;
 }
 
 export interface DecideInput {
@@ -576,6 +586,48 @@ export class Coordination {
     });
   }
 
+  /**
+   * A member asking Human through its provider's own question tool (slice 7,
+   * I2). The question blocks the member's turn and does not reach the ledger,
+   * so the plugin records it for the panel and the report. Not blocked
+   * (decision 0001).
+   */
+  async onPermissionRequested(event: {
+    agentId: string;
+    workspaceId: string | null;
+    request: PermissionRequest;
+  }): Promise<void> {
+    if (!event.workspaceId || event.request.kind !== "question") return;
+    await this.deps.queue.run(event.workspaceId, async () => {
+      const record = this.deps.store.get(event.workspaceId!);
+      const group = record?.group;
+      if (!record || !group || group.endedAt) return;
+      const member = group.members.find((m) => m.agentId === event.agentId);
+      if (!member) return;
+      this.event(group, "native-question", {
+        requestId: event.request.id,
+        role: member.role,
+        agentId: event.agentId,
+        text: questionText(event.request),
+      });
+      this.deps.store.put(record);
+    });
+  }
+
+  /** Closes a recorded native question once it is answered or dismissed. */
+  async onPermissionResolved(event: { agentId: string; workspaceId: string | null; requestId: string }): Promise<void> {
+    if (!event.workspaceId) return;
+    await this.deps.queue.run(event.workspaceId, async () => {
+      const record = this.deps.store.get(event.workspaceId!);
+      const group = record?.group;
+      if (!record || !group) return;
+      const asked = group.events.some((e) => e.kind === "native-question" && e.data.requestId === event.requestId);
+      if (!asked) return;
+      this.event(group, "native-question-resolved", { requestId: event.requestId, agentId: event.agentId });
+      this.deps.store.put(record);
+    });
+  }
+
   /** Delivers held messages whose recipient is idle; covers missed turn events. */
   async reconcile(host: PaseoHost): Promise<number> {
     let delivered = 0;
@@ -604,6 +656,7 @@ export class Coordination {
     return {
       groupId: group?.id ?? null,
       ledger: group?.ledger ?? { assignments: [], findings: [], decisions: [] },
+      nativeQuestions: group && !group.endedAt ? openNativeQuestions(group) : [],
       heldMessages: group?.held.length ?? 0,
       events: group?.events.slice(-200) ?? [],
     };
@@ -796,6 +849,43 @@ export class Coordination {
   private shortId(prefix: string, count: number): string {
     return `${prefix}${count + 1}`;
   }
+}
+
+/** Native questions recorded for the group and not yet resolved (slice 7, I2). */
+export function openNativeQuestions(group: GroupRecord): NativeQuestion[] {
+  const resolved = new Set(
+    group.events.filter((e) => e.kind === "native-question-resolved").map((e) => e.data.requestId),
+  );
+  return group.events
+    .filter((e) => e.kind === "native-question" && !resolved.has(e.data.requestId))
+    .map((e) => ({
+      requestId: String(e.data.requestId),
+      role: e.data.role as Role,
+      agentId: String(e.data.agentId),
+      text: String(e.data.text),
+      at: e.at,
+    }));
+}
+
+const QUESTION_TEXT_LIMIT = 1000;
+
+/** Readable text for a question request: Claude's AskUserQuestion carries `questions`. */
+function questionText(request: PermissionRequest): string {
+  const input = (request.input ?? {}) as { questions?: unknown };
+  const lines = Array.isArray(input.questions)
+    ? input.questions.flatMap((entry) => {
+        const question = entry as { question?: unknown; options?: unknown };
+        if (typeof question.question !== "string") return [];
+        const labels = Array.isArray(question.options)
+          ? question.options
+              .map((option) => (option as { label?: unknown }).label)
+              .filter((label): label is string => typeof label === "string")
+          : [];
+        return [labels.length ? `${question.question} (${labels.join(" / ")})` : question.question];
+      })
+    : [];
+  const text = lines.join("\n") || request.title || request.description || request.name;
+  return text.length > QUESTION_TEXT_LIMIT ? `${text.slice(0, QUESTION_TEXT_LIMIT)}…` : text;
 }
 
 function summary(message: HeldMessage) {

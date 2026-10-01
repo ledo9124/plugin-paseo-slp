@@ -43,8 +43,13 @@ export function ProcessSection({ report, markdown }: { report: Report; markdown:
         hint={`${counts(report.messages)}. Delivery: ${report.delivery.delivered} at once, ${report.delivery.held} held for a busy recipient, ${report.delivery.steered} steered. Plugin notices: ${report.notices}.`}
       />
       <SettingsRow
-        label={`Convention breaks: ${total(report.busySendViolations) + report.outsideAgents.created + total(report.outsideAgents.builtinCreateCalls)}`}
-        hint={`Built-in send_agent_prompt calls ${total(report.busySendViolations)} (${counts(report.busySendViolations)}); agents created outside slp_delegate ${report.outsideAgents.created}; built-in create_agent calls ${total(report.outsideAgents.builtinCreateCalls)}.`}
+        label={`Convention breaks: ${
+          total(report.busySendViolations) +
+          report.outsideAgents.created +
+          total(report.outsideAgents.builtinCreateCalls) +
+          total(report.nativeQuestions.byRole)
+        }`}
+        hint={`Questions to Human through a provider's own tool ${total(report.nativeQuestions.byRole)} (${counts(report.nativeQuestions.byRole)}; unanswered ${report.nativeQuestions.unanswered}); built-in send_agent_prompt calls ${total(report.busySendViolations)} (${counts(report.busySendViolations)}); agents created outside slp_delegate ${report.outsideAgents.created}; built-in create_agent calls ${total(report.outsideAgents.builtinCreateCalls)}.`}
         testID="slp-process-breaks"
       />
       {Object.entries(report.usage).map(([role, usage]) => (
