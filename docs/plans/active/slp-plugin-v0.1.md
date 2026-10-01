@@ -4,7 +4,8 @@ Date: 2026-10-01
 
 ## Status
 
-Active. Slice 0 is complete; slice 1 is next.
+Active. Slices 0 and 1 are complete on Claude; slice 1 Codex coverage is
+unproven. Slice 2 waits on the Human decisions listed under slice 1 results.
 
 ## Outcome
 
@@ -133,7 +134,8 @@ with commands and observed results.
 
 - [x] Slice 0: repository, Harness core 0.1.16, decisions 0001-0003, docs,
   no-op skeleton.
-- [ ] Slice 1: platform probes on stock Paseo.
+- [x] Slice 1: platform probes on stock Paseo v0.10.2, Claude only. Codex
+  not run by Human choice. Results below.
 - [ ] Slice 2: toggle and group start.
 - [ ] Slice 3: delegation, ledger, handback, reconciliation.
 - [ ] Slice 4: Human panel.
@@ -163,6 +165,173 @@ with commands and observed results.
     - lanes, worktree slots, and merge queues;
     - plugin-owned mail and watchers;
     - writing into the project's `AGENTS.md`.
+
+- 2026-10-01: Slice 1 runs on an isolated home
+  (`C:\code\my-project\paseo-upstream\.dev\paseo-home`, port 6768), not the
+  shared dev home, which `my-plugin` uses with `injectIntoAgents: true`.
+  Human chose this and allowed enabling `injectIntoAgents` there.
+- 2026-10-01: Slice 1 covers Claude only; Human declined Codex quota.
+- 2026-10-01: Acceptance target is the `v0.10.2` release tag, not upstream
+  main. Agent choice within the handoff's "main or release tag": the manifest
+  requires `>=0.10.2`, the SDK is pinned to 0.10.2, and the shared fork
+  branch is `v0.10.2` plus one patch. Upstream main `d30e99c85` reports
+  version 0.10.0 (the 0.10.x releases are cut on a separate branch), so the
+  daemon would reject this manifest there.
+- 2026-10-01: Keep parentage in the ledger; do not pass `parent` to
+  `agents.create` in v0.1. Agent decision from probe 3; Human may revisit.
+  - Archiving a parent archives its children, so archiving a Lead occupant
+    would silently end its Peers, against decision 0002 item 4.
+  - `parent` brings no finish notification for plugin-created children, and
+    creation fails when the parent is not loaded.
+  - Handback is relayed at `agent.turn_ended` either way.
+
+## Slice 1 Results
+
+Environment for every probe unless noted:
+- Paseo `v0.10.2` (`919c737c1`), stock, in the detached worktree
+  `C:\code\my-project\paseo-upstream`; started with `npm run dev:server:raw`.
+- Isolated home `C:\code\my-project\paseo-upstream\.dev\paseo-home`, port
+  6768. Daemon 6767 and the shared dev home were not touched.
+- Provider `claude/claude-haiku-4-5`, default mode, cwd a scratch directory
+  outside any repository.
+- Probe build: `plugins/slp` (`index.server.ts`, `server/`), driven by
+  `scripts/probe-rpc.mts` because the CLI has no plugin RPC command. Probe
+  events went to `<home>\plugin-data\slp-probe\events.jsonl`, which the
+  observations below quote.
+
+| Probe | Result |
+| --- | --- |
+| 0 Paseo tools in members | Pass with a setup requirement. Tools appear only with `injectIntoAgents: true` |
+| 1 Install, reload, logs | Pass |
+| 2 Plugin MCP route, per-member secret | Pass on Claude, including after both resume paths. Codex unproven |
+| 3 `parent`, handback | Facts recorded. Parentage stays in the ledger; relay at `turn_ended` works |
+| 4 Busy send | Claude: the built-in send replaces the turn; a plugin send with `steer` injects. Codex unproven |
+| 5 Reconciliation | Pass. No member lost across a daemon restart |
+
+Probes 0, 2, and 3 did not fail, so decision 0001 needs no revision on those
+grounds. The new constraints under "Open For Human" may still affect it.
+
+### Probe 0: Paseo Tools In Members
+
+- Default config, no `daemon.mcp` key: member `p0-default` listed its
+  `mcp__*` tools without calling any. It had no `mcp__paseo__*` tool. It did
+  have `mcp__slp__slp_whoami` and Human's global Claude MCP servers (`tilth`,
+  Claude Docs).
+- `injectIntoAgents: true` and a daemon restart: member `p0-inject` listed
+  39 `mcp__paseo__*` tools, including `send_agent_prompt`, `create_agent`,
+  and `list_agents`.
+  - Its real `mcp__paseo__list_agents` call returned only the two probe
+    agents, so the tool reached the 6768 daemon.
+  - The call waited on a permission prompt until it was allowed with
+    `paseo permit allow`.
+- Conclusion: `injectIntoAgents: true` is a setup requirement, now in
+  `docs/RUNBOOK.md`.
+
+### Probe 1: Install, Reload, Logs
+
+- `plugin install C:\code\my-project\plugin-paseo-slp\plugins\slp`: exit 0,
+  and `plugin ls` showed `slp running`.
+- `plugin reload slp`: exit 0. Logs showed stop, load, and ready, and the
+  MCP port 6791 was released and bound again.
+- `plugin logs slp` showed the plugin's `console.log` lines.
+- The plugin process inherits the daemon's environment, including
+  `PASEO_HOME`.
+- RUNBOOK gaps found and fixed:
+  - the CLI needs `npm run build:lib --workspace=@getpaseo/server`;
+  - npm 11 skips install scripts without breaking the daemon;
+  - JSON arguments under Git Bash need forward-slash paths.
+
+### Probe 2: Plugin MCP Route
+
+- Claude connected to `http://127.0.0.1:6791/mcp/<secret>` with `alwaysLoad`.
+  It sent `server/discover`, `initialize`, `notifications/initialized`, and
+  `tools/list`.
+- `toolPolicy.preapproved` for `slp.slp_whoami` let the tool run without a
+  prompt. It returned the right member key for `p0-default` and `p0-inject`.
+- Resume keeps the secret on both paths:
+  - after a daemon restart, `p0-default` was resumed and its turn ids
+    restarted at `foreground-turn-1`; `slp_whoami` still returned
+    `p0-default`;
+  - after `paseo agent reload`, `p0-inject` still got `p0-inject`.
+- A live POST with an unknown secret returned 401.
+- Consequence: the MCP port must be fixed, because the URL is persisted with
+  the agent.
+- Codex: not run.
+
+### Probe 3: `parent` And Handback
+
+- `p3-child-a` was created with `parent` and `systemPrompt`. It had the label
+  `paseo.parent-agent-id`, and `agent.created` carried `parentAgentId`. Its
+  reply ended with the token its system prompt required.
+- Its parent `p3-lead` received no finish notification: no turn started, and
+  `paseo agent logs` showed only the initial prompt.
+- Handback relay worked. On `p3-child-b`'s `agent.turn_ended`, the plugin
+  sent the last reply to the idle Lead with `activeTurnBehavior: "steer"`.
+  The Lead started a turn with the `<slp-handback>` message.
+- `probe.archive` on the Lead archived the Lead, then `p3-child-a` and
+  `p3-child-b` about 0.5 s later. Each archive emitted `agent.archived`.
+
+### Probe 4: Busy Send (Claude)
+
+- **Built-in send replaces the turn.** `p4b-sender` called
+  `mcp__paseo__send_agent_prompt` (after a manual permission) while
+  `p4b-target` was inside a 90 s `slp_sleep`.
+  - The target's turn ended `canceled: Interrupted` mid-tool, and its
+    original task was lost.
+  - A new turn answered only the new message.
+  - The sender got a finish notification turn, because the built-in tool
+    arms one.
+- **A plugin send with steer is injected.** `probe.send` with
+  `activeTurnBehavior: "steer"` reached `p4c-target` during a 45 s sleep.
+  - The same turn finished the tool and replied to both the original task
+    and the steered message.
+  - SDK 0.10.2 forwards the option but leaves it out of
+    `PaseoAgentSendOptions`; `PaseoHost` widens the type.
+- A plugin send without options interrupts, per source
+  (`session.ts:8071`). Not run live.
+- Codex: not run.
+
+### Probe 5: Reconciliation
+
+- `p5-a` and `p5-b` were created with labels and `idempotencyKey`. The
+  daemon was stopped and started again.
+- The first RPC that bound the Paseo API reconciled 7 stored members against
+  `agents.list` filtered by `slp.probe=1`: all 7 live members matched, with
+  no orphans. The 5 missing were the 3 archived probe 3 agents and 2 keys
+  whose create had been rejected.
+- Re-creating `p5-a` with the same key returned the same agent
+  (`8e8e743f`).
+- Slice 3 must tell archived members apart from never-created ones.
+- Not exercised: first contact through a hook instead of an RPC.
+
+### Other Findings
+
+- `toolPolicy.preapproved` cannot name the injected `paseo` server. Create
+  fails with "toolPolicy preapproval 'paseo.send_agent_prompt' requires MCP
+  server 'paseo' in the same agent request". Members in Claude's default
+  mode therefore get a permission prompt for every built-in Paseo tool call.
+- A rejected create still uses up its `idempotencyKey`. Retrying the key with
+  a different request gives `agent_request_key_conflict`.
+- After `agent reload`, the `agent.turn_ended` timeline also contains earlier
+  turns. Handback must take the last assistant message, not the whole
+  timeline.
+- Members inherit Human's global Claude MCP servers and settings.
+
+### Open For Human
+
+1. **Built-in messaging prompts for permission and replaces busy turns.**
+   Decision 0001 keeps messaging on Paseo's built-in tools. Probe 4 shows two
+   costs:
+   - each built-in send needs a Human permission in default mode, and the
+     plugin cannot preapprove it;
+   - it cancels a busy recipient's turn.
+
+   A plugin-hosted send tool could be preapproved and could steer instead.
+   It would change 0001's messaging layer, so it needs Human's decision.
+   No edit was made.
+2. **Setup requirement.** SLP members need `injectIntoAgents: true`. That is
+   daemon-wide, so every agent on that daemon gets Paseo tools.
+3. **Codex.** Probes 2 and 4 remain unproven on Codex.
 
 ## Validation
 

@@ -1,54 +1,80 @@
 # Runbook: Run The Plugin On A Dev Paseo Daemon
 
-Status: not yet exercised from this repository. These steps are adapted from
-the verified runbook of the sibling repository `ledo9124/paseo-plugin`
-(`C:/code/my-project/my-plugin/docs/RUNBOOK.md`). Slice 1 of the active plan
-must prove them here before any result relies on them.
+Status: first exercised from this repository on 2026-10-01 (slice 1 of the
+active plan). The run used stock Paseo `v0.10.2` with an isolated home and
+Claude agents only. The steps were adapted from the sibling repository
+`ledo9124/paseo-plugin` (`C:/code/my-project/my-plugin/docs/RUNBOOK.md`).
 
 ## Prerequisites And Ownership
 
-- A Paseo source checkout at `C:\code\my-project\paseo`. Run
-  `npm run build:server-deps` there first.
-  - This plugin targets stock Paseo 0.10.2 or later and must not rely on fork
-    patches.
-  - The checkout is shared with the sibling `paseo-plugin` repository and may
-    sit on its fork branch `per-agent-paseo-tools`.
-  - A result obtained on that branch proves behavior on stock Paseo only if
-    it does not touch the patched area. Run each slice's acceptance proof at
-    least once on an upstream checkout (`origin/main` or a release tag) in a
-    separate worktree.
-- Two daemons can exist on this machine:
-  - **6767:** the installed Paseo app, home `~\.paseo`. It is not owned by
-    this workflow. Never stop or restart it, and never install this plugin
-    into it unless Human asks.
-  - **6768:** the dev daemon, home `C:\code\my-project\paseo\.dev\paseo-home`.
-    This workflow owns it.
-- Root `pluginsEnabled: true` in the dev home's `config.json`.
+- **Stock checkout.** Use a stock Paseo checkout for acceptance proof. Slice
+  1 used a detached worktree of the shared repository:
+
+  ```powershell
+  cd C:\code\my-project\paseo
+  git worktree add --detach C:\code\my-project\paseo-upstream v0.10.2
+  cd C:\code\my-project\paseo-upstream
+  npm ci
+  npm run build:server-deps
+  npm run build:lib --workspace=@getpaseo/server   # the CLI imports server dist
+  ```
+
+  - npm 11 reports that it skipped install scripts (node-pty, esbuild).
+    The daemon still ran.
+  - Upstream main reports version 0.10.0, because 0.10.x releases are cut
+    on a separate branch. A daemon built from main rejects this plugin's
+    `requirements.paseo` (`>=0.10.2`).
+- **Shared checkout.** `C:\code\my-project\paseo` is shared with the sibling
+  `paseo-plugin` repository.
+  - It may sit on the fork branch `per-agent-paseo-tools`, which patches
+    `paseo-tools.ts`. Do not switch its branch without asking.
+  - A result from that branch proves stock behavior only if it does not
+    touch the patched area.
+- **Daemons on this machine:**
+  - **6767:** the installed Paseo app, home `~\.paseo`. This workflow does
+    not own it. Never stop or restart it, and never install this plugin into
+    it unless Human asks.
+  - **6768:** the dev daemon. Only one home may use the port at a time:
+    - shared dev home `C:\code\my-project\paseo\.dev\paseo-home`, used by
+      `my-plugin`. It already has `injectIntoAgents: true` and three
+      `my-plugin` plugins;
+    - isolated probe home
+      `C:\code\my-project\paseo-upstream\.dev\paseo-home`, owned by this
+      repository's probes.
+- **Required config** in the home's `config.json`:
+  - `"pluginsEnabled": true` at the root;
+  - `"daemon": { "listen": "127.0.0.1:6768", "mcp": { "injectIntoAgents": true } }`.
+    Seed `listen` before the first boot, or the daemon defaults to 6767 and
+    CLI calls silently target the installed app.
+- **`injectIntoAgents` is required** (slice 1 probe 0). Without it, SLP
+  members get no `mcp__paseo__*` tools. It is daemon-wide: every agent on
+  that daemon gets Paseo tools. Ask Human before enabling it on any home.
+- **MCP port.** The plugin's MCP endpoint listens on `127.0.0.1:6791`. Set
+  `SLP_PROBE_MCP_PORT` to override. Keep it stable, because member MCP URLs
+  are persisted with each agent.
 
 ## Start
 
-From the Paseo checkout, in PowerShell:
+From the stock checkout, in PowerShell:
 
 ```powershell
-$env:PASEO_HOME = "C:\code\my-project\paseo\.dev\paseo-home"
+$env:PASEO_HOME = "C:\code\my-project\paseo-upstream\.dev\paseo-home"
 $env:PASEO_LISTEN = "127.0.0.1:6768"
 $env:PASEO_CORS_ORIGINS = "*"
-npm run dev:server:watch
+npm run dev:server:raw          # or dev:server:watch to rebuild protocol and client too
 ```
 
-Always pass the dev home to the CLI. Without it, the CLI targets the
-installed app.
+- A fresh home starts downloading local speech models into `<home>\models`.
+- The `dev:server`, `dev:app`, and `cli` npm scripts call shell scripts that
+  fail on Windows. Use the commands here instead.
+- Always pass the home to the CLI; without it, the CLI targets the installed
+  app:
 
-```powershell
-npx tsx C:\code\my-project\paseo\packages\cli\src\index.ts --home C:\code\my-project\paseo\.dev\paseo-home <command>
-```
-
-The `dev:server`, `dev:app`, and `cli` npm scripts call shell scripts that
-fail on Windows. Use the commands above instead.
-
-If the dev home is recreated, seed `config.json` with the 6768 listen address
-before the first boot. Otherwise the daemon defaults to 6767, and CLI calls
-silently target the installed app.
+  ```bash
+  node C:/code/my-project/paseo-upstream/node_modules/tsx/dist/cli.mjs \
+    C:/code/my-project/paseo-upstream/packages/cli/src/index.ts \
+    --home 'C:\code\my-project\paseo-upstream\.dev\paseo-home' <command>
+  ```
 
 ## Install And Reload
 
@@ -62,10 +88,35 @@ npm install                     # in this repository, before every install or re
 - A failed reload stays failed; Paseo does not restore the previous code.
 - To change the plugin id, run `plugin remove <old-id>` first.
 
+## Calling Plugin RPCs
+
+The CLI has no plugin RPC command. `scripts/probe-rpc.mts` reuses the CLI's
+connection code:
+
+```bash
+PASEO_HOME='C:\code\my-project\paseo-upstream\.dev\paseo-home' \
+  node C:/code/my-project/paseo-upstream/node_modules/tsx/dist/cli.mjs \
+  scripts/probe-rpc.mts probe.list '{}'
+```
+
+Under Git Bash, write Windows paths inside JSON arguments with forward
+slashes (`C:/Users/...`). Backslashes do not survive argument conversion.
+
 ## Readiness
 
 - `<cli> plugin ls` shows `slp` as `running`.
-- Durable log: `C:\code\my-project\paseo\.dev\paseo-home\daemon.log`.
+- `<cli> plugin logs slp` shows the plugin's MCP listening line.
+- Durable log: `<home>\daemon.log`.
+
+## Permissions
+
+In Claude's default mode, a member asks permission for every built-in Paseo
+tool call. The plugin cannot preapprove the injected `paseo` server.
+
+```bash
+<cli> permit ls
+<cli> permit allow <agent-id> <request-id>
+```
 
 ## Validation From Git Bash
 
@@ -81,5 +132,7 @@ Read the exit code; do not treat filtered output as a pass.
 
 ## Stop
 
-Stop only the dev daemon this run started. Remove test agents and workspaces
-this run created.
+- Archive the test agents this run created.
+- Stop only the daemon this run started: `<cli> daemon stop`, with the same
+  `--home`.
+- Leave the 6767 daemon alone.

@@ -1,6 +1,6 @@
 {
   "id": "slp",
-  "description": "Supervisor-Lead-Peer coordination for Paseo agents (early setup; no behavior yet).",
+  "description": "Supervisor-Lead-Peer coordination for Paseo agents (slice 1 probe build; no SLP behavior yet).",
   "requirements": {
     "paseo": ">=0.10.2"
   }

@@ -1,7 +1,9 @@
 # Architecture
 
-Status: approach accepted in decisions 0001-0003. Only the repository layout
-and a no-op plugin entry exist.
+Status: approach accepted in decisions 0001-0003. Slice 1 platform probes ran
+on stock Paseo `v0.10.2` with Claude. The code is a throwaway probe build plus
+the `PaseoHost` adapter; results are in the
+[active plan](plans/active/slp-plugin-v0.1.md#slice-1-results).
 
 ## Repository Layout
 
@@ -16,6 +18,8 @@ and a no-op plugin entry exist.
 - `docs/`: Harness core plus this repository's product, decisions, plans,
   runbook, and research notes.
 - `scripts/bin/harness(.exe)`: untracked Harness maintenance binary.
+- `scripts/probe-rpc.mts`: dev driver that calls plugin RPCs through a Paseo
+  source checkout's CLI connection code (see [RUNBOOK.md](RUNBOOK.md)).
 
 Paseo compiles plugin TypeScript itself; there is no build step. Run
 `npm install` before installing or reloading, because Paseo does not install
@@ -46,15 +50,18 @@ Paseo daemon ── plugin subprocess
 
 ## Capability Map
 
-Verified against `getpaseo/paseo` main at `d30e99c85` and plugin SDK 0.10.2.
+Read from source on `getpaseo/paseo` main at `d30e99c85`, and checked at the
+`v0.10.2` tag where noted. Rows marked "probed" were observed live on
+`v0.10.2` with Claude in slice 1.
 
 | Need | Mechanism | Limitation or open question |
 | --- | --- | --- |
 | Members with role instructions | `paseo.agents.create({config: {systemPrompt, mcpServers}, labels, idempotencyKey})` | Prompt and labels are fixed at creation |
-| Peer creation with a structured brief | Plugin MCP tool, Lead only, calling `agents.create` with the requested provider and model | `parent` sets `paseo.parent-agent-id`, and archiving a parent cascades to its children. Slice 1 decides whether to use `parent` or keep parentage in the ledger |
-| Member identity for SLP tools | Plugin-hosted HTTP MCP server with a per-member secret in the URL | Slice 1: confirm on each target provider, and confirm the secret survives a resume (`session_open` env is not kept across resume) |
-| Handback | Plugin relays the member's last message at `agent.turn_ended` | Agents created by a plugin get no finish notification; that exists only for agent-created children. Relaying to a busy Lead has the same steer or replace problem as other sends |
-| Messages between members | Built-in `send_agent_prompt` | Needs Paseo tools injected into agents. `daemon.mcp.injectIntoAgents` defaults to `false` (`config.ts:540`); slice 1 probe 0. A busy recipient's turn is steered or replaced. Convention: message a Peer after its handback; telemetry counts violations |
+| Peer creation with a structured brief | Plugin MCP tool, Lead only, calling `agents.create` with the requested provider and model | Probed: `parent` sets `paseo.parent-agent-id`, archiving a parent archives its children, and creation needs the parent loaded. v0.1 keeps parentage in the ledger and does not pass `parent` |
+| Member identity for SLP tools | Plugin-hosted HTTP MCP server with a per-member secret in the URL | Probed on Claude: works, and the secret survives resume after a daemon restart and after `agent reload`. The port must stay fixed, because the URL is persisted with the agent. `toolPolicy.preapproved` covers the plugin's own tools. Codex unproven |
+| Handback | Plugin relays the member's last message at `agent.turn_ended`, sending with `activeTurnBehavior: "steer"` | Probed: plugin-created children get no finish notification, and the relay works. After a reload, the event timeline also holds earlier turns, so relay the last assistant message only |
+| Messages between members | Built-in `send_agent_prompt` | Probed: needs `daemon.mcp.injectIntoAgents: true` (default `false`), which is daemon-wide. On Claude a busy recipient's turn is canceled and replaced. In default mode each call asks Human for permission, and plugins cannot preapprove the injected `paseo` server. Open for Human (plan, slice 1) |
+| Steering a busy member | Plugin `agents.ref(id).send(text, {activeTurnBehavior: "steer"})` | Probed on Claude: the message joins the running turn. SDK 0.10.2 forwards the option but leaves it out of `PaseoAgentSendOptions`. A send without options interrupts |
 | Ledger and Human steering | Plugin MCP tools for agents; RPCs and a panel for Human; plugin-owned files | The ledger records each assignment and role with `agentId` as its current occupant, not as its identity. The plugin has no Paseo API at startup, only inside hooks and RPCs, so reconciliation from files, labels, and `agents.list` runs at the first hook or RPC |
 | Agents created outside the delegate tool | `agent.created` with `parentAgentId` | Visible, not blocked |
 | Per-workspace toggle | Plugin state per workspace and a client control | Exact control location decided in slice 2 |
@@ -69,11 +76,20 @@ Verified against `getpaseo/paseo` main at `d30e99c85` and plugin SDK 0.10.2.
   - It also writes to Human's global provider config and stays visible while
     SLP is off.
 
+- Members inherit Human's global Claude MCP servers and settings.
+- `idempotencyKey` is consumed even when the daemon rejects the create, and a
+  retry with a different request fails with `agent_request_key_conflict`.
+- Upstream main reports version 0.10.0 because releases are cut on a
+  separate branch. A daemon built from main rejects `requirements.paseo`
+  `>=0.10.2`.
+
 ## Plugin Code Boundary
 
 SLP logic talks to Paseo through one thin `PaseoHost` adapter in `server/`.
 - The adapter exposes only the calls the plugin actually makes.
-- It is bound when the first hook or RPC supplies the Paseo API.
+- It is bound when the first hook or RPC supplies the Paseo API. In
+  `v0.10.2` the plugin process creates one long-lived `PaseoApi`, so keeping
+  that reference after binding is safe.
 - A fake implementation of it backs unit tests.
 - Lifecycle events are best-effort and not replayed. Plugin timeline rows are
   memory-only.
@@ -85,3 +101,4 @@ SLP logic talks to Paseo through one thin `PaseoHost` adapter in `server/`.
 - Stock Paseo 0.10.2 or later. No fork patches.
 - `@getpaseo/plugin` 0.10.2 (dev dependency, types only).
 - A Paseo source checkout for the dev daemon. See [RUNBOOK.md](RUNBOOK.md).
+- The daemon must run with `daemon.mcp.injectIntoAgents: true`.
