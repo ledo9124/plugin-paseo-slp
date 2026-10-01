@@ -17,6 +17,7 @@ export const MEMBER_TOOLS = [
   "slp_delegate",
   "slp_accept",
   "slp_decide",
+  "slp_revise_decision",
 ] as const;
 
 const GROUP_ROLES: readonly Role[] = ["supervisor", "lead"];

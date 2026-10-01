@@ -150,6 +150,19 @@ with commands and observed results.
        decides whether and how to tell the Lead and Peers;
      - the panel offers no other actions in v0.1: no findings, ownership
        changes, or acceptance by Human.
+   - Human's choices on the slice 4 observations (2026-10-01):
+     - pending decisions get full create, read, update, and delete. Agent
+       choices within that:
+       - only the member that recorded a pending decision may update or
+         withdraw it, and only while it is pending;
+       - "delete" withdraws the decision (status `withdrawn`, with a
+         reason) rather than erasing it. This keeps decision ids unique and
+         the history visible;
+       - when the Lead revises one, the Supervisor is told;
+     - attribution to Human is fixed by instructions only (option A).
+       `source: "human"` and a constraint source of "Human" are only for
+       what Human actually said; derived points name the agent and the
+       Human decision they come from. No new restriction in the plugin.
 5. **Telemetry.** Counts of escalations, reopens, acceptance outcomes,
    message rounds, busy-send violations, agents created outside the delegate
    tool, and Human interventions, with a readable per-group report.
@@ -340,18 +353,63 @@ panel ran in the web app on 8081 (driven by `agent-browser`, session
 - Cleanup: the browser session was closed, Metro and the daemon were
   stopped, and 6767 was untouched.
 
-Observations for Human (no change made):
+Observations from the first run, and what followed:
 - **No way to amend a pending decision.** The Lead recorded D2 only to
-  correct D1, which left Human two items to settle.
+  correct D1, which left Human two items to settle. Human chose full CRUD
+  for pending decisions (see Approach, slice 4). This added
+  `slp_revise_decision`: the author updates or withdraws its own pending
+  decision, and the Supervisor is told.
 - **An agent's inference recorded as Human's.** The Supervisor recorded
   D2 as `source: "human"` because it inferred D2 from Human's D1; Human
   never answered D2. A1's brief also listed "Do not invent a length limit;
   Human set none" with source "Human (review request)", which Human did not
-  say. Required behavior 1 is at risk where agents attribute inferences to
-  Human. Possible fixes are tuning the instructions or limiting
-  `source: "human"`; both need Human's call.
+  say. Human chose option A, instructions only:
+  - the shared, Supervisor, and Lead role texts now say "Human" is only
+    for what Human said, and that a derived point names who inferred it
+    and from what;
+  - a decision made moot is withdrawn by its author, not settled as
+    Human's;
+  - the `slp_decide` and `slp_delegate` descriptions say the same.
 - **The Lead implemented the first goal itself, without delegating.** The
   role text allows this, and the task was small.
+
+Follow-up run, on the same environment with a new group, so the new role
+texts applied. Workspace `slp-s4-ws2` (`wks_bd1fb54d73b420a4`).
+
+Focused proof:
+- `tsc` passes.
+- `vitest` passes 39 tests, including 3 new revise tests: update in place,
+  withdraw (it keeps its id, and Human can no longer settle it), and
+  refusals for other members, settled decisions, and an update with no
+  text.
+
+Live results:
+- Human reserved two choices. The Lead recorded pending D1 (non-ASCII) and
+  D2 (maximum length).
+- Human then asked, through the Supervisor, to take D1 off Human's list
+  and to reword D2 to "60 or 80".
+  - The Supervisor recorded D5 (`source: human`), a faithful relay of that
+    message.
+  - The Lead called `slp_revise_decision`: D2 `update` (events show
+    `decision-revised {action: "update"}`; still pending, same id), then
+    D1 `withdraw` with reason "Per Human D5...".
+  - The Lead recorded its own non-ASCII choice as D6, `source: agent`,
+    worded "Lead design choice (per Human D5, non-ASCII is Lead's call)".
+- The web app showed "Waiting for you (1)" with "D2, raised by the Lead
+  (revised)", and "D1: withdrawn by the Lead, no answer needed" under
+  Decisions.
+- Human settled D2 ("60 characters.") from the panel. The Supervisor
+  relayed it, and the Lead implemented it.
+  - The Lead recorded D7 as `source: agent`, "Implemented Human's D2
+    answer".
+  - The code comment reads "60 characters (Human decision)".
+- No misattribution to Human was seen in this run. The Lead again worked
+  without a Peer, so no brief was written and brief constraint sources
+  were not exercised. One clean run is weak evidence; slice 6 should check
+  attribution again.
+- Cleanup: the workspace was archived (the group ended and both members
+  were archived), the browser closed, Metro and the daemon stopped, and
+  6767 was untouched.
 
 Not covered live in slice 4:
 - **An open finding in the panel.** F1 was resolved within seconds, so the

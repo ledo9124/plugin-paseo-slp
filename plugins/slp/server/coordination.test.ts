@@ -346,6 +346,68 @@ describe("findings and decisions", () => {
   });
 });
 
+describe("revising pending decisions", () => {
+  it("lets the author update a pending decision in place and tells the Supervisor", async () => {
+    const { host, coordination, secretOf, idOf, group } = await setup();
+    const pending = await coordination.decide(host, secretOf("lead"), {
+      text: "Transliterate or drop? Drop gives caf-d-j-vu",
+      source: "agent",
+      status: "pending",
+    });
+    host.sends.length = 0;
+
+    const result = await coordination.reviseDecision(host, secretOf("lead"), {
+      decisionId: pending.decisionId,
+      action: "update",
+      text: "Transliterate or drop? Drop gives caf-dj-vu",
+      reason: "wrong example",
+    });
+
+    expect(result).toEqual({ decisionId: pending.decisionId, status: "pending", notified: [idOf("supervisor")] });
+    expect(group().ledger.decisions).toHaveLength(1);
+    expect(group().ledger.decisions[0]).toMatchObject({ text: "Transliterate or drop? Drop gives caf-dj-vu", status: "pending" });
+    expect(group().ledger.decisions[0].revisedAt).toBeTruthy();
+    expect(host.sends[0]).toMatchObject({ agentId: idOf("supervisor"), text: expect.stringContaining("caf-dj-vu") });
+  });
+
+  it("withdraws a pending decision, which Human can then no longer settle and which keeps its id", async () => {
+    const { host, coordination, secretOf, group } = await setup();
+    const first = await coordination.decide(host, secretOf("lead"), { text: "q1", source: "agent", status: "pending" });
+    await coordination.reviseDecision(host, secretOf("lead"), {
+      decisionId: first.decisionId,
+      action: "withdraw",
+      reason: "answered by the project docs",
+    });
+
+    expect(group().ledger.decisions[0]).toMatchObject({
+      status: "withdrawn",
+      withdrawnReason: "answered by the project docs",
+    });
+    await expect(coordination.humanDecide(host, "ws", { text: "x", settles: first.decisionId })).rejects.toMatchObject({
+      code: "invalid",
+    });
+    const next = await coordination.decide(host, secretOf("lead"), { text: "q2", source: "agent", status: "pending" });
+    expect(next.decisionId).not.toBe(first.decisionId);
+    expect(group().events.filter((e) => e.kind === "decision-revised")).toEqual([
+      expect.objectContaining({ data: { decisionId: first.decisionId, action: "withdraw", by: "lead" } }),
+    ]);
+  });
+
+  it("refuses other members, settled decisions, and an update without text", async () => {
+    const { host, coordination, secretOf } = await setup();
+    await coordination.delegate(host, secretOf("lead"), delegateInput);
+    const pending = await coordination.decide(host, secretOf("lead"), { text: "q", source: "agent", status: "pending" });
+    const settled = await coordination.decide(host, secretOf("lead"), { text: "s", source: "agent", status: "settled" });
+    const revise = (role: string, decisionId: string, action: "update" | "withdraw", text?: string) =>
+      coordination.reviseDecision(host, secretOf(role), { decisionId, action, text, reason: "r" });
+
+    await expect(revise("supervisor", pending.decisionId, "withdraw")).rejects.toMatchObject({ code: "forbidden" });
+    await expect(revise("peer", pending.decisionId, "withdraw")).rejects.toMatchObject({ code: "forbidden" });
+    await expect(revise("lead", settled.decisionId, "withdraw")).rejects.toMatchObject({ code: "invalid" });
+    await expect(revise("lead", pending.decisionId, "update")).rejects.toMatchObject({ code: "invalid" });
+  });
+});
+
 describe("Human decisions from the panel", () => {
   it("settles a pending decision as Human's and tells only the Supervisor", async () => {
     const { host, coordination, secretOf, idOf, group } = await setup();

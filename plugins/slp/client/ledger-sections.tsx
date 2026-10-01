@@ -33,6 +33,7 @@ function actorLabel(by: Decision["by"]): string {
 
 function decisionSource(decision: Decision): string {
   const who = actorLabel(decision.by);
+  if (decision.status === "withdrawn") return `withdrawn by the ${who}, no answer needed`;
   if (decision.source === "agent") return `agent choice (${who})`;
   return decision.by.role === "human" ? "Human, from the panel" : `Human, relayed by the ${who}`;
 }
@@ -143,7 +144,7 @@ export function LedgerSections({ workspaceId, ledger, members, running, onChange
     members.find((m) => m.agentId === agentId)?.title ?? agentId ?? "nobody";
 
   const pending = ledger.decisions.filter((d) => d.status === "pending");
-  const settled = ledger.decisions.filter((d) => d.status === "settled");
+  const closed = ledger.decisions.filter((d) => d.status !== "pending");
   const openFindings = ledger.findings.filter((f) => f.status === "open");
 
   return (
@@ -154,7 +155,7 @@ export function LedgerSections({ workspaceId, ledger, members, running, onChange
             <DecisionForm
               key={decision.id}
               workspaceId={workspaceId}
-              label={`${decision.id}, raised by the ${actorLabel(decision.by)}`}
+              label={`${decision.id}, raised by the ${actorLabel(decision.by)}${decision.revisedAt ? " (revised)" : ""}`}
               hint={decision.text + (decision.findingId ? `\nOn finding ${decision.findingId}.` : "")}
               actionLabel={`Settle ${decision.id}`}
               settles={decision.id}
@@ -191,14 +192,15 @@ export function LedgerSections({ workspaceId, ledger, members, running, onChange
         ))}
       </SettingsSection>
 
-      <SettingsSection title={`Decisions (${settled.length})`} testID="slp-decisions">
-        {settled.length === 0 ? <SettingsRow label="No settled decisions." /> : null}
-        {settled.map((decision) => (
+      <SettingsSection title={`Decisions (${closed.length})`} testID="slp-decisions">
+        {closed.length === 0 ? <SettingsRow label="No settled decisions." /> : null}
+        {closed.map((decision) => (
           <SettingsRow
             key={decision.id}
             label={`${decision.id}: ${decisionSource(decision)}`}
             hint={[
               decision.text,
+              decision.withdrawnReason ? `Reason: ${decision.withdrawnReason}` : null,
               decision.findingId ? `Resolves ${decision.findingId}.` : null,
               decision.projectRecord ? `Project record: ${decision.projectRecord}` : null,
             ]

@@ -43,7 +43,7 @@ export interface DelegateInput {
 export interface DecideInput {
   text: string;
   source: Decision["source"];
-  status: Decision["status"];
+  status: "pending" | "settled";
   findingId?: string;
   projectRecord?: string;
   /** Settle this pending decision instead of recording a new one. */
@@ -379,6 +379,64 @@ export class Coordination {
       });
       this.save(caller);
       return { decisionId: decision.id, status: decision.status, notified: [...recipients] };
+    });
+  }
+
+  /**
+   * Updates or withdraws a pending decision. Only its author may, and only
+   * while it is pending; a withdrawn decision stays in the ledger.
+   */
+  reviseDecision(
+    host: PaseoHost,
+    secret: string,
+    input: { decisionId: string; action: "update" | "withdraw"; text?: string; reason: string },
+  ) {
+    return this.withCaller(secret, async (caller) => {
+      this.requireRole(caller, ["lead", "supervisor"], "slp_revise_decision");
+      const decision = caller.group.ledger.decisions.find((d) => d.id === input.decisionId);
+      if (!decision || decision.status !== "pending") {
+        throw new SlpError("invalid", `${input.decisionId} is not a pending decision.`);
+      }
+      if (decision.by.agentId !== caller.member.agentId) {
+        throw new SlpError("forbidden", `Only the member that recorded ${decision.id} may revise it.`);
+      }
+      if (input.action === "update") {
+        if (!input.text) throw new SlpError("invalid", "update needs the new text.");
+        decision.text = input.text;
+        decision.revisedAt = this.deps.now();
+      } else {
+        decision.status = "withdrawn";
+        decision.withdrawnReason = input.reason;
+      }
+      this.event(caller.group, "decision-revised", {
+        decisionId: decision.id,
+        action: input.action,
+        by: caller.member.role,
+      });
+      this.save(caller);
+
+      const supervisor = caller.group.members.find((m) => m.role === "supervisor");
+      const notified: string[] = [];
+      if (supervisor?.agentId && supervisor.agentId !== caller.member.agentId) {
+        await this.deliver(
+          host,
+          caller.group,
+          {
+            fromAgentId: caller.member.agentId,
+            fromRole: caller.member.role,
+            toAgentId: supervisor.agentId,
+            kind: "notice",
+            text:
+              input.action === "update"
+                ? `Pending decision ${decision.id} was revised (${input.reason}). It now reads: ${decision.text}`
+                : `Pending decision ${decision.id} was withdrawn; Human no longer needs to answer it. Reason: ${input.reason}`,
+          },
+          "after-turn",
+        );
+        notified.push(supervisor.agentId);
+        this.save(caller);
+      }
+      return { decisionId: decision.id, status: decision.status, notified };
     });
   }
 

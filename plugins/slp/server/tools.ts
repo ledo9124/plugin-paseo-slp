@@ -41,6 +41,13 @@ const DecideInput = z.object({
   notify: z.array(z.string()).optional(),
 });
 
+const ReviseDecisionInput = z.object({
+  decisionId: z.string(),
+  action: z.enum(["update", "withdraw"]),
+  text: z.string().min(1).optional(),
+  reason: z.string().min(1),
+});
+
 function schema(type: z.ZodType): Record<string, unknown> {
   const { $schema: _ignored, ...json } = z.toJSONSchema(type, { io: "input" }) as Record<string, unknown>;
   return json;
@@ -85,7 +92,7 @@ export function memberTools(coordination: Coordination, host: () => PaseoHost): 
     {
       name: "slp_delegate",
       description:
-        "Lead only. Create an assignment with a structured brief and give it to a new Peer (model from the allowed list) or to an existing Peer with no open assignment (peerAgentId). Constraints need a source; the current choice is not a constraint.",
+        "Lead only. Create an assignment with a structured brief and give it to a new Peer (model from the allowed list) or to an existing Peer with no open assignment (peerAgentId). Constraints need a source (\"Human\" only for what Human said; inferences name who inferred them and from what); the current choice is not a constraint.",
       inputSchema: schema(DelegateInput),
       call: (args, secret) => coordination.delegate(host(), secret, parse(DelegateInput, args)),
     },
@@ -99,9 +106,16 @@ export function memberTools(coordination: Coordination, host: () => PaseoHost): 
     {
       name: "slp_decide",
       description:
-        'Lead or Supervisor. Record a decision with its source. status "pending" sends it to Human through the Supervisor; "settled" resolves its finding. source "human" and settling a pending decision (settles) are for the Supervisor relaying Human. notify lists the members whose work it changes.',
+        'Lead or Supervisor. Record a decision with its source. status "pending" sends it to Human through the Supervisor; "settled" resolves its finding. source "human" and settling a pending decision (settles) are for the Supervisor relaying Human\'s own answer, never an inference from it. notify lists the members whose work it changes.',
       inputSchema: schema(DecideInput),
       call: (args, secret) => coordination.decide(host(), secret, parse(DecideInput, args)),
+    },
+    {
+      name: "slp_revise_decision",
+      description:
+        'Lead or Supervisor, for a pending decision you recorded. action "update" replaces its text (to correct or sharpen the question); "withdraw" removes it from what Human must answer. The reason is required; the Supervisor is told.',
+      inputSchema: schema(ReviseDecisionInput),
+      call: (args, secret) => coordination.reviseDecision(host(), secret, parse(ReviseDecisionInput, args)),
     },
   ];
 }

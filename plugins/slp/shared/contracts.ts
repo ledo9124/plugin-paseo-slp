@@ -122,13 +122,17 @@ export const DecisionSchema = z.object({
   text: z.string(),
   /** "human" only for Human's own choice: from the panel, or relayed by the Supervisor. */
   source: z.enum(["human", "agent"]),
-  /** Pending decisions wait for Human through the Supervisor. */
-  status: z.enum(["pending", "settled"]),
+  /** Pending decisions wait for Human through the Supervisor; their author may withdraw them. */
+  status: z.enum(["pending", "settled", "withdrawn"]),
   by: ActorSchema,
   findingId: z.string().nullable(),
   /** Where a lasting decision is recorded in the project, if anywhere. */
   projectRecord: z.string().nullable(),
   at: z.string(),
+  /** Set when the author last revised the text while it was pending. */
+  revisedAt: z.string().nullable().optional(),
+  /** Why the author withdrew it. */
+  withdrawnReason: z.string().nullable().optional(),
 });
 export type Decision = z.infer<typeof DecisionSchema>;
 
