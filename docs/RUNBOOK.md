@@ -147,6 +147,9 @@ workspace.
   and the plugin cannot preapprove the injected `paseo` server. No prompts
   appeared in Claude `bypassPermissions`, Claude `auto` with Sonnet 5.5, or
   Codex `full-access`. Claude `auto` with Haiku 4.5 still prompted.
+- SLP members default to each provider's bypass mode: Claude
+  `bypassPermissions`, Codex `full-access`. Change it in Settings, Plugins,
+  `slp` (Supervisor, Lead, and Peer modes per provider).
 - Codex on this machine reaches its model through `cli-proxy-api` in WSL
   Ubuntu.
   - Windows reaches that proxy only on IPv6 loopback, so `base_url` in

@@ -11,8 +11,24 @@ const ROLES = [
   { key: "lead", title: "Lead" },
 ] as const;
 
-// Provider, model, and mode for the members SLP starts. Applies to groups
-// started after saving.
+function splitList(text: string): string[] {
+  return text
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function parseModes(text: string): Record<string, string> {
+  return Object.fromEntries(
+    splitList(text).map((pair) => {
+      const [provider, mode = ""] = pair.split("=").map((part) => part.trim());
+      return [provider, mode];
+    }),
+  );
+}
+
+// Provider, model, and mode for the members SLP starts, and the Peer
+// allowlist. Applies to groups started after saving; new Peers use it too.
 export function SlpSettingsScreen({ theme }: PluginSurfaceProps) {
   const settings = useSettings(slpSettings);
   const [draft, setDraft] = useState<SlpSettings | null>(null);
@@ -43,12 +59,34 @@ export function SlpSettingsScreen({ theme }: PluginSurfaceProps) {
           />
           <SettingsInput
             label="Mode"
-            hint="Members must not depend on permission prompts: Claude auto or bypassPermissions, Codex full-access."
+            hint="Default bypassPermissions. Members must not depend on permission prompts."
             initialValue={draft[key].modeId}
             onChangeText={(modeId) => setDraft({ ...draft, [key]: { ...draft[key], modeId } })}
           />
         </SettingsSection>
       ))}
+      <SettingsSection title="Peers">
+        <SettingsInput
+          label="Models"
+          hint="provider/model values the Lead may pick, separated by commas; the first is the default."
+          initialValue={draft.peers.models.join(", ")}
+          onChangeText={(text) => setDraft({ ...draft, peers: { ...draft.peers, models: splitList(text) } })}
+        />
+        <SettingsInput
+          label="Mode per provider"
+          hint="provider=mode pairs, separated by commas. Default claude=bypassPermissions, codex=full-access."
+          initialValue={Object.entries(draft.peers.modes)
+            .map(([provider, mode]) => `${provider}=${mode}`)
+            .join(", ")}
+          onChangeText={(text) => setDraft({ ...draft, peers: { ...draft.peers, modes: parseModes(text) } })}
+        />
+        <SettingsInput
+          label="Most active Peers"
+          hint="From 1 to 16."
+          initialValue={String(draft.peers.maxActive)}
+          onChangeText={(text) => setDraft({ ...draft, peers: { ...draft.peers, maxActive: Number(text.trim()) } })}
+        />
+      </SettingsSection>
       <SettingsAction
         label="Save"
         error={settings.saveError ?? (settings.status === "invalid" ? settings.error : null)}

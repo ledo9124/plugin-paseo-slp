@@ -293,6 +293,14 @@ with commands and observed results.
   - Supervisor `claude/claude-opus-5-5`, mode `auto`;
   - Lead `claude/claude-sonnet-5-5`, mode `auto`.
   They are plugin settings that Human can change.
+- 2026-10-01, after slice 5: Human made every SLP member default to its
+  provider's bypass mode, changeable in settings. The trigger was a Haiku
+  Peer in `auto` that waited on 18 permission prompts.
+  - Defaults: Claude `bypassPermissions` for the Supervisor, the Lead, and
+    Peers; Codex `full-access`. The models are unchanged.
+  - The settings screen now also edits the Peer models, the modes per
+    provider, and the active Peer cap.
+  - This replaces the `auto` modes in the slice 2 and slice 3 defaults.
 - 2026-10-01: Agent decision for slice 3: Peers are never archived before
   the workspace, and only 4 may be active, so `slp_delegate` can give a new
   assignment to an existing Peer that has none open. This keeps the
