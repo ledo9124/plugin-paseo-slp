@@ -1,6 +1,6 @@
 # SLP For Paseo: Product Overview
 
-Status: partly implemented (slices 1-6 of the active plan). The approach is
+Status: v0.1 implemented (slices 1-7 of the completed v0.1 plan). The approach is
 accepted in decisions
 [0001](../decisions/0001-slp-as-a-paseo-plugin.md),
 [0002](../decisions/0002-slp-toggle-instead-of-modes.md),
@@ -241,7 +241,7 @@ mechanism.
 ## Proof
 
 Live runs on stock Paseo `v0.10.2`, recorded in the
-[active plan](../plans/active/slp-plugin-v0.1.md) slice 3, 4, and 5 results:
+[v0.1 plan](../plans/completed/slp-plugin-v0.1.md) slice 3, 4, and 5 results:
 
 - Behaviors 1, 5, 6, 8, and 9: a Human-reserved choice went through the
   Supervisor and back with source "human". A reopen finding with evidence

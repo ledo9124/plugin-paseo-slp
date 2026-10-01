@@ -150,5 +150,5 @@ Tradeoffs:
   - the scope of 0006;
   - the Supervisor's use of native question tools;
   - when a Lead should delegate.
-- Slice 7 of the active plan tests the first ideas that pass the criterion
+- Slice 7 of the v0.1 plan (`docs/plans/completed/`) tests the first ideas that pass the criterion
   in item 5.

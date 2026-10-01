@@ -114,7 +114,7 @@ Tradeoffs:
 
 ## Follow-Up
 
-- Slice 1 of `docs/plans/active/slp-plugin-v0.1.md` proves four things:
+- Slice 1 of `docs/plans/completed/slp-plugin-v0.1.md` proves four things:
   - the plugin-hosted MCP route;
   - Peer creation with role instructions;
   - handback delivery;

@@ -77,8 +77,8 @@ Other differences:
 - a block is written into the project's `AGENTS.md`.
 
 Five ideas passed the criterion in 0007 item 5: they serve a job or an
-invariant, and they match a problem seen in a live run. The active plan
-tracks them as slice 7 trials:
+invariant, and they match a problem seen in a live run. The v0.1 plan
+tracked them as slice 7 trials:
 - I1, the Lead does not edit the repository. Not taken: Human left it to
   the Lead's own judgment;
 - I2, mid-run questions go through the ledger, not a native question tool;
@@ -118,4 +118,4 @@ requirement in `docs/product/overview.md` calls for that test.
     delegation, so it is not evidence about SLP's target failure.
 - **Deferred brief-format experiment.** Scenarios N and K, in that same
   record, test premise narrowing through narrowed briefs. They are slice 6 of
-  the active plan.
+  the v0.1 plan.

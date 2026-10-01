@@ -1,7 +1,7 @@
 # Runbook: Run The Plugin On A Dev Paseo Daemon
 
 Status: first exercised from this repository on 2026-10-01 (slice 1 of the
-active plan). The run used stock Paseo `v0.10.2` with an isolated home, on
+v0.1 plan, now in `docs/plans/completed/`). The run used stock Paseo `v0.10.2` with an isolated home, on
 Claude and Codex. The steps were adapted from the sibling repository
 `ledo9124/paseo-plugin` (`C:/code/my-project/my-plugin/docs/RUNBOOK.md`).
 

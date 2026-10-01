@@ -4,69 +4,10 @@ Date: 2026-10-01
 
 ## Status
 
-Active. Slices 0-6 are complete; slice 7 trials are done, with live runs
-B-F played by the agent. See Handoff.
-- Decision 0006 now blocks provider subagents for the Lead.
-- Decision 0007 records what SLP is: three jobs (complete the input,
-  filter decisions by authority, keep Human in control), four layers, and
-  independence from Repository Harness. Slice 7 tests the first ideas that
-  serve it.
-- Settled in slice 7:
-  - native questions: I2 kept;
-  - when a Lead delegates: the Lead's own judgment (Human);
-  - I1 not taken, I5 not built, I4 added as role text;
-  - read-back: only interpreted points, gated only when a misread is
-    costly;
-  - the Supervisor stops at the outcome and constraints;
-  - agent choices inside a delegation may be reported in messages.
-
-## Handoff (2026-10-01, updated after Part F)
-
-Start here in a new session. Read, in order:
-1. `docs/product/overview.md` (outcome, layers, behaviors 1-12);
-2. `docs/decisions/0007-what-slp-is.md`;
-3. this plan's "Slice 7 Results";
-4. `docs/RUNBOOK.md` before running a daemon.
-
-State:
-- `main` holds everything; the working tree is clean.
-- Tests: 49 pass. Run them with `node node_modules/vitest/vitest.mjs run
-  --root plugins/slp` and `node node_modules/typescript/bin/tsc --noEmit
-  -p plugins/slp`.
-- No daemon is running. Port 6767 is the user's app; never touch it.
-- Live runs B-F used temporary repositories under
-  `%TEMP%/slp-live/` (helper scripts `cli.sh` and `rpc.sh` are there).
-  They are scratch, not records.
-
-Next steps, in priority order. None of these is decided policy; ask Human
-where a choice is open:
-1. **Watch in the next real runs:**
-   - the Supervisor's question tool, the rule adopted after Part E and
-     held in Part F: all questions to Human go through it;
-   - a recommendation that leans against Human's earlier answer
-     (Part F, D4);
-   - acceptance that checks tests but not the command on Human's data
-     and console (Part F, the cp1252 crash);
-   - intake questions recorded as pending decisions, which count as
-     escalations (Parts E and F).
-2. **I4, the scope rule.** Human: leave it; later real work will
-   exercise it. Do not force delegation (Human: the Lead judges).
-3. **A live run with Human playing Human.** Parts B-F were played by the
-   operating agent; Human declined twice ("Mày làm đi").
-4. **Closing v0.1:** when Human accepts the slice 7 results, move this
-   plan to `docs/plans/completed/` and record the result.
-
-Done this session:
-- `projectRecord` is described in `slp_decide`'s schema (Human's choice);
-- Part E ran;
-- the Supervisor asks Human through its question tool, and the report
-  counts those questions as escalations (Human delegated the choice);
-- Part F checked that rule.
-
-All of it is recorded in Slice 7 Results.
-- Slice 1 ran probes 2 and 4 on both Claude and Codex.
-- Decision 0004 settled the messaging question, and decision 0005 replaced
-  the free toggle.
+Completed on 2026-10-01. Human accepted the slice 7 results and closed
+v0.1 with the gaps recorded under Result. The sections below are history;
+the next work starts from Result's follow-ups, not from this plan's
+earlier handoffs.
 
 ## Outcome
 
@@ -355,12 +296,14 @@ with commands and observed results.
 - [x] Slice 6: brief-format evaluation and field run, done together as
   the N/K experiment run by an SLP group in `repository-harness` (see
   Slice 6 Results). Two SLP observations are open for Human.
-- [ ] Slice 7: outcome trials (decision 0007).
+- [x] Slice 7: outcome trials (decision 0007). Accepted by Human with
+  the gaps under Result.
   - [x] I3: intake read-back and delegation (role text).
   - [x] I2: native questions visible (event, panel, report, role text).
   - [x] Live run, with the operating agent playing Human at Human's
     request (see Slice 7 Results).
-  - [ ] A live run with Human, on work with a mid-run choice.
+  - [ ] A live run with Human, on work with a mid-run choice. Not done:
+    Human twice asked the agent to play Human (gap under Result).
   - [x] I1: not taken (Human: the Lead judges for itself).
   - [x] I4: briefs say what is out of scope; a Peer changes only what the
     goal needs (role text). Live check in Part C.
@@ -1828,4 +1771,48 @@ live members, the Codex members included.
 
 ## Result
 
-Pending.
+Closed on 2026-10-01. Human accepted the slice 7 results and chose to
+close v0.1 with the gaps below recorded.
+
+Outcome reached:
+- The plugin installs into stock Paseo `v0.10.2` and turns SLP on per
+  workspace. The mode locks at Human's first message (0005). Archiving
+  the workspace ends the group.
+- With SLP off, no group starts, and an ordinary agent run locked the
+  workspace off (slice 2). The setup needs daemon-wide
+  `injectIntoAgents: true`, which Human accepted as a requirement.
+- The required behaviors have live proof on Claude, with a Codex Peer in
+  slice 3. `docs/product/overview.md` "Proof" lists it by behavior.
+- Behaviors 11 and 12 rest on slice 7 runs B-F:
+  - intake front-loaded the questions;
+  - Human's decisions and delegations were recorded in Human's words;
+  - agent decisions named their basis;
+  - after Part E, every question to Human goes through the Supervisor's
+    question tool (Part F).
+
+Validation at close:
+- `vitest` passes 49 tests, and `tsc --noEmit` passes;
+- `harness status` is current.
+
+Gaps, accepted by Human:
+- No live run with Human playing Human: Parts B-F were played by the
+  operating agent, which wrote the trials.
+- I4 (the brief's out-of-scope statement) is not exercised: the Lead
+  delegated only in Part B. Human: later real work will exercise it.
+- Behaviors 2 and 3: no live test challenged a scope edit.
+- The panel's new Process hint for questions was checked only by
+  typecheck and the report RPC, not in the web app.
+
+Follow-ups for the first real runs. Act only if one repeats (Human's
+simple-and-effective principle):
+- whether the Supervisor keeps every question to Human in its question
+  tool, and how its waiting turn holds other messages;
+- a recommendation that leans against Human's earlier answer (Part F,
+  D4);
+- acceptance that checks tests but not the command on Human's data and
+  console (Part F, the cp1252 crash);
+- intake questions recorded as pending decisions, which count as
+  escalations (Parts E and F);
+- the open product items in `docs/product/overview.md`: who writes a
+  durable plan, whether the ledger earns its place, the scope of 0006, and
+  when a Lead should delegate.

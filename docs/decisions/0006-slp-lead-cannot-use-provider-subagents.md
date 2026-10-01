@@ -87,6 +87,6 @@ Tradeoffs:
 ## Follow-Up
 
 - Implemented for groups started after 2026-10-01; proved live (see the
-  active plan).
+  v0.1 plan, `docs/plans/completed/slp-plugin-v0.1.md`).
 - The deferred delegation experiment (when a Lead should delegate) needs
   more analysis first; Human postponed it on 2026-10-01.

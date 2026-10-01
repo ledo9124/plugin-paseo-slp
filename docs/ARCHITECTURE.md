@@ -13,13 +13,13 @@ Status: approach accepted in decisions 0001-0007.
   only to the Supervisor.
 - Slice 5 adds the process report: telemetry from turn timelines, usage,
   and `agent.created`, shown in the panel and through `slp.report.get`.
-- Slice 7 (in progress) records members' native questions to Human from
+- Slice 7 records members' native questions to Human from
   `agent.permission_requested`, shows open ones in the panel, and counts
   them in the report. After intake, the Supervisor asks Human through its
   question tool; the report counts those under escalations, and a Lead's or
   Peer's as convention breaks.
 
-Results are in the [active plan](plans/active/slp-plugin-v0.1.md).
+Results are in the [completed v0.1 plan](plans/completed/slp-plugin-v0.1.md).
 
 ## Repository Layout
 
