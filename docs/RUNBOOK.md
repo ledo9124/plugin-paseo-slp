@@ -1,8 +1,8 @@
 # Runbook: Run The Plugin On A Dev Paseo Daemon
 
 Status: first exercised from this repository on 2026-10-01 (slice 1 of the
-active plan). The run used stock Paseo `v0.10.2` with an isolated home and
-Claude agents only. The steps were adapted from the sibling repository
+active plan). The run used stock Paseo `v0.10.2` with an isolated home, on
+Claude and Codex. The steps were adapted from the sibling repository
 `ledo9124/paseo-plugin` (`C:/code/my-project/my-plugin/docs/RUNBOOK.md`).
 
 ## Prerequisites And Ownership
@@ -108,10 +108,21 @@ slashes (`C:/Users/...`). Backslashes do not survive argument conversion.
 - `<cli> plugin logs slp` shows the plugin's MCP listening line.
 - Durable log: `<home>\daemon.log`.
 
-## Permissions
+## Providers And Permissions
 
-In Claude's default mode, a member asks permission for every built-in Paseo
-tool call. The plugin cannot preapprove the injected `paseo` server.
+- Pass a member's mode explicitly. Otherwise the provider default applies,
+  not the app default.
+- Claude's `default` mode asks permission for every built-in Paseo tool call,
+  and the plugin cannot preapprove the injected `paseo` server. No prompts
+  appeared in Claude `bypassPermissions`, Claude `auto` with Sonnet 5.5, or
+  Codex `full-access`. Claude `auto` with Haiku 4.5 still prompted.
+- Codex on this machine reaches its model through `cli-proxy-api` in WSL
+  Ubuntu.
+  - Windows reaches that proxy only on IPv6 loopback, so `base_url` in
+    `~/.codex/config.toml` must use `localhost`, not `127.0.0.1`. The proxy
+    also requires its API key.
+  - Run `paseo agent reload <id>` after changing Codex config, because
+    running Codex agents keep the old config.
 
 ```bash
 <cli> permit ls

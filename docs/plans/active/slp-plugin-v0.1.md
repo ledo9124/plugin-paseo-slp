@@ -4,8 +4,8 @@ Date: 2026-10-01
 
 ## Status
 
-Active. Slices 0 and 1 are complete on Claude; slice 1 Codex coverage is
-unproven. Slice 2 waits on the Human decisions listed under slice 1 results.
+Active. Slices 0 and 1 are complete, with probes 2 and 4 run on Claude and
+Codex. Slice 2 waits on the Human decision listed under slice 1 results.
 
 ## Outcome
 
@@ -134,8 +134,8 @@ with commands and observed results.
 
 - [x] Slice 0: repository, Harness core 0.1.16, decisions 0001-0003, docs,
   no-op skeleton.
-- [x] Slice 1: platform probes on stock Paseo v0.10.2, Claude only. Codex
-  not run by Human choice. Results below.
+- [x] Slice 1: platform probes on stock Paseo v0.10.2. All probes ran on
+  Claude; probes 2 and 4 also ran on Codex (`gpt-6-luna`). Results below.
 - [ ] Slice 2: toggle and group start.
 - [ ] Slice 3: delegation, ledger, handback, reconciliation.
 - [ ] Slice 4: Human panel.
@@ -170,7 +170,8 @@ with commands and observed results.
   (`C:\code\my-project\paseo-upstream\.dev\paseo-home`, port 6768), not the
   shared dev home, which `my-plugin` uses with `injectIntoAgents: true`.
   Human chose this and allowed enabling `injectIntoAgents` there.
-- 2026-10-01: Slice 1 covers Claude only; Human declined Codex quota.
+- 2026-10-01: Slice 1 first covered Claude only. Human then approved Codex
+  with `gpt-6-luna` through their local proxy.
 - 2026-10-01: Acceptance target is the `v0.10.2` release tag, not upstream
   main. Agent choice within the handoff's "main or release tag": the manifest
   requires `>=0.10.2`, the SDK is pinned to 0.10.2, and the shared fork
@@ -215,9 +216,9 @@ Environment for every probe unless noted:
 | --- | --- |
 | 0 Paseo tools in members | Pass with a setup requirement. Tools appear only with `injectIntoAgents: true` |
 | 1 Install, reload, logs | Pass |
-| 2 Plugin MCP route, per-member secret | Pass on Claude, including after both resume paths. Codex unproven |
+| 2 Plugin MCP route, per-member secret | Pass on Claude and Codex, including after both resume paths |
 | 3 `parent`, handback | Facts recorded. Parentage stays in the ledger; relay at `turn_ended` works |
-| 4 Busy send | Claude: the built-in send replaces the turn; a plugin send with `steer` injects. Codex unproven |
+| 4 Busy send | Claude and Codex: the built-in send cancels and replaces the turn; a plugin send with `steer` injects into it |
 | 5 Reconciliation | Pass. No member lost across a daemon restart |
 
 Probes 0, 2, and 3 did not fail, so decision 0001 needs no revision on those
@@ -268,7 +269,7 @@ grounds. The new constraints under "Open For Human" may still affect it.
 - A live POST with an unknown secret returned 401.
 - Consequence: the MCP port must be fixed, because the URL is persisted with
   the agent.
-- Codex: not run.
+- Codex: see "Codex Probes 2 And 4" below.
 
 ### Probe 3: `parent` And Handback
 
@@ -301,7 +302,7 @@ grounds. The new constraints under "Open For Human" may still affect it.
     `PaseoAgentSendOptions`; `PaseoHost` widens the type.
 - A plugin send without options interrupts, per source
   (`session.ts:8071`). Not run live.
-- Codex: not run.
+- Codex: see "Codex Probes 2 And 4" below.
 
 ### Probe 5: Reconciliation
 
@@ -354,16 +355,43 @@ they use auto or bypass themselves. Same environment as above.
   `bypassPermissions`, built-in Paseo tools run without Human prompts. The
   plugin must pass the mode explicitly.
 
-### Codex Attempt (2026-10-01)
+### Codex Probes 2 And 4 (2026-10-01)
 
-- `p7-codex` was created with `codex/gpt-6-luna` and `full-access`.
-  - It connected to the plugin MCP endpoint (`initialize`, `tools/list`).
-  - Its first turn never reached the model: every request to
-    `http://127.0.0.1:8317/v1/responses` failed with "Connection failed",
-    because the proxy configured for Codex (ProxyPal, `cliproxyapi`) was not
-    running.
-- The turn was interrupted with `paseo stop`. Codex probes 2 and 4 wait for
-  the proxy.
+Same environment as above, with `codex/gpt-6-luna` in mode `full-access`.
+Codex reaches the model through Human's `cli-proxy-api`, which runs in WSL.
+
+Setup fixes, Human-approved:
+- The proxy listens only on IPv6 `::1:8318` from Windows (`wslrelay`), so
+  `base_url` was changed from `127.0.0.1` to `localhost` in
+  `~/.codex/config.toml` (backup `config.toml.bak-slp-2026-10-01`).
+- Human then added the proxy key (`experimental_bearer_token`).
+- A Codex agent started before a config change keeps the old config until
+  `paseo agent reload`.
+
+**Probe 2.**
+- `p7-codex` reached the plugin endpoint at create (`initialize`,
+  `tools/list`).
+- `slp_whoami` returned `p7-codex` after `agent reload`, and again after a
+  daemon restart. The timeline names the tool `slp.slp_whoami`.
+- In `full-access` there was no permission prompt for plugin tools or for
+  `paseo.send_agent_prompt`.
+
+**Probe 4a: the built-in send replaces the turn.**
+- `p8-codex-sender` called `paseo.send_agent_prompt` while `p8-codex-target`
+  was inside a 90 s `slp_sleep`. The target's turn ended `canceled:
+  interrupted`.
+- Unlike Claude, the replacing Codex turn still saw the original request in
+  its thread history. It slept again, replied `TARGET-DONE`, and quoted the
+  new message instead of answering it (`BUILTIN-SEEN` never came).
+- The sender got a finish notification turn.
+
+**Probe 4b: a plugin send with steer is injected.**
+- `probe.send` with `activeTurnBehavior: "steer"` reached
+  `p8b-codex-target` during a 45 s sleep.
+- The same turn completed and replied `TARGET-DONE` plus `STEER-SEEN`.
+
+**Probe 5 cross-check.** After the restart, reconciliation matched all 7
+live members, the Codex members included.
 
 ### Open For Human
 
@@ -382,8 +410,7 @@ they use auto or bypass themselves. Same environment as above.
    No edit was made.
 2. **Setup requirement.** Settled: Human accepts `injectIntoAgents: true`
    (see Decisions).
-3. **Codex.** Approved with `gpt-6-luna`. It is blocked until the Codex
-   proxy at `127.0.0.1:8317` is running.
+3. **Codex.** Done: probes 2 and 4 passed (see above).
 
 ## Validation
 
