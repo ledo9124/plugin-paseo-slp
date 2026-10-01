@@ -213,14 +213,16 @@ the fixes' quality.
 
 - [x] Run 1: docs review of `paseo-plugin` and `dsh-personal` (results
   above; merged by Human's choice without a diff review).
-- [ ] Run 2: proposed, not decided. The same request run twice, once with
-  SLP and once by a single agent, with Human scoring blind. It answers
-  whether SLP is worth its cost.
+- [ ] Run 2, a comparison with a single agent: deferred by Human
+  (2026-10-02). SLP will be judged and improved through use, by its own
+  process data (behavior 10), once it matures.
 
 ## Decisions
 
 - 2026-10-02: Human chose run 1's task, its result (review and fix), and
   its focus. Human asked the operating agent to play Human.
+- 2026-10-02: Human deferred the single-agent comparison. SLP is judged
+  and improved through real use and its own process data.
 
 ## Validation
 

@@ -53,7 +53,7 @@ Claude and Codex. The steps were adapted from the sibling repository
   It is daemon-wide: every agent on that daemon gets Paseo tools. Ask Human
   before enabling it on another home.
 - **MCP port.** The plugin's MCP endpoint listens on `127.0.0.1:6791`. Set
-  `SLP_PROBE_MCP_PORT` to override. Keep it stable, because member MCP URLs
+  `SLP_MCP_PORT` to override. Keep it stable, because member MCP URLs
   are persisted with each agent.
 
 ## Start
