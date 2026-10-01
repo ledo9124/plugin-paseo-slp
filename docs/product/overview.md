@@ -125,7 +125,8 @@ combine the strengths of each.
   the project (decision 0003).
 - A trust boundary. Rules are conventions that well-behaved agents follow;
   the plugin makes violations visible but does not prevent them (decision
-  0001).
+  0001). The one exception: within SLP, a Claude Lead has no subagent tool,
+  so it delegates only through the plugin (decision 0006).
 
 ## Deferred
 

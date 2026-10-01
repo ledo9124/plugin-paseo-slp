@@ -12,7 +12,8 @@ documents here as real choices are accepted, then index them in this file.
 ## Index
 
 - [0001 SLP As A Coordination Plugin On Paseo Primitives](0001-slp-as-a-paseo-plugin.md):
-  Accepted, messaging layer amended by 0004. Conventions plus a plugin
+  Accepted, messaging layer amended by 0004, enforcement amended by 0006
+  for one rule. Conventions plus a plugin
   coordination service; no runtime enforcement without evidence. Rests on
   plugin SDK 0.10.2, read from upstream main `d30e99c85` and probed on
   `v0.10.2`; re-check after a Paseo upgrade.
@@ -30,3 +31,6 @@ documents here as real choices are accepted, then index them in this file.
   Accepted. The mode can change only until Human's first message in the
   workspace. Archiving the workspace ends the group. The controls are an
   SLP panel and a header button.
+- [0006 The SLP Lead Cannot Use Its Provider's Own Subagents](0006-slp-lead-cannot-use-provider-subagents.md):
+  Accepted, amends 0001 item 3 for this rule only. A Claude Lead is created
+  with its subagent tool disallowed. The rule applies within SLP only.

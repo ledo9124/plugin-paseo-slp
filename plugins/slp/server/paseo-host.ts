@@ -44,6 +44,8 @@ export interface CreateAgentInput {
   idempotencyKey?: string;
   parent?: string;
   prompt?: string;
+  /** Provider-native options, validated by the provider (for Claude, `disallowedTools`). */
+  providerOptions?: Record<string, string[]>;
 }
 
 export type ActiveTurnBehavior = "interrupt" | "steer";
@@ -97,6 +99,7 @@ export function createPaseoHost(paseo: PaseoApi): PaseoHost {
           modeId: input.modeId,
           systemPrompt: input.systemPrompt,
           mcpServers: input.mcpServers,
+          ...(input.providerOptions ? { options: input.providerOptions } : {}),
           toolPolicy: input.preapprovedTools
             ? { preapproved: input.preapprovedTools.map((ref) => ({ kind: "mcp" as const, ...ref })) }
             : undefined,

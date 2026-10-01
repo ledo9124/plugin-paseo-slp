@@ -22,6 +22,17 @@ export const MEMBER_TOOLS = [
 
 const GROUP_ROLES: readonly Role[] = ["supervisor", "lead"];
 
+/** Claude Code's subagent tool; older versions call it Task (decision 0006). */
+export const CLAUDE_SUBAGENT_TOOLS = ["Agent", "Task"];
+
+/**
+ * The Lead delegates only through slp_delegate (decision 0006). Claude can
+ * drop a tool per agent; other providers follow the role instructions.
+ */
+function leadProviderOptions(provider: string): Record<string, string[]> | undefined {
+  return provider.split("/")[0] === "claude" ? { disallowedTools: CLAUDE_SUBAGENT_TOOLS } : undefined;
+}
+
 export function slpMcpServers(url: string) {
   return { [MCP_SERVER_NAME]: { type: "http" as const, url, alwaysLoad: true } };
 }
@@ -187,6 +198,7 @@ export class SlpService {
       preapprovedTools: PREAPPROVED_TOOLS,
       labels: { [GROUP_LABEL]: group.id, [ROLE_LABEL]: member.role },
       idempotencyKey: `slp:${group.id}:${member.role}`,
+      ...(member.role === "lead" ? { providerOptions: leadProviderOptions(config.provider) } : {}),
     });
   }
 

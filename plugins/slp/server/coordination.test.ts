@@ -128,6 +128,8 @@ describe("slp_delegate", () => {
       title: "SLP Peer 1",
       labels: { "slp.role": "peer", "slp.group": group().id },
     });
+    // Decision 0006 blocks subagents for the Lead only.
+    expect(created.providerOptions).toBeUndefined();
     expect(created.systemPrompt).toContain("Your role: Peer");
     expect(created.prompt).toContain("Goal: Users can export reports as CSV");
     expect(created.prompt).toContain("No new runtime dependency (source: Human)");

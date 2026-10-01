@@ -4,9 +4,12 @@ Date: 2026-10-01
 
 ## Status
 
-Active. Slices 0-6 are complete. Before closing v0.1, Human must decide
-on the slice 6 observations: the Lead never delegated, and the Supervisor
-asked through Claude Code's `AskUserQuestion`.
+Active. Slices 0-6 are complete.
+- Decision 0006 now blocks provider subagents for the Lead.
+- Open before closing v0.1:
+  - the Supervisor's use of Claude Code's `AskUserQuestion`;
+  - when a Lead should delegate to Peers (Human postponed it for
+    analysis).
 - Slice 1 ran probes 2 and 4 on both Claude and Codex.
 - Decision 0004 settled the messaging question, and decision 0005 replaced
   the free toggle.
@@ -28,7 +31,8 @@ With SLP off, agents behave exactly as without the plugin.
   - 0003: the ledger is coordination state, not project truth;
   - 0004: member messaging through a plugin send tool;
   - 0005: the SLP mode locks at the first message, and archiving the
-    workspace ends the group.
+    workspace ends the group;
+  - 0006: the SLP Lead cannot use its provider's own subagents.
 - Method sources and prior analysis: `docs/research/sources.md`. The earlier
   `paseo-slp` fork is not a decision basis.
 
@@ -411,11 +415,33 @@ Observations about SLP (no change made):
 5. **Experiment cost lives mostly outside the group.** The report's token
    table covers members only.
 
-Open for Human:
-- review and merge `slp/premise-narrowing-experiment` (the group's
-  question: should premerge be runnable here, with `rustup component add
-  rustfmt` and a supported shell, or should it be left to CI);
-- whether observations 1 and 2 need changes before v0.1 closes.
+Follow-up, 2026-10-01 (Human):
+- **Merging.** Human chose to push to `main` directly, without a PR. The
+  operating agent fast-forwarded `main` to `origin/main` (`802bb54`), then
+  merged the branch with a merge commit (`fd96cfc`), keeping the commit ids
+  that the plan and the record cite. It removed the two stale Progress
+  lines (`07b05c5`) and pushed `802bb54..07b05c5` to `origin/main`.
+  - Premerge CI runs only on pull requests, so no repository validation
+    ran on this change.
+  - The post-merge changelog workflow also needs a merged PR, so there is
+    no changelog entry.
+- **Observation 1 (the Lead used provider subagents).** Human made it
+  decision 0006: within SLP, a Claude Lead is created without its subagent
+  tool.
+  - Live proof on a scratch group (`slp-d6-ws1`), asking each member the
+    same probe:
+    - the Supervisor reported `Agent` in its toolset and started a
+      subagent that replied OK, showing that only the Lead is affected;
+    - the Lead reported no `Agent` or `Task` tool and tried no
+      workaround;
+    - after a daemon restart, the reloaded Lead still had no such tool.
+  - `vitest` passes 45 tests, covering: a Claude Lead gets
+    `disallowedTools: ["Agent", "Task"]`; the Supervisor, Peers, and a
+    Codex Lead get no provider options.
+- **When a Lead should delegate to Peers.** Human postponed the proposed
+  experiment until this has been analyzed further. Nothing changed besides
+  decision 0006 and the Lead's role text.
+- **Observation 2 (the Supervisor used `AskUserQuestion`)** is still open.
 
 ## Slice 5 Results
 

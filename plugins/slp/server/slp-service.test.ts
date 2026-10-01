@@ -17,14 +17,14 @@ const SETTINGS = {
   },
 };
 
-function setup() {
+function setup(settings: typeof SETTINGS = SETTINGS) {
   let counter = 0;
   const store = new SlpStore(mkdtempSync(join(tmpdir(), "slp-service-")));
   const service = new SlpService({
     store,
     queue: new WorkspaceQueue(),
     mcpUrl: (secret) => `http://mcp.test/mcp/${secret}`,
-    settings: async () => SETTINGS,
+    settings: async () => settings,
     now: () => `2026-10-01T00:00:${String(counter++).padStart(2, "0")}Z`,
     newId: () => `group-${++counter}`,
     newSecret: () => `secret-${++counter}`,
@@ -57,6 +57,16 @@ describe("SlpService.setMode", () => {
     expect(supervisor.preapprovedTools).toContainEqual({ server: "slp", tool: "slp_group" });
     expect(supervisor.preapprovedTools).toContainEqual({ server: "slp", tool: "slp_send" });
     expect(supervisor.prompt).toBeUndefined();
+    // Decision 0006: only the Lead loses Claude's subagent tool.
+    expect(lead.providerOptions).toEqual({ disallowedTools: ["Agent", "Task"] });
+    expect(supervisor.providerOptions).toBeUndefined();
+  });
+
+  it("gives a non-Claude Lead no Claude-only options", async () => {
+    const { service, host } = setup({ ...SETTINGS, lead: { provider: "codex/gpt-6-luna", modeId: "full-access" } });
+    await service.setMode(host, "ws-1", "on");
+    expect(host.created[1]).toMatchObject({ provider: "codex/gpt-6-luna" });
+    expect(host.created[1].providerOptions).toBeUndefined();
   });
 
   it("archives the members when switched off before the lock, and can start again", async () => {
