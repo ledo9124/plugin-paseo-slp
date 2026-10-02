@@ -194,6 +194,11 @@ changes member behavior.
 
 - [x] Analysis and Human's decisions (0008).
 - [ ] Slice 1: role definitions, scenario suite, v0.1.0 baseline.
+  - [x] Draft definitions: `docs/product/roles.md` (awaiting Human).
+  - [x] Scenario suite S1-S10 and a baseline from earlier evidence:
+    `docs/product/role-scenarios.md`. S2-S4 fail, S5 and S7 partial,
+    S10 not run.
+  - [ ] Human accepts or corrects the definitions.
 - [ ] Slice 2: role contexts.
 - [ ] Slice 3: tuning until the scenarios pass.
 - [ ] Slice 4: settings v2.

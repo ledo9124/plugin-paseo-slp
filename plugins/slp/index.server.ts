@@ -11,6 +11,7 @@ import { createPaseoHost, type PaseoHost } from "./server/paseo-host";
 import { WorkspaceQueue } from "./server/queue";
 import { buildReport, renderReport } from "./server/report";
 import { lastAssistantText } from "./server/timeline";
+import { ROLE_TOOLS } from "./server/roles";
 import { memberTools } from "./server/tools";
 import { MCP_SERVER_NAME, SlpError, SlpService } from "./server/slp-service";
 import { SlpStore } from "./server/store";
@@ -72,6 +73,10 @@ export default function contribute(server: PluginServerContext) {
     serverName: MCP_SERVER_NAME,
     resolveCaller: (secret) => (service.groupForSecret(secret) ? secret : null),
     tools: memberTools(coordination, requireHost),
+    allows: (tool, secret) => {
+      const found = service.groupForSecret(secret);
+      return found !== null && ROLE_TOOLS[found.you.role].includes(tool);
+    },
   })
     .then((handle) => {
       mcp = handle;

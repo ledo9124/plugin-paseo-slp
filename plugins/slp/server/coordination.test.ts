@@ -2,8 +2,8 @@ import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import type { Brief } from "../shared/contracts";
-import { Coordination } from "./coordination";
+import type { Brief, Ledger } from "../shared/contracts";
+import { Coordination, peerView } from "./coordination";
 import { FakePaseoHost } from "./paseo-host.fake";
 import { buildReport, renderReport } from "./report";
 import { WorkspaceQueue } from "./queue";
@@ -128,8 +128,9 @@ describe("slp_delegate", () => {
       title: "SLP Peer 1",
       labels: { "slp.role": "peer", "slp.group": group().id },
     });
-    // Decision 0006 blocks subagents for the Lead only.
-    expect(created.providerOptions).toBeUndefined();
+    // Decision 0008: a Claude Peer has no question tool; it keeps its others.
+    expect(created.providerOptions).toEqual({ disallowedTools: ["AskUserQuestion"] });
+    expect(created.preapprovedTools?.map((tool) => tool.tool)).toEqual(["slp_ledger", "slp_send", "slp_finding"]);
     expect(created.systemPrompt).toContain("Your role: Peer");
     expect(created.prompt).toContain("Goal: Users can export reports as CSV");
     expect(created.prompt).toContain("No new runtime dependency (source: Human)");
@@ -703,5 +704,30 @@ describe("reconcile and lifecycle", () => {
     await expect(coordination.send(host, secret, { to: "supervisor", text: "x" })).rejects.toMatchObject({
       code: "forbidden",
     });
+  });
+});
+
+describe("peerView", () => {
+  it("shows a Peer its own work and Human's decisions, not other Peers' briefs", () => {
+    const actor = (agentId: string) => ({ role: "peer" as const, agentId });
+    const assignment = (id: string, peerAgentId: string) =>
+      ({ id, peerAgentId, title: id }) as unknown as Ledger["assignments"][number];
+    const ledger = {
+      assignments: [assignment("A1", "p1"), assignment("A2", "p2")],
+      findings: [
+        { id: "F1", assignmentId: "A1", by: actor("p1") },
+        { id: "F2", assignmentId: "A2", by: actor("p2") },
+      ],
+      decisions: [
+        { id: "D1", source: "human", status: "settled", findingId: null },
+        { id: "D2", source: "agent", status: "settled", findingId: "F1" },
+        { id: "D3", source: "agent", status: "settled", findingId: "F2" },
+        { id: "D4", source: "agent", status: "pending", findingId: null },
+      ],
+    } as unknown as Ledger;
+    const view = peerView(ledger, "p1");
+    expect(view.assignments.map((a) => a.id)).toEqual(["A1"]);
+    expect(view.findings.map((f) => f.id)).toEqual(["F1"]);
+    expect(view.decisions.map((d) => d.id)).toEqual(["D1", "D2"]);
   });
 });

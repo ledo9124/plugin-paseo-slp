@@ -56,10 +56,18 @@ describe("SlpService.setMode", () => {
     expect(supervisor.mcpServers?.slp).toMatchObject({ type: "http", url: `http://mcp.test/mcp/${secrets[0]}` });
     expect(supervisor.preapprovedTools).toContainEqual({ server: "slp", tool: "slp_group" });
     expect(supervisor.preapprovedTools).toContainEqual({ server: "slp", tool: "slp_send" });
+    // Decision 0008: each role is preapproved only for its own tools.
+    expect(supervisor.preapprovedTools).not.toContainEqual({ server: "slp", tool: "slp_delegate" });
+    expect(lead.preapprovedTools).toContainEqual({ server: "slp", tool: "slp_delegate" });
     expect(supervisor.prompt).toBeUndefined();
-    // Decision 0006: only the Lead loses Claude's subagent tool.
-    expect(lead.providerOptions).toEqual({ disallowedTools: ["Agent", "Task"] });
-    expect(supervisor.providerOptions).toBeUndefined();
+    // Decisions 0006 and 0008: the Lead loses subagents and the question tool;
+    // the Supervisor keeps its question tool but cannot edit or spawn agents.
+    expect(lead.providerOptions?.disallowedTools).toEqual(
+      expect.arrayContaining(["Agent", "Task", "AskUserQuestion"]),
+    );
+    expect(supervisor.providerOptions?.disallowedTools).toEqual(expect.arrayContaining(["Edit", "Write", "Agent"]));
+    expect(supervisor.providerOptions?.disallowedTools).not.toContain("AskUserQuestion");
+    expect(supervisor.systemPrompt).toContain("AskUserQuestion");
   });
 
   it("gives a non-Claude Lead no Claude-only options", async () => {

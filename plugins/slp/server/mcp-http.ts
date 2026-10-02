@@ -17,6 +17,8 @@ export interface McpHttpOptions<Caller> {
   serverName: string;
   resolveCaller(secret: string): Caller | null;
   tools: readonly McpTool<Caller>[];
+  /** Whether the caller is offered a tool; others are hidden and refused. Default: all. */
+  allows?(tool: string, caller: Caller): boolean;
   onRequest?(event: { secret: string; method: string; known: boolean }): void;
 }
 
@@ -101,11 +103,15 @@ async function dispatch<Caller>(
       return rpcResult(id, {});
     case "tools/list":
       return rpcResult(id, {
-        tools: options.tools.map(({ name, description, inputSchema }) => ({ name, description, inputSchema })),
+        tools: options.tools
+          .filter((tool) => options.allows?.(tool.name, caller) ?? true)
+          .map(({ name, description, inputSchema }) => ({ name, description, inputSchema })),
       });
     case "tools/call": {
       const name = message.params?.name;
-      const tool = options.tools.find((candidate) => candidate.name === name);
+      const tool = options.tools.find(
+        (candidate) => candidate.name === name && (options.allows?.(candidate.name, caller) ?? true),
+      );
       if (!tool) return rpcError(id, -32602, `unknown tool: ${String(name)}`);
       const args = (message.params?.arguments ?? {}) as Record<string, unknown>;
       try {

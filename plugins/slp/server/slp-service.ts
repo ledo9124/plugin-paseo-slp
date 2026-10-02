@@ -2,13 +2,13 @@ import type { Mode, Role, WorkspaceView } from "../shared/contracts";
 import type { SlpSettings } from "../shared/settings";
 import type { HostAgent, PaseoHost } from "./paseo-host";
 import type { WorkspaceQueue } from "./queue";
-import { ROLE_TITLES, roleInstructions } from "./roles";
+import { providerOptionsFor, ROLE_TITLES, ROLE_TOOLS, roleInstructions } from "./roles";
 import { emptyLedger, type GroupRecord, type MemberRecord, type SlpStore, type WorkspaceRecord } from "./store";
 
 export const GROUP_LABEL = "slp.group";
 export const ROLE_LABEL = "slp.role";
 export const MCP_SERVER_NAME = "slp";
-/** Plugin MCP tools every member may call without a prompt; each tool checks the caller's role. */
+/** Every plugin MCP tool; each role is offered only its own (ROLE_TOOLS). */
 export const MEMBER_TOOLS = [
   "slp_group",
   "slp_ledger",
@@ -22,22 +22,14 @@ export const MEMBER_TOOLS = [
 
 const GROUP_ROLES: readonly Role[] = ["supervisor", "lead"];
 
-/** Claude Code's subagent tool; older versions call it Task (decision 0006). */
-export const CLAUDE_SUBAGENT_TOOLS = ["Agent", "Task"];
-
-/**
- * The Lead delegates only through slp_delegate (decision 0006). Claude can
- * drop a tool per agent; other providers follow the role instructions.
- */
-function leadProviderOptions(provider: string): Record<string, string[]> | undefined {
-  return provider.split("/")[0] === "claude" ? { disallowedTools: CLAUDE_SUBAGENT_TOOLS } : undefined;
-}
-
 export function slpMcpServers(url: string) {
   return { [MCP_SERVER_NAME]: { type: "http" as const, url, alwaysLoad: true } };
 }
 
-export const PREAPPROVED_TOOLS = MEMBER_TOOLS.map((tool) => ({ server: MCP_SERVER_NAME, tool }));
+/** The role's own plugin tools, callable without a permission prompt. */
+export function preapprovedTools(role: Role) {
+  return ROLE_TOOLS[role].map((tool) => ({ server: MCP_SERVER_NAME, tool }));
+}
 
 export class SlpError extends Error {
   constructor(
@@ -193,12 +185,12 @@ export class SlpService {
       provider: config.provider,
       modeId: config.modeId,
       title: ROLE_TITLES[member.role],
-      systemPrompt: roleInstructions(member.role),
+      systemPrompt: roleInstructions(member.role, config.provider),
       mcpServers: slpMcpServers(this.deps.mcpUrl(member.secret)),
-      preapprovedTools: PREAPPROVED_TOOLS,
+      preapprovedTools: preapprovedTools(member.role),
       labels: { [GROUP_LABEL]: group.id, [ROLE_LABEL]: member.role },
       idempotencyKey: `slp:${group.id}:${member.role}`,
-      ...(member.role === "lead" ? { providerOptions: leadProviderOptions(config.provider) } : {}),
+      providerOptions: providerOptionsFor(member.role, config.provider),
     });
   }
 

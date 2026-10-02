@@ -65,6 +65,27 @@ describe("startMcpHttp", () => {
     expect(JSON.parse(call.json.result.content[0].text)).toEqual({ label: "lead" });
   });
 
+  it("hides and refuses a tool the caller is not allowed", async () => {
+    handle = await startMcpHttp({
+      host: "127.0.0.1",
+      port: 0,
+      serverName: "slp-test",
+      resolveCaller: (secret) => (secret === "peer" ? "peer" : null),
+      tools: ["open", "closed"].map((name) => ({
+        name,
+        description: name,
+        inputSchema: { type: "object", properties: {} },
+        call: () => name,
+      })),
+      allows: (tool) => tool === "open",
+    });
+    const url = handle.url("peer");
+    const list = await post(url, { jsonrpc: "2.0", id: 1, method: "tools/list" });
+    expect(list.json.result.tools.map((tool: { name: string }) => tool.name)).toEqual(["open"]);
+    const call = await post(url, { jsonrpc: "2.0", id: 2, method: "tools/call", params: { name: "closed" } });
+    expect(call.json.error.message).toMatch(/unknown tool/);
+  });
+
   it("rejects an unknown secret", async () => {
     const mcp = await start();
     const res = await post(mcp.url("nope"), { jsonrpc: "2.0", id: 1, method: "tools/list" });

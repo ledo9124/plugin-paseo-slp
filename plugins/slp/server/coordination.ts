@@ -3,8 +3,8 @@ import type { Assignment, Brief, Decision, Finding, Ledger, NativeQuestion, Role
 import type { SlpSettings } from "../shared/settings";
 import type { PaseoHost } from "./paseo-host";
 import type { WorkspaceQueue } from "./queue";
-import { roleInstructions } from "./roles";
-import { GROUP_LABEL, PREAPPROVED_TOOLS, ROLE_LABEL, SlpError, slpMcpServers } from "./slp-service";
+import { providerOptionsFor, roleInstructions } from "./roles";
+import { GROUP_LABEL, preapprovedTools, ROLE_LABEL, SlpError, slpMcpServers } from "./slp-service";
 import type { GroupRecord, HeldMessage, MemberRecord, SlpStore, WorkspaceRecord } from "./store";
 
 // Group coordination: messaging (decision 0004), delegation, handback,
@@ -95,7 +95,7 @@ export class Coordination {
     const settings = await this.deps.settings();
     return {
       you: { role: caller.member.role, agentId: caller.member.agentId },
-      ...caller.group.ledger,
+      ...(caller.member.role === "peer" ? peerView(caller.group.ledger, caller.member.agentId) : caller.group.ledger),
       ...(caller.member.role === "lead"
         ? { peerModels: settings.peers.models, maxActivePeers: settings.peers.maxActive }
         : {}),
@@ -209,9 +209,10 @@ export class Coordination {
           provider: model,
           modeId,
           title: member.title,
-          systemPrompt: roleInstructions("peer"),
+          systemPrompt: roleInstructions("peer", model),
           mcpServers: slpMcpServers(this.deps.mcpUrl(member.secret)),
-          preapprovedTools: PREAPPROVED_TOOLS,
+          preapprovedTools: preapprovedTools("peer"),
+          providerOptions: providerOptionsFor("peer", model),
           labels: { [GROUP_LABEL]: caller.group.id, [ROLE_LABEL]: "peer" },
           idempotencyKey: `slp:${caller.group.id}:peer:${assignment.id}`,
           prompt: renderBrief(assignment),
@@ -957,4 +958,22 @@ function renderDecision(decision: Decision): string {
   ]
     .filter(Boolean)
     .join("\n");
+}
+
+/**
+ * A Peer sees its own work (0008): its assignments, the findings it recorded
+ * or that concern them, decisions on those findings, and Human's decisions.
+ * Other Peers' briefs stay hidden.
+ */
+export function peerView(ledger: Ledger, agentId: string | null): Ledger {
+  const assignments = ledger.assignments.filter((a) => a.peerAgentId === agentId);
+  const own = new Set(assignments.map((a) => a.id));
+  const findings = ledger.findings.filter(
+    (f) => f.by.agentId === agentId || (f.assignmentId !== null && own.has(f.assignmentId)),
+  );
+  const findingIds = new Set(findings.map((f) => f.id));
+  const decisions = ledger.decisions.filter(
+    (d) => (d.source === "human" && d.status === "settled") || (d.findingId !== null && findingIds.has(d.findingId)),
+  );
+  return { assignments, findings, decisions };
 }
