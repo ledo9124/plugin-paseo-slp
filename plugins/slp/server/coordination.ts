@@ -326,6 +326,13 @@ export class Coordination {
       const ledger = caller.group.ledger;
       const finding = input.findingId ? ledger.findings.find((f) => f.id === input.findingId) : undefined;
       if (input.findingId && !finding) throw new SlpError("invalid", `No finding ${input.findingId}.`);
+      // Resolve notify before recording, so a bad target records nothing.
+      const recipients = new Set<string>();
+      for (const target of input.notify ?? []) {
+        const member = this.findMember(caller.group, target);
+        if (!member?.agentId) throw new SlpError("invalid", `notify: ${target} is not a group member.`);
+        recipients.add(member.agentId);
+      }
 
       let decision: Decision;
       if (input.settles) {
@@ -364,7 +371,6 @@ export class Coordination {
         resolved.resolvedBy = decision.id;
       }
 
-      const recipients = new Set(input.notify ?? []);
       if (decision.status === "pending" && caller.member.role === "lead") {
         const supervisor = caller.group.members.find((m) => m.role === "supervisor");
         if (supervisor?.agentId) recipients.add(supervisor.agentId);
@@ -374,11 +380,6 @@ export class Coordination {
         if (lead?.agentId) recipients.add(lead.agentId);
       }
       recipients.delete(caller.member.agentId ?? "");
-      for (const agentId of recipients) {
-        if (!caller.group.members.some((m) => m.agentId === agentId)) {
-          throw new SlpError("invalid", `notify: ${agentId} is not a group member.`);
-        }
-      }
       for (const agentId of recipients) {
         await this.deliver(
           host,

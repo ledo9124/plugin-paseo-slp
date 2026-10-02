@@ -309,6 +309,19 @@ describe("findings and decisions", () => {
     ]);
   });
 
+  it("records nothing when a notify target is unknown, and accepts a role name", async () => {
+    const { host, coordination, secretOf, idOf, group } = await setup();
+    const input = { text: "Keep it as is", source: "human" as const, status: "settled" as const };
+    await expect(coordination.decide(host, secretOf("supervisor"), { ...input, notify: ["nobody"] })).rejects.toMatchObject(
+      { code: "invalid" },
+    );
+    expect(group().ledger.decisions).toHaveLength(0);
+
+    await coordination.decide(host, secretOf("supervisor"), { ...input, notify: ["lead"] });
+    expect(group().ledger.decisions).toHaveLength(1);
+    expect(host.sends.at(-1)).toMatchObject({ agentId: idOf("lead") });
+  });
+
   it("sends pending Lead decisions to the Supervisor, who settles them for Human", async () => {
     const { host, coordination, secretOf, idOf, group } = await setup();
     const pending = await coordination.decide(host, secretOf("lead"), {

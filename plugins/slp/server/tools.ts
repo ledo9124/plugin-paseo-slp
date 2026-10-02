@@ -109,7 +109,7 @@ export function memberTools(coordination: Coordination, host: () => PaseoHost): 
     {
       name: "slp_decide",
       description:
-        'Lead or Supervisor. Record a decision with its source. status "pending" sends it to Human through the Supervisor; "settled" resolves its finding. source "human" and settling a pending decision (settles) are for the Supervisor relaying Human\'s own answer or delegation, never an inference from it. An agent decision names what it rests on in its text (a delegation\'s decision id, or the project record). notify lists the members whose work it changes.',
+        'Lead or Supervisor. Record a decision with its source. status "pending" sends it to Human through the Supervisor; "settled" resolves its finding. source "human" and settling a pending decision (settles) are for the Supervisor relaying Human\'s own answer or delegation, never an inference from it. An agent decision names what it rests on in its text (a delegation\'s decision id, or the project record). notify lists the members whose work it changes, by agent id or role ("lead", "supervisor").',
       inputSchema: schema(DecideInput),
       call: (args, secret) => coordination.decide(host(), secret, parse(DecideInput, args)),
     },
