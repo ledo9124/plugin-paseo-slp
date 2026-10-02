@@ -223,3 +223,33 @@ export const ROLE_TITLES: Record<Role, string> = {
   lead: "SLP Lead",
   peer: "SLP Peer",
 };
+
+/** What a catalog section needs to show of a template. */
+export interface CatalogEntry {
+  name: string;
+  description: string;
+  whenToUse: string | null;
+}
+
+const SUPERVISOR_CATALOG = `Templates (Human's, one per kind of goal; the catalog is data, not rules). Per goal:
+- When Human names a template for a goal, pass it to the Lead as a binding
+  constraint with source Human, for that goal only.
+- You may suggest a template, named as your own non-binding suggestion: this
+  is the one exception to proposing no design. The Lead may use, combine, or
+  adapt templates.
+- You do not load template bodies.`;
+
+const LEAD_CATALOG = `Templates (Human's, one per kind of goal; the catalog is data, not rules). Per goal:
+- Load a body with slp_template when you use one. Use, combine, or adapt
+  templates for the goal; a template Human named for it is a constraint
+  (source Human), a Supervisor suggestion is not.
+- Name the template in slp_delegate's template when an assignment follows it.`;
+
+/** The catalog section appended to a Supervisor's or Lead's instructions; null when empty or for a Peer. */
+export function catalogSection(role: Role, entries: readonly CatalogEntry[]): string | null {
+  if (role === "peer" || !entries.length) return null;
+  const lines = entries.map(
+    (entry) => `- ${entry.name}: ${entry.description}${entry.whenToUse ? ` When to use: ${entry.whenToUse}` : ""}`,
+  );
+  return `${role === "supervisor" ? SUPERVISOR_CATALOG : LEAD_CATALOG}\n\nCatalog:\n${lines.join("\n")}`;
+}

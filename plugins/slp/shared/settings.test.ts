@@ -22,4 +22,14 @@ describe("SLP settings defaults", () => {
     ).toThrow();
     expect(() => slpSettings.schema.parse({ lead: { provider: "claude/x", modeId: "auto", instructions: " " } })).toThrow();
   });
+
+  it("takes an optional template catalog filter for the Supervisor and Lead", () => {
+    const parsed = slpSettings.schema.parse({
+      supervisor: { provider: "claude/x", modeId: "auto", templates: [] },
+      lead: { provider: "claude/x", modeId: "auto", templates: ["review"] },
+    });
+    expect(parsed.supervisor.templates).toEqual([]);
+    expect(parsed.lead.templates).toEqual(["review"]);
+    expect(slpSettings.schema.parse({}).lead.templates).toBeUndefined();
+  });
 });

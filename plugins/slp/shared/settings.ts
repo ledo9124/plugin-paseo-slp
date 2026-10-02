@@ -12,6 +12,7 @@ export const SLP_TOOLS = [
   "slp_accept",
   "slp_decide",
   "slp_revise_decision",
+  "slp_template",
 ] as const;
 export type SlpTool = (typeof SLP_TOOLS)[number];
 
@@ -31,12 +32,19 @@ const RoleOverrides = {
   tools: z.array(z.enum(SLP_TOOLS)).optional(),
 };
 
+/**
+ * Template names in the role's catalog (0008, plan slice 5). Absent means
+ * every stored template; an empty list hides the catalog.
+ */
+const CatalogOverride = { templates: z.array(z.string().min(1)).optional() };
+
 const RoleConfigSchema = z.object({
   /** `provider/model`, for example `claude/claude-opus-5-5`. */
   provider: z.string().min(3).regex(/^[^/\s]+\/\S+$/, "use provider/model"),
   /** Provider mode id; members must not depend on permission prompts. */
   modeId: z.string().min(1),
   ...RoleOverrides,
+  ...CatalogOverride,
 });
 
 export type RoleConfig = z.infer<typeof RoleConfigSchema>;

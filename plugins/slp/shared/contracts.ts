@@ -95,6 +95,8 @@ export const AssignmentSchema = z.object({
    * that ends before then is not a handback of this assignment.
    */
   briefDeliveredAt: z.string().nullable(),
+  /** The template the assignment follows, by name (0008); absent or null for none. */
+  template: z.string().nullable().optional(),
   handbacks: z.number().int(),
   lastHandbackAt: z.string().nullable(),
   acceptance: z
@@ -228,6 +230,21 @@ export const ReportSchema = z.object({
     }),
   ),
   usage: z.record(z.string(), UsageTotalsSchema),
+  /**
+   * Per template name (0008, behavior 10): slp_template loads, assignments
+   * that name it, their latest outcomes, and reopen findings on them.
+   */
+  templates: z.record(
+    z.string(),
+    z.object({
+      loads: z.number().int(),
+      assignments: z.number().int(),
+      accepted: z.number().int(),
+      rework: z.number().int(),
+      dropped: z.number().int(),
+      reopens: z.number().int(),
+    }),
+  ),
 });
 export type Report = z.infer<typeof ReportSchema>;
 
@@ -251,4 +268,56 @@ export const humanDecide = defineRpc({
     findingId: z.string().optional(),
   }),
   output: z.object({ decisionId: z.string(), notified: z.array(z.string()) }),
+});
+
+// Templates (decision 0008, plan slice 5): SKILL.md texts stored in plugin
+// data, managed from the Settings screen. The name is the key.
+
+export const TemplateViewSchema = z.object({
+  /** From the front matter `name`. */
+  name: z.string(),
+  /** From the front matter `description`. */
+  description: z.string(),
+  /** From a body line "When to use: ..."; null when the text has none. */
+  whenToUse: z.string().nullable(),
+  /** The whole SKILL.md text, front matter included, as Human saved it. */
+  text: z.string(),
+});
+export type TemplateView = z.infer<typeof TemplateViewSchema>;
+
+export const listTemplates = defineRpc({
+  name: "slp.templates.list",
+  input: z.object({}),
+  output: z.object({ templates: z.array(TemplateViewSchema) }),
+});
+
+/**
+ * Saves a SKILL.md text; the name comes from its front matter. Replaces a
+ * template of the same name. `previousName` renames: that entry is removed.
+ * An unparsable text is refused with the parse error.
+ */
+export const saveTemplate = defineRpc({
+  name: "slp.templates.save",
+  input: z.object({ text: z.string().min(1), previousName: z.string().optional() }),
+  output: z.object({ template: TemplateViewSchema }),
+});
+
+export const removeTemplate = defineRpc({
+  name: "slp.templates.remove",
+  input: z.object({ name: z.string().min(1) }),
+  output: z.object({ removed: z.boolean() }),
+});
+
+/**
+ * Imports the SKILL.md files under a folder on the plugin's host: the
+ * folder's own SKILL.md and each direct subfolder's `<sub>/SKILL.md`. Each
+ * file is saved like slp.templates.save; failures are listed, not thrown.
+ */
+export const importTemplates = defineRpc({
+  name: "slp.templates.import",
+  input: z.object({ path: z.string().trim().min(1) }),
+  output: z.object({
+    imported: z.array(z.string()),
+    errors: z.array(z.object({ file: z.string(), error: z.string() })),
+  }),
 });

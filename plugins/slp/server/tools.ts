@@ -19,7 +19,9 @@ const DelegateInput = z.object({
   brief: BriefSchema,
   model: z.string().optional(),
   peerAgentId: z.string().optional(),
+  template: z.string().optional().describe("Name of the stored template this assignment follows."),
 });
+const TemplateInput = z.object({ name: z.string().min(1) });
 const AcceptInput = z.object({
   assignmentId: z.string(),
   outcome: z.enum(["accepted", "rework", "dropped"]),
@@ -119,6 +121,13 @@ export function memberTools(coordination: Coordination, host: () => PaseoHost): 
         'Lead or Supervisor, for a pending decision you recorded. action "update" replaces its text (to correct or sharpen the question); "withdraw" removes it from what Human must answer. The reason is required; the Supervisor is told.',
       inputSchema: schema(ReviseDecisionInput),
       call: (args, secret) => coordination.reviseDecision(host(), secret, parse(ReviseDecisionInput, args)),
+    },
+    {
+      name: "slp_template",
+      description:
+        "Load a template's body by name (the catalog in your instructions lists them). Use, combine, or adapt it for the goal; the load is recorded.",
+      inputSchema: schema(TemplateInput),
+      call: (args, secret) => coordination.template(secret, parse(TemplateInput, args)),
     },
   ];
 }

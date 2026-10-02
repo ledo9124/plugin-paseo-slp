@@ -5,6 +5,7 @@ import { useSettings } from "@getpaseo/plugin/client";
 import { ScrollView, TextInput } from "@getpaseo/plugin/client/react-native";
 import { SettingsAction, SettingsInput, SettingsSection, SettingsSwitch } from "@getpaseo/plugin/client/ui";
 import type { Role } from "../shared/contracts";
+import { TemplatesSection, useTemplates } from "./templates-section";
 import { roleInstructions } from "../shared/roles";
 import { DEFAULT_ROLE_TOOLS, SLP_TOOLS, slpSettings, type SlpSettings, type SlpTool } from "../shared/settings";
 
@@ -13,7 +14,7 @@ const ROLES = [
   { key: "lead", title: "Lead" },
 ] as const;
 
-type Overrides = { instructions?: string; tools?: SlpTool[] };
+type Overrides = { instructions?: string; tools?: SlpTool[]; templates?: string[] };
 
 function splitList(text: string): string[] {
   return text
@@ -44,6 +45,7 @@ function RoleOverrides({
   value,
   onChange,
   theme,
+  catalog,
 }: {
   role: Role;
   provider: string;
@@ -51,6 +53,8 @@ function RoleOverrides({
   value: Overrides;
   onChange(next: Overrides): void;
   theme: PluginSurfaceProps["theme"];
+  /** Stored template names; set only for roles with a catalog. */
+  catalog?: string[];
 }) {
   const tools = value.tools ?? [...DEFAULT_ROLE_TOOLS[role]];
   const defaultText = roleInstructions(role, {
@@ -61,6 +65,13 @@ function RoleOverrides({
   const custom = value.instructions !== undefined;
   const setTools = (next: SlpTool[]) =>
     onChange({ ...value, tools: sameTools(next, DEFAULT_ROLE_TOOLS[role]) ? undefined : next });
+
+  // Absent means every stored template; choosing them all again removes the override.
+  const shown = catalog ? catalog.filter((name) => !value.templates || value.templates.includes(name)) : [];
+  const setCatalog = (name: string, on: boolean) => {
+    const next = (catalog ?? []).filter((n) => (n === name ? on : shown.includes(n)));
+    onChange({ ...value, templates: next.length === (catalog ?? []).length ? undefined : next });
+  };
 
   return (
     <>
@@ -110,6 +121,25 @@ function RoleOverrides({
           onValueChange={(on) => setTools(on ? [...tools, tool] : tools.filter((t) => t !== tool))}
         />
       ))}
+      {catalog?.length ? (
+        <>
+          <SettingsAction
+            label="Template catalog"
+            hint={value.templates ? "Only the templates switched on are listed for this role." : "Every stored template."}
+            actionLabel="Show all"
+            disabled={!value.templates}
+            onPress={() => onChange({ ...value, templates: undefined })}
+          />
+          {catalog.map((name) => (
+            <SettingsSwitch
+              key={name}
+              label={name}
+              value={shown.includes(name)}
+              onValueChange={(on) => setCatalog(name, on)}
+            />
+          ))}
+        </>
+      ) : null}
     </>
   );
 }
@@ -120,6 +150,7 @@ function RoleOverrides({
 export function SlpSettingsScreen({ theme }: PluginSurfaceProps) {
   const settings = useSettings(slpSettings);
   const [draft, setDraft] = useState<SlpSettings | null>(null);
+  const stored = useTemplates();
 
   useEffect(() => {
     if (settings.status === "ready") setDraft(settings.values);
@@ -158,9 +189,11 @@ export function SlpSettingsScreen({ theme }: PluginSurfaceProps) {
             value={draft[key]}
             onChange={(next) => setDraft({ ...draft, [key]: { ...draft[key], ...next } })}
             theme={theme}
+            catalog={stored.templates?.map((template) => template.name)}
           />
         </SettingsSection>
       ))}
+      <TemplatesSection templates={stored.templates} listError={stored.error} refresh={stored.refresh} theme={theme} />
       <SettingsSection title="Peers">
         <SettingsInput
           label="Models"

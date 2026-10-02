@@ -1,9 +1,10 @@
 import { createHash } from "node:crypto";
-import type { Mode, Role, WorkspaceView } from "../shared/contracts";
-import { ROLE_TITLES, roleInstructions } from "../shared/roles";
+import type { Mode, Role, TemplateView, WorkspaceView } from "../shared/contracts";
+import { ROLE_TITLES, catalogSection, roleInstructions } from "../shared/roles";
 import { DEFAULT_ROLE_TOOLS, SLP_TOOLS, type SlpSettings } from "../shared/settings";
 import type { HostAgent, PaseoHost } from "./paseo-host";
 import type { WorkspaceQueue } from "./queue";
+import type { TemplateStore } from "./template-store";
 import { emptyLedger, type GroupRecord, type MemberRecord, type SlpStore, type WorkspaceRecord } from "./store";
 
 export const GROUP_LABEL = "slp.group";
@@ -55,12 +56,24 @@ export interface MemberSetup {
   providerOptions?: { disallowedTools: string[] };
 }
 
-export function memberSetup(role: Role, provider: string, settings: SlpSettings): MemberSetup {
+export function memberSetup(
+  role: Role,
+  provider: string,
+  settings: SlpSettings,
+  templates: readonly TemplateView[] = [],
+): MemberSetup {
   const config = role === "peer" ? settings.peers : settings[role];
   const tools = [...(config.tools ?? DEFAULT_ROLE_TOOLS[role])];
-  const systemPrompt =
+  const text =
     config.instructions ??
     roleInstructions(role, { provider: providerId(provider), maxActivePeers: settings.peers.maxActive, tools });
+  // The catalog is data after the text, default or custom; Peers get none.
+  const allowed = role === "peer" ? [] : (settings[role].templates ?? templates.map((t) => t.name));
+  const catalog = catalogSection(
+    role,
+    templates.filter((template) => allowed.includes(template.name)),
+  );
+  const systemPrompt = catalog ? `${text}\n\n${catalog}` : text;
   return {
     systemPrompt,
     tools,
@@ -90,6 +103,7 @@ export class SlpError extends Error {
 
 export interface SlpServiceDeps {
   store: SlpStore;
+  templates: TemplateStore;
   queue: WorkspaceQueue;
   mcpUrl(secret: string): string;
   settings(): Promise<SlpSettings>;
@@ -200,7 +214,12 @@ export class SlpService {
     };
     const setups = new Map(
       group.members.map((member) => {
-        const setup = memberSetup(member.role, settings[member.role as "supervisor" | "lead"].provider, settings);
+        const setup = memberSetup(
+          member.role,
+          settings[member.role as "supervisor" | "lead"].provider,
+          settings,
+          this.deps.templates.list(),
+        );
         applySetup(member, setup);
         return [member, setup] as const;
       }),
