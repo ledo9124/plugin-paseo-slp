@@ -1,7 +1,7 @@
 # SLP Roles: Definitions
 
 Status: accepted by Human on 2026-10-02, after the tuning evidence in
-[slp-role-config-and-templates](../plans/active/slp-role-config-and-templates.md)
+[slp-role-config-and-templates](../plans/completed/slp-role-config-and-templates.md)
 (slice 3). It spells out, per role, what [overview.md](overview.md) and
 decisions 0001-0008 say, plus Human's choices of 2026-10-02: the
 Supervisor's narrow routing, the Lead's own judgment on delegating, and a

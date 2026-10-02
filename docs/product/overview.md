@@ -11,8 +11,8 @@ accepted in decisions
 SLP is, its layers, and its boundary with Repository Harness are accepted in
 [0007](../decisions/0007-what-slp-is.md). Per-role configuration, templates
 as plugin skills, and the group's shape are accepted in
-[0008](../decisions/0008-per-role-configuration-and-templates.md), not yet
-implemented.
+[0008](../decisions/0008-per-role-configuration-and-templates.md), and
+implemented by the completed role-config plan.
 
 ## Outcome
 

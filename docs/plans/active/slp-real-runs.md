@@ -203,7 +203,7 @@ the fixes' quality.
 ### Run 2: slice 5 (templates) of this repository, through SLP
 
 Registered before the run (2026-10-02). Human asked that an SLP group
-implement slice 5 of `docs/plans/active/slp-role-config-and-templates.md`,
+implement slice 5 of `docs/plans/completed/slp-role-config-and-templates.md`,
 with the operating agent playing Human.
 - Human's answers, given to the operating agent before the run:
   - result: commit on a new branch, no push. If the tests pass and the

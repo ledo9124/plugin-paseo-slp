@@ -4,14 +4,8 @@ Date: 2026-10-02
 
 ## Status
 
-Active. Decisions settled by Human on 2026-10-02 (decision 0008). Human
-added the role-definition task on 2026-10-02 (slices 1 and 3). Slices 1-2
-are done: draft definitions in `docs/product/roles.md`, the suite in
-`docs/product/role-scenarios.md`, the v0.1.0 baseline below, and the role
-contexts in code. Slice 3 is done: R1 and R2 pass, and Human accepted the
-definitions and left delegation to the Lead. Slice 4 (per-role settings)
-is done; Human saw its settings screen in the app. Slice 5
-(templates) is done. Next: slice 6.
+Completed on 2026-10-02. Human closed slice 6 with the gaps listed in
+Result.
 
 ## Outcome
 
@@ -364,7 +358,7 @@ Other observations:
     Templates section.
   Human saw the Settings screen in the app (2026-10-02). Not seen yet: a
   Lead choosing a template on its own (slice 6).
-- [ ] Slice 6: live proof. Seen live: per-role `tools/list` and refused
+- [x] Slice 6: live proof, closed by Human with gaps (see Result). Seen live: per-role `tools/list` and refused
   calls (slices 4-5), the Settings screen (Human), templates seeded,
   loaded by a Lead, recorded on an assignment, and counted (run 3a in
   `slp-real-runs.md`), and a Lead declining an unnamed template on a tiny
@@ -417,4 +411,36 @@ Other observations:
 
 ## Result
 
-Pending.
+Closed on 2026-10-02.
+
+Outcome reached:
+- Each role has an accepted definition (`docs/product/roles.md`): the
+  Supervisor answers only from records, the ledger, and the conversation,
+  and routes all project work to the Lead; the Lead decides when to
+  delegate.
+- The definitions were tuned on a scenario suite until R1 and R2 passed
+  on Opus and Sonnet Supervisors. After tuning, Supervisors ran 0 shell
+  commands and changed 0 files in every group, here and in real runs 2
+  and 3.
+- Human tunes each role in Settings: provider and model, mode,
+  instructions, SLP tools, and the template catalog. Members keep what
+  they were created with, and the report shows each member's instruction
+  hash.
+- Templates are `SKILL.md` texts in plugin data, five defaults seeded,
+  managed in Settings, offered as a catalog, loaded by the Lead with
+  `slp_template`, recorded on assignments, and counted in the report.
+- Slice 5 was built by an SLP group (real run 2) and merged as `2bd4a99`.
+
+Validation at close: `vitest` 72 passed, `tsc` passed; live checks on the
+main daemon as recorded per slice and in `slp-real-runs.md`.
+
+Gaps, accepted by Human:
+- The Supervisor suggesting a template has not been seen.
+- No Lead or Peer tried `AskUserQuestion`, so the Claude block is
+  unit-tested and configured but not seen refusing.
+- A Peer's own-work ledger view is unit-tested, not seen live.
+- A settings edit saved from the app has not been seen.
+- The Lead's own choices in slice 5 stand unless Human revisits them: the
+  catalog follows custom instructions too, template names are lowercase
+  with hyphens, and import reads a folder's `SKILL.md` and its direct
+  subfolders'.

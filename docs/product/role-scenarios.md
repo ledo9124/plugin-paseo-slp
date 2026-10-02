@@ -1,7 +1,7 @@
 # SLP Role Scenarios
 
 Status: draft, slice 1 of
-[slp-role-config-and-templates](../plans/active/slp-role-config-and-templates.md).
+[slp-role-config-and-templates](../plans/completed/slp-role-config-and-templates.md).
 Tests the [role definitions](roles.md). Results go in the plan, per run.
 
 ## Seed Project

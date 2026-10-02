@@ -129,6 +129,6 @@ Tradeoffs:
 
 ## Follow-Up
 
-- Execution plan: `docs/plans/active/slp-role-config-and-templates.md`.
+- Execution plan: `docs/plans/completed/slp-role-config-and-templates.md`.
 - If Human enables Codex's question feature, check whether Paseo can turn
   it off for one agent.
