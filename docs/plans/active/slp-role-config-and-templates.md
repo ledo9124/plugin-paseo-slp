@@ -4,9 +4,8 @@ Date: 2026-10-02
 
 ## Status
 
-Active. Decisions settled by Human on 2026-10-02 (decision 0008). Human
-added the role-definition task on 2026-10-02 (slices 1 and 3). No code
-changed yet.
+Active, paused by Human on 2026-10-02 at the end of slice 3a, to resume on
+another machine. Work is on branch `slp/role-tuning`. See Resuming below.
 
 ## Outcome
 
@@ -266,7 +265,9 @@ changes member behavior.
   - [x] A2 (Supervisor on Sonnet) and K runs (Supervisor holds part of the
     outcome; does it catch the Lead going wrong?), asked by Human
     2026-10-02. Results and proposed tuning in the research note.
-  - [ ] Human's choice on the proposed tuning; rerun on the tuned text.
+  - [ ] Human's choice on the proposed tuning (revised for "Human is not
+    always right"); apply it; rerun T1, T2, K, and the new S11 with the
+    Supervisor on Sonnet.
   - [ ] S5-S10.
 - [ ] Slice 4: settings v2.
 - [ ] Slice 5: templates.
@@ -287,6 +288,12 @@ changes member behavior.
   spoon-fed ones. Runs use a scratch clone, never Human's checkout.
 - 2026-10-02: after run 1, Human questioned the Supervisor's value for
   one-off questions and asked for an evaluation (slice 3a).
+- 2026-10-02: Human: Human is not always right; an instruction can go
+  against Human's own outcome. The Supervisor holds the outcome above the
+  instruction and raises a conflict with evidence; Human still decides.
+  Recorded as a draft rule in `docs/product/roles.md` and in the research
+  note's proposed tuning. Required behavior 1 in `overview.md` changes only
+  when Human accepts the role definitions.
 - Open: how far the Supervisor works on the project (option A or B). The
   draft uses A; Human accepts the definition after the tuning evidence.
 - 2026-10-02 (agent, Human may revisit): templates are stored in plugin
@@ -295,6 +302,52 @@ changes member behavior.
   has no file picker.
 - 2026-10-02 (agent, Human may revisit): the Supervisor keeps
   `slp_finding` by default, for drift it sees across scopes.
+
+## Resuming
+
+State at pause (2026-10-02):
+- Branch `slp/role-tuning`, pushed. It holds:
+  - the draft role definitions (`docs/product/roles.md`);
+  - the scenarios (`docs/product/role-scenarios.md`);
+  - the slice 2 code (per-role instructions, tools, and blocked tools; the
+    notify fix);
+  - the experiment-only `experiment.noSupervisor` setting;
+  - the research note `docs/research/supervisor-ab-2026-10-02.md`, with
+    every run's numbers and the proposed tuning.
+- The proposed tuning is **not applied** yet. It waits for Human's
+  go-ahead.
+- Experiment kit:
+  - intent sheets: `docs/research/supervisor-ab/intent-T1.md`,
+    `intent-T2.md`;
+  - scripts: `scripts/slp-test/rpc.mjs` calls plugin RPCs through the
+    globally installed Paseo CLI; `scripts/slp-test/watch.sh` waits for
+    test agents to ask a question or go idle.
+  - The scratch clones and working notes stayed on the work machine under
+    `D:/codes/slp-test`; nothing in them is needed to resume.
+- The work machine's daemon (6767) loads the plugin from this repository's
+  directory, so it runs whatever branch is checked out there.
+
+To run a test on another machine:
+1. Install the plugin from a directory: `paseo plugin install
+   <repo>/plugins/slp`, after `npm install` here. Its daemon needs
+   `pluginsEnabled` and `daemon.mcp.injectIntoAgents` (README).
+2. Clone the target project into a scratch directory and disable push:
+   `git remote set-url --push origin DISABLED-no-push`.
+3. Create a workspace there:
+   `paseo workspace create --isolation local --path <dir> --title <t> --json`.
+4. Turn SLP on:
+   `node scripts/slp-test/rpc.mjs slp.workspace.set-mode '{"workspaceId":"<id>","mode":"on"}'`.
+5. Send Human's rough first message:
+   `paseo send --no-wait <supervisor id> "<text>"`.
+6. Run `scripts/slp-test/watch.sh`. On exit 2, answer the question as Human
+   with the Paseo `respond_to_permission` tool. Answer only from the
+   intent sheet; anything else is "tùy em".
+7. To run arm B, set `"experiment":{"noSupervisor":true}` in
+   `<home>/plugin-settings/slp/slp.json` before turning SLP on, then
+   restore it. To change the Supervisor's model, edit `supervisor.provider`
+   there, then restore it.
+8. Score from the agent timelines, `slp.report.get`, the clone's diff, and
+   a test rerun. Archive the workspaces after.
 
 ## Validation
 
