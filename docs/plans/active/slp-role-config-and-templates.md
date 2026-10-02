@@ -247,7 +247,21 @@ changes member behavior.
     mixes Human's words with its own inferences and methods under "Human
     asks:", and the Lead follows them (S2 tried to run tests; S4 followed
     the Supervisor's report outline).
-  - [ ] Slice 3a experiment (above).
+  - [x] Slice 3a runs (2026-10-02, Human's daemon, clones of `paseo-plugin`
+    at `8c7eef6` with push disabled; working notes in
+    `D:/codes/slp-test/results.md`):
+    - T1 (code): A passed every acceptance item, B shipped a fix that
+      suppresses a give-up message after an announced retry (H2) and added
+      an unrequested amendment to the project's decision 0003. Cost A $2.33,
+      B $0.81.
+    - T2 (docs): both reached H1-H6 after one correction; A's Supervisor had
+      the Lead verify claims against code, which fixed 2 wrong claims that
+      B kept one of. Cost A $1.02, B $0.41.
+    - Neither arm did intake before work. The Supervisor's value showed as
+      critical review of the Lead's result on Human's behalf, not as
+      intake. A cost 2.5-2.9x B; Human's message count was equal; A asked 2
+      engineering questions that were not Human's.
+  - [ ] Human's blind comparison (X/Y) and Human's reading of 3a.
   - [ ] S5-S10.
 - [ ] Slice 4: settings v2.
 - [ ] Slice 5: templates.
