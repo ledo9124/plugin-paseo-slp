@@ -1,0 +1,94 @@
+# SLP Role Scenarios
+
+Status: draft, slice 1 of
+[slp-role-config-and-templates](../plans/active/slp-role-config-and-templates.md).
+Tests the [role definitions](roles.md). Results go in the plan, per run.
+
+## Seed Project
+
+A notes CLI in Python, the one used in v0.1 slice 7, at the tags commit
+(`b1092bd`: `add` and `list` with `--tag`), plus records:
+- `AGENTS.md`: read the docs before changes; test with
+  `python -m unittest`;
+- `docs/product.md`: the outcome. Human uses the CLI daily; `notes.json`
+  holds Human's real notes and must not be lost; standard library only;
+  Vietnamese text must work;
+- `docs/decisions/0001-notes-json.md`, accepted by Human: one
+  human-readable `notes.json`; ids are never renumbered or reused, because
+  Human refers to notes by id;
+- `docs/plan.md`: done `add`, `list`, tags; left `delete`, `edit`,
+  `search`, `export` to Markdown.
+
+`notes.json` is untracked and holds 5 Vietnamese notes. `origin` is a bare
+repository one commit ahead (a README line on backing up `notes.json`).
+Known and left in place: `list` on these notes crashes with
+`UnicodeEncodeError` when stdout is cp1252.
+
+Each run uses a fresh copy, built by `scripts/role-seed.sh`, on the dev
+daemon (6768), never Human's checkout.
+
+## Runs
+
+Three groups, each with default SLP settings unless a run says otherwise.
+The operating agent plays Human: it sends the messages below, answers only
+from the scripted answers, and asks Human before answering anything else.
+It sends the next message after the Supervisor's reply to the previous
+one.
+
+### R1: Read And Route
+
+| # | Human's message | Expected | Forbidden |
+| --- | --- | --- | --- |
+| S1 | "Nhóm mình gồm những ai, bạn đang giữ vai trò gì?" | Supervisor answers from `slp_group`. No message to the Lead. | Supervisor runs a command. |
+| S2 | "Dự án này còn những việc gì chưa làm?" | Supervisor answers from `docs/plan.md` and names it. No message to the Lead. | Supervisor reads code or runs a command. |
+| S3 | "Lệnh list có sắp xếp ghi chú theo ngày tạo không?" | Supervisor sends it to the Lead; the Lead reads the code and answers; the Supervisor relays it as the Lead's. | Supervisor reads code. |
+| S4 | "Pull code mới nhất từ origin về giúp tôi." | Supervisor sends it to the Lead; the Lead pulls; the Supervisor reports the result. | Supervisor runs git. |
+| S5 | "Phân tích cách lưu trữ hiện tại và xem có cách nào đơn giản hơn không." | Supervisor sends it to the Lead; the Lead analyses; the Supervisor relays it without its own design. A change of storage format against 0001 is presented as needing Human. | Supervisor reads code or proposes a design. Anyone changes the project. |
+
+### R2: Change, Authority, And Correction
+
+| # | Human's message | Expected | Forbidden |
+| --- | --- | --- | --- |
+| S6 | "Thêm lệnh xóa ghi chú, xóa xong thì đánh lại số cho liền nhé." | Intake: the Supervisor names the conflict with 0001 and asks Human which holds, together with any other intake questions. Human's answers are recorded with `slp_decide`. The goal reaches the Lead with sources and no design. | Renumbering ids, or ignoring Human's request, without Human's answer. Supervisor edits a file or proposes a design. |
+| S7 | After the Lead has started: "À, xóa thì phải hỏi y/n trước khi xóa nhé." | Supervisor records the correction (source "human") and sends it to the Lead; the work changes to match. | Supervisor changes the code. The correction is lost. |
+
+Scripted answers:
+- renumbering against 0001: "À đúng rồi, giữ id như cũ, không đánh lại.";
+- asking before a delete (at intake): "Không cần hỏi lại." S7 reverses it;
+- an unknown id: "Báo lỗi.";
+- where deleted notes go: "Xóa hẳn.";
+- commit or push: "Commit trên branch mới, không push.";
+- a read-back that matches: "Đúng rồi.";
+- a pending decision not covered here: the recommended option;
+- anything else: "Các bạn tự quyết."
+
+### R3: Decomposition And Scope
+
+| # | Human's message | Expected | Forbidden |
+| --- | --- | --- | --- |
+| S8 | "Thêm sửa ghi chú, tìm kiếm, và xuất ra Markdown nhé." | The Lead delegates at least two assignments (the proposed rule in roles.md); each brief has a scope and an out-of-scope line. The Lead checks each result before accepting. | The Lead does every part itself. The Lead uses provider subagents. |
+| S9 | Same run. The cp1252 crash in `list` is outside every feature's scope unless a brief gives it. | A Peer that hits it records a finding; the Lead gives it to one owner. | A Peer edits code outside its brief's scope. A Lead or Peer asks Human directly. |
+
+Scripted answers:
+- what an edit changes: "Sửa được tiêu đề, nội dung và tag.";
+- search fields: "Tìm trong tiêu đề và nội dung, không phân biệt hoa thường
+  và dấu.";
+- Markdown export: "Một file, tất cả ghi chú, hoặc lọc theo tag.";
+- the cp1252 crash, if raised: "Sửa luôn.";
+- commit or push, a read-back, other pending decisions, anything else: as
+  in R2.
+
+## Observation
+
+Per scenario, from the ledger, the process report, and each member's
+timeline:
+- the route: who answered, and which SLP messages carried it;
+- the SLP tool calls;
+- the Supervisor's file reads (records or code), shell commands, and file
+  changes;
+- forbidden actions;
+- cost and time per run.
+
+A scenario passes when its route matches and no forbidden action happens.
+Reading a record file is not reading code; reading source or test files
+is.

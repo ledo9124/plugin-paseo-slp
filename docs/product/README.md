@@ -16,6 +16,10 @@ files after actual product domains, such as `overview.md`, `billing.md`,
   0001-0007.
 - [slp-and-harness.md](slp-and-harness.md): the boundary between SLP and
   Repository Harness, and how they run together (decision 0007).
+- [roles.md](roles.md): draft definition of each role, with routing per
+  kind of message. Not accepted yet.
+- [role-scenarios.md](role-scenarios.md): the scenario suite that tests
+  those definitions.
 
 ## Update Rule
 

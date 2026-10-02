@@ -5,8 +5,10 @@ Date: 2026-10-02
 ## Status
 
 Active. Decisions settled by Human on 2026-10-02 (decision 0008). Human
-added the role-definition task on 2026-10-02 (slices 1 and 3). No code
-changed yet.
+added the role-definition task on 2026-10-02 (slices 1 and 3). Slice 1 is
+done: draft definitions in `docs/product/roles.md`, the suite in
+`docs/product/role-scenarios.md`, and the v0.1.0 baseline below. No code
+changed yet. Next: slice 2.
 
 ## Outcome
 
@@ -181,6 +183,53 @@ changes member behavior.
      loaded through the UI, suggested by the Supervisor, loaded by the
      Lead, and counted in the report; settings edited in the web app.
 
+### Slice 1 Baseline Results (2026-10-02)
+
+v0.1.0 instructions, dev daemon 6768, a fresh seed per run
+(`scripts/role-seed.sh`). The operating agent played Human
+from the suite's scripted answers; nothing outside the script came up.
+Supervisor Opus unless marked; Lead Sonnet. "Narrow-B break" means the
+Supervisor read code, or ran a command on the project, which the draft
+definition forbids.
+
+| Scenario | Result | What happened |
+| --- | --- | --- |
+| R1 S1 group question | pass | `slp_group` only. |
+| R1 S2 status from records | fail | Answered from `docs/plan.md`, but also grepped `notes.py` "to check the plan against the code". |
+| R1 S3 status from code | fail | Read `notes.py` and answered itself; the Lead got nothing. |
+| R1 S4 `git pull` | fail | Ran `git pull` itself. |
+| R1 S5 analysis | pass | Sent to the Lead as analysis only, with "departures from 0001 come back to Human"; relayed the result as the Lead's, then asked Human with the question tool. |
+| R1b (Sonnet) S1 | pass | |
+| R1b S2 | pass | Records only (through the shell). |
+| R1b S3 | fail | Read the code with a search tool and answered itself. |
+| R1b S4 | fail | Ran `git pull` itself. |
+| R1b S5 | fail | Did the analysis itself and proposed fixes; the Lead was never used. Same as Human's own test. |
+| R2 S6 conflict with 0001 | pass | Named the conflict at intake with options and a recommendation, recorded a pending decision, and held renumbering back from the Lead. |
+| R2 S7 correction | pass | Recorded (source "human"), sent to the Lead; the Lead added the y/n prompt with tests. |
+| R3 S8 three-part goal | fail | One Peer got all three parts in one assignment. The brief had scope and out-of-scope lines, and the Lead re-ran the tests before accepting. |
+| R3 S9 cross-scope fix | not exercised | The Lead put UTF-8 output into the brief, so the cp1252 crash was in the Peer's scope; it fixed it there. |
+
+Across runs:
+- **The Supervisor works on the project in every run.** Besides the
+  table, in R2 and R3 it read the code at intake, read diffs, ran the
+  tests, and ran the CLI to check the Lead's report. Opus still routes
+  analysis to the Lead; Sonnet does everything itself.
+- **"Check the result against Human's goal"** is read as re-running the
+  Lead's checks. The definition must say how the Supervisor checks:
+  against Human's decisions, using the Lead's evidence and the ledger.
+- **Reading records through the shell** (`cat docs/...`) makes "no
+  command" hard to observe. Simplest fix to try: the Supervisor reads
+  files with its read tool, and has no shell use on the project.
+- The Lead attributed its own inference to Human once: "use utf-8
+  explicitly" under source "Human, docs/product.md".
+- In R2 the Lead migrated Human's real `notes.json`, which Human's D3
+  allowed, with a byte-identical backup.
+- Intake, conflicts with records, pending decisions, and corrections all
+  held (R2). The report has no signal yet for the Supervisor's own shell
+  use (slice 2).
+- Cost: R1 $0.71, R1b $0.18 (the Lead was never used), R2 $0.97, R3
+  $0.87. About 20 minutes in all.
+
 ## Risks And Recovery
 
 - **Settings migration loses Human's values.** Test the v1-to-v2 migration;
@@ -197,7 +246,8 @@ changes member behavior.
 ## Progress
 
 - [x] Analysis and Human's decisions (0008).
-- [ ] Slice 1: role definitions, scenario suite, v0.1.0 baseline.
+- [x] Slice 1: role definitions (draft), scenario suite, v0.1.0 baseline
+  (results below).
 - [ ] Slice 2: role contexts.
 - [ ] Slice 3: tuning until the scenarios pass.
 - [ ] Slice 4: settings v2.
