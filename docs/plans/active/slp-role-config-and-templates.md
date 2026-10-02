@@ -364,7 +364,13 @@ Other observations:
     Templates section.
   Human saw the Settings screen in the app (2026-10-02). Not seen yet: a
   Lead choosing a template on its own (slice 6).
-- [ ] Slice 6: live proof.
+- [ ] Slice 6: live proof. Seen live: per-role `tools/list` and refused
+  calls (slices 4-5), the Settings screen (Human), templates seeded,
+  loaded by a Lead, recorded on an assignment, and counted (run 3a in
+  `slp-real-runs.md`), and a Lead declining an unnamed template on a tiny
+  task (run 3b). Not seen: the Supervisor suggesting a template, a Lead
+  or Peer trying `AskUserQuestion` (none tried in any run), a Peer's
+  ledger view, and a settings edit saved from the app.
 
 ## Decisions
 

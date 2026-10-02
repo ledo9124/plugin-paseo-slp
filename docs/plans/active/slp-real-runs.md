@@ -328,6 +328,36 @@ the operating agent, which plays Human again.
 - Stop: the Supervisor reports the result, or $5 per group. Cleanup:
   archive both workspaces.
 
+### Run 3 Results (2026-10-02)
+
+Workspaces `slp-run3a` (`wks_b837744ff5fb55e3`) and `slp-run3b`
+(`wks_25523acae774dff6`), 16:04 to 16:09 UTC. No question reached Human in
+either group.
+- **3a, named.** The Supervisor recorded Human's words (D1) and passed
+  "use the independent-review template for this goal" to the Lead as a
+  binding constraint with source Human. The Lead loaded the template
+  (`template-load`), gave one assignment to a fresh Codex Peer with
+  `template: independent-review`, and kept the brief free of its own
+  reasoning about the code. The Peer recorded two findings with evidence;
+  the Lead decided on both with `findingId` (so they closed, unlike run
+  1), added two defects it confirmed itself, and accepted. The Supervisor
+  reported four defects to Human, marked confirmed or suspected, with
+  Human's and the agents' choices kept apart. Report: `independent-review`
+  loaded 1, assignments 1, accepted 1. Cost $0.52 plus the Codex Peer
+  (not reported).
+- **3b, not named.** The Lead saw `test-audit` in its catalog and chose
+  not to use it, nor Peers, saying why: the project is tiny (75 lines of
+  code, 53 of tests). It ran the tests and reported five gaps. The
+  Supervisor suggested no template. Report: no template entries. Cost
+  $0.33.
+- Both Supervisors: 0 shell commands and 0 file changes; replies in
+  Vietnamese. Both workspaces archived.
+
+Reading of run 3: a named template travels from Human to the brief and is
+counted; an unnamed one is the Lead's call, and it declined openly on a
+small task, as Human's "the Lead decides" allows. The Supervisor's
+optional template suggestion has not been seen.
+
 ## Risks And Recovery
 
 - **Edits to Human's real repositories.** Edits stay on new branches in
@@ -352,7 +382,7 @@ the operating agent, which plays Human again.
   (behavior 10), once it matures.
 - [x] Run 2: slice 5 (templates) of this repository, through SLP
   (results above; merged as `2bd4a99`).
-- [ ] Run 3: templates in use, named and not named (registered above).
+- [x] Run 3: templates in use, named and not named (results above).
 
 ## Decisions
 
