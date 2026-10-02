@@ -54,6 +54,13 @@ export function ProcessSection({ report, markdown }: { report: Report; markdown:
         hint={`Questions to Human through a provider's own tool by the Lead or a Peer ${total(nativeQuestionBreaks(report.nativeQuestions.byRole))} (${counts(nativeQuestionBreaks(report.nativeQuestions.byRole))}); built-in send_agent_prompt calls ${total(report.busySendViolations)} (${counts(report.busySendViolations)}); agents created outside slp_delegate ${report.outsideAgents.created}; built-in create_agent calls ${total(report.outsideAgents.builtinCreateCalls)}; Supervisor shell commands ${report.supervisorWork.shellCommands} and file changes ${report.supervisorWork.fileChanges} on the project.`}
         testID="slp-process-breaks"
       />
+      <SettingsRow
+        label={`Instructions: ${report.instructions.filter((entry) => entry.custom).length} custom of ${report.instructions.length}`}
+        hint={report.instructions
+          .map((entry) => `${entry.role} ${entry.hash ?? "not recorded"}${entry.custom ? " (custom)" : ""}`)
+          .join("; ")}
+        testID="slp-process-instructions"
+      />
       {Object.entries(report.usage).map(([role, usage]) => (
         <SettingsRow
           key={role}

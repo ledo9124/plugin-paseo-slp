@@ -1,35 +1,20 @@
+import { createHash } from "node:crypto";
 import type { Mode, Role, WorkspaceView } from "../shared/contracts";
-import type { SlpSettings } from "../shared/settings";
+import { ROLE_TITLES, roleInstructions } from "../shared/roles";
+import { DEFAULT_ROLE_TOOLS, SLP_TOOLS, type SlpSettings } from "../shared/settings";
 import type { HostAgent, PaseoHost } from "./paseo-host";
 import type { WorkspaceQueue } from "./queue";
-import { ROLE_TITLES, roleInstructions } from "./roles";
 import { emptyLedger, type GroupRecord, type MemberRecord, type SlpStore, type WorkspaceRecord } from "./store";
 
 export const GROUP_LABEL = "slp.group";
 export const ROLE_LABEL = "slp.role";
 export const MCP_SERVER_NAME = "slp";
-/** Plugin MCP tools; each member is offered only its role's list (decision 0008). */
-export const MEMBER_TOOLS = [
-  "slp_group",
-  "slp_ledger",
-  "slp_send",
-  "slp_finding",
-  "slp_delegate",
-  "slp_accept",
-  "slp_decide",
-  "slp_revise_decision",
-] as const;
-export type MemberTool = (typeof MEMBER_TOOLS)[number];
+/** Plugin MCP tools; each member is offered only its own list (decision 0008). */
+export const MEMBER_TOOLS = SLP_TOOLS;
 
-/** Default SLP tools per role (decision 0008); a call outside the list is refused. */
-export const ROLE_TOOLS: Record<Role, readonly MemberTool[]> = {
-  supervisor: ["slp_group", "slp_ledger", "slp_send", "slp_finding", "slp_decide", "slp_revise_decision"],
-  lead: MEMBER_TOOLS,
-  peer: ["slp_ledger", "slp_send", "slp_finding"],
-};
-
-export function roleAllows(role: Role, tool: string): boolean {
-  return (ROLE_TOOLS[role] as readonly string[]).includes(tool);
+/** Whether a member may use an SLP tool: its list from creation, else its role's default. */
+export function memberAllows(member: MemberRecord, tool: string): boolean {
+  return (member.tools ?? (DEFAULT_ROLE_TOOLS[member.role] as readonly string[])).includes(tool);
 }
 
 const GROUP_ROLES: readonly Role[] = ["supervisor", "lead"];
@@ -54,21 +39,44 @@ export function providerId(provider: string): string {
   return provider.split("/")[0];
 }
 
-export function memberProviderOptions(role: Role, provider: string): { disallowedTools: string[] } | undefined {
-  return providerId(provider) === "claude" ? { disallowedTools: [...CLAUDE_DISALLOWED[role]] } : undefined;
-}
-
-/** A member's system prompt, with its provider and settings filled in. */
-export function memberInstructions(role: Role, provider: string, settings: SlpSettings): string {
-  return roleInstructions(role, { provider: providerId(provider), maxActivePeers: settings.peers.maxActive });
-}
-
 export function slpMcpServers(url: string) {
   return { [MCP_SERVER_NAME]: { type: "http" as const, url, alwaysLoad: true } };
 }
 
-export function preapprovedTools(role: Role) {
-  return ROLE_TOOLS[role].map((tool) => ({ server: MCP_SERVER_NAME, tool }));
+/** How SLP creates a member of a role, from the settings at creation (decision 0008). */
+export interface MemberSetup {
+  systemPrompt: string;
+  tools: string[];
+  /** Short hash of systemPrompt, shown in the process report. */
+  instructionsHash: string;
+  /** Human replaced the role's default text in Settings. */
+  customInstructions: boolean;
+  preapprovedTools: Array<{ server: string; tool: string }>;
+  providerOptions?: { disallowedTools: string[] };
+}
+
+export function memberSetup(role: Role, provider: string, settings: SlpSettings): MemberSetup {
+  const config = role === "peer" ? settings.peers : settings[role];
+  const tools = [...(config.tools ?? DEFAULT_ROLE_TOOLS[role])];
+  const systemPrompt =
+    config.instructions ??
+    roleInstructions(role, { provider: providerId(provider), maxActivePeers: settings.peers.maxActive, tools });
+  return {
+    systemPrompt,
+    tools,
+    instructionsHash: createHash("sha256").update(systemPrompt).digest("hex").slice(0, 12),
+    customInstructions: config.instructions !== undefined,
+    preapprovedTools: tools.map((tool) => ({ server: MCP_SERVER_NAME, tool })),
+    providerOptions:
+      providerId(provider) === "claude" ? { disallowedTools: [...CLAUDE_DISALLOWED[role]] } : undefined,
+  };
+}
+
+/** Records on the member what it was created with; the MCP endpoint and report read it. */
+export function applySetup(member: MemberRecord, setup: MemberSetup): void {
+  member.tools = setup.tools;
+  member.instructionsHash = setup.instructionsHash;
+  member.customInstructions = setup.customInstructions;
 }
 
 export class SlpError extends Error {
@@ -190,11 +198,18 @@ export class SlpService {
       events: [],
       seen: [],
     };
-    // Persist secrets before creating agents, so their first MCP call resolves.
+    const setups = new Map(
+      group.members.map((member) => {
+        const setup = memberSetup(member.role, settings[member.role as "supervisor" | "lead"].provider, settings);
+        applySetup(member, setup);
+        return [member, setup] as const;
+      }),
+    );
+    // Persist secrets and tool lists before creating agents, so their first MCP call resolves.
     this.deps.store.put({ ...record, mode: "on", group });
     try {
       for (const member of group.members) {
-        const agent = await this.createMember(host, record.workspaceId, group, member, settings);
+        const agent = await this.createMember(host, record.workspaceId, group, member, settings, setups.get(member)!);
         member.agentId = agent.id;
         this.deps.store.put({ ...record, mode: "on", group });
       }
@@ -218,6 +233,7 @@ export class SlpService {
     group: GroupRecord,
     member: MemberRecord,
     settings: SlpSettings,
+    setup: MemberSetup,
   ): Promise<HostAgent> {
     const config = settings[member.role as "supervisor" | "lead"];
     return host.createAgent({
@@ -225,12 +241,12 @@ export class SlpService {
       provider: config.provider,
       modeId: config.modeId,
       title: ROLE_TITLES[member.role],
-      systemPrompt: memberInstructions(member.role, config.provider, settings),
+      systemPrompt: setup.systemPrompt,
       mcpServers: slpMcpServers(this.deps.mcpUrl(member.secret)),
-      preapprovedTools: preapprovedTools(member.role),
+      preapprovedTools: setup.preapprovedTools,
       labels: { [GROUP_LABEL]: group.id, [ROLE_LABEL]: member.role },
       idempotencyKey: `slp:${group.id}:${member.role}`,
-      providerOptions: memberProviderOptions(member.role, config.provider),
+      providerOptions: setup.providerOptions,
     });
   }
 

@@ -218,6 +218,15 @@ export const ReportSchema = z.object({
   outsideAgents: z.object({ created: z.number().int(), builtinCreateCalls: CountsSchema }),
   /** The Supervisor working on the project, which roles.md rules out (0008). */
   supervisorWork: z.object({ shellCommands: z.number().int(), fileChanges: z.number().int() }),
+  /** Which instruction text each member was created with (decision 0008). */
+  instructions: z.array(
+    z.object({
+      role: RoleSchema,
+      agentId: z.string().nullable(),
+      hash: z.string().nullable(),
+      custom: z.boolean(),
+    }),
+  ),
   usage: z.record(z.string(), UsageTotalsSchema),
 });
 export type Report = z.infer<typeof ReportSchema>;

@@ -36,6 +36,12 @@ export function buildReport(group: GroupRecord): Report {
     nativeQuestions: { byRole: {}, unanswered: 0 },
     outsideAgents: { created: 0, builtinCreateCalls: {} },
     supervisorWork: { shellCommands: 0, fileChanges: 0 },
+    instructions: group.members.map((member) => ({
+      role: member.role,
+      agentId: member.agentId,
+      hash: member.instructionsHash ?? null,
+      custom: member.customInstructions ?? false,
+    })),
     usage: {},
   };
 
@@ -175,6 +181,12 @@ export function renderReport(report: Report): string {
     `- Busy-send violations (built-in send_agent_prompt): ${total(report.busySendViolations)} (${counts(report.busySendViolations)})`,
     `- Agents created outside slp_delegate: ${report.outsideAgents.created}; built-in create_agent calls ${total(report.outsideAgents.builtinCreateCalls)} (${counts(report.outsideAgents.builtinCreateCalls)})`,
     `- Supervisor working on the project: ${report.supervisorWork.shellCommands} shell commands, ${report.supervisorWork.fileChanges} file changes`,
+    "",
+    "## Instructions",
+    ...report.instructions.map(
+      (entry) =>
+        `- ${entry.role} ${entry.agentId?.slice(0, 7) ?? "(not created)"}: ${entry.hash ?? "not recorded"}${entry.custom ? " (custom)" : entry.hash ? " (default)" : ""}`,
+    ),
     "",
     "## Tokens and cost (estimates)",
     "Tokens are summed from the usage each provider reported after completed turns. Cost counts the growth of each agent's cumulative session cost. Codex reports no cost.",

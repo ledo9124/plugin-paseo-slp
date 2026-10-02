@@ -12,7 +12,7 @@ import { WorkspaceQueue } from "./server/queue";
 import { buildReport, renderReport } from "./server/report";
 import { lastAssistantText } from "./server/timeline";
 import { memberTools } from "./server/tools";
-import { MCP_SERVER_NAME, SlpError, SlpService, roleAllows } from "./server/slp-service";
+import { MCP_SERVER_NAME, SlpError, SlpService, memberAllows } from "./server/slp-service";
 import { SlpStore } from "./server/store";
 
 const MCP_HOST = "127.0.0.1";
@@ -73,8 +73,8 @@ export default function contribute(server: PluginServerContext) {
     resolveCaller: (secret) => (service.groupForSecret(secret) ? secret : null),
     tools: memberTools(coordination, requireHost),
     toolAllowed: (secret, name) => {
-      const group = service.groupForSecret(secret);
-      return group !== null && roleAllows(group.you.role, name);
+      const found = deps.store.memberForSecret(secret);
+      return found !== null && !found.group.endedAt && memberAllows(found.member, name);
     },
   })
     .then((handle) => {

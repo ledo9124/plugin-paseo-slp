@@ -1,15 +1,22 @@
-import type { Role } from "../shared/contracts";
+import type { Role } from "./contracts";
 
-// Role instructions, written from docs/product/roles.md (draft), the
+// Default role instructions, written from docs/product/roles.md, the
 // overview, and decisions 0001-0008. Roles are responsibilities, not personas.
 // Each role's text holds only what that role acts on (0008); runtime facts
-// come in through RoleFacts at creation.
+// come in through RoleFacts at creation. Human may replace a role's text in
+// Settings; the client shows these defaults there.
 
 export interface RoleFacts {
   /** The member's provider id, for example "claude" or "codex". */
   provider: string;
   /** The most Peers the Lead may have active at once. */
   maxActivePeers: number;
+  /** The SLP tools the member is offered. */
+  tools: readonly string[];
+}
+
+function toolLine(facts: RoleFacts): string {
+  return `Your SLP tools: ${facts.tools.length ? facts.tools.join(", ") : "none"}.`;
 }
 
 /** The provider's own tool for asking Human, if SLP knows it. */
@@ -114,8 +121,7 @@ During the work:
   Human what was done, the evidence, and what is open, keeping apart what Human
   decided and what an agent chose.
 
-Your SLP tools: slp_group, slp_ledger, slp_send, slp_finding, slp_decide,
-slp_revise_decision.`;
+${toolLine(facts)}`;
 }
 
 function lead(facts: RoleFacts): string {
@@ -175,11 +181,10 @@ When the goal is done (every assignment accepted or dropped, the integrated
 result checked), send the Supervisor the result, its evidence, and what is
 open, with slp_send.
 
-Your SLP tools: slp_group, slp_ledger, slp_send, slp_finding, slp_delegate,
-slp_accept, slp_decide, slp_revise_decision.`;
+${toolLine(facts)}`;
 }
 
-function peer(): string {
+function peer(facts: RoleFacts): string {
   return `${GROUP}
 
 Your role: Peer. You own one assignment at a time, with independent technical
@@ -204,13 +209,13 @@ judgment. Your assignment arrives as a brief from the Lead.
   plan. That reply goes to the Lead automatically.
 - Rework from the Lead arrives as a message; continue the same assignment.
 
-Your SLP tools: slp_ledger (your own work), slp_send, slp_finding.`;
+${toolLine(facts)} slp_ledger shows only your own work.`;
 }
 
 export function roleInstructions(role: Role, facts: RoleFacts): string {
   if (role === "supervisor") return supervisor(facts);
   if (role === "lead") return lead(facts);
-  return peer();
+  return peer(facts);
 }
 
 export const ROLE_TITLES: Record<Role, string> = {

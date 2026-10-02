@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { FakePaseoHost } from "./paseo-host.fake";
-import { GROUP_LABEL, ROLE_LABEL, SlpError, SlpService } from "./slp-service";
+import { GROUP_LABEL, ROLE_LABEL, SlpError, SlpService, memberAllows } from "./slp-service";
 import { WorkspaceQueue } from "./queue";
 import { SlpStore } from "./store";
 
@@ -76,6 +76,38 @@ describe("SlpService.setMode", () => {
     // Runtime facts are filled in per member.
     expect(supervisor.systemPrompt).toContain("question tool (AskUserQuestion)");
     expect(lead.systemPrompt).toContain("At most 2 Peers can be active");
+  });
+
+  it("lists the role's tools in its default text and records what each member was created with", async () => {
+    const { service, host, store } = setup();
+    await service.setMode(host, "ws-1", "on");
+    const [supervisor] = host.created;
+    expect(supervisor.systemPrompt).toContain(
+      "Your SLP tools: slp_group, slp_ledger, slp_send, slp_finding, slp_decide, slp_revise_decision.",
+    );
+    const [supervisorRecord, leadRecord] = store.get("ws-1")!.group!.members;
+    expect(supervisorRecord).toMatchObject({ customInstructions: false, instructionsHash: expect.stringMatching(/^[0-9a-f]{12}$/) });
+    expect(leadRecord.tools).toHaveLength(8);
+  });
+
+  it("uses Human's instructions and tool list for a role when set (0008)", async () => {
+    const tuned = {
+      ...SETTINGS,
+      supervisor: { ...SETTINGS.supervisor, instructions: "Only talk to Human.", tools: ["slp_send" as const] },
+    };
+    const { service, host, store } = setup(tuned as typeof SETTINGS);
+    await service.setMode(host, "ws-1", "on");
+    const [supervisor, lead] = host.created;
+    expect(supervisor.systemPrompt).toBe("Only talk to Human.");
+    expect(supervisor.preapprovedTools).toEqual([{ server: "slp", tool: "slp_send" }]);
+    expect(lead.systemPrompt).toContain("Your role: Lead");
+    const record = store.get("ws-1")!.group!.members[0];
+    expect(record).toMatchObject({ tools: ["slp_send"], customInstructions: true });
+    expect(memberAllows(record, "slp_send")).toBe(true);
+    expect(memberAllows(record, "slp_ledger")).toBe(false);
+    // A member stored before 0008 falls back to its role's default list.
+    expect(memberAllows({ role: "peer", secret: "s", agentId: "a" }, "slp_delegate")).toBe(false);
+    expect(memberAllows({ role: "lead", secret: "s", agentId: "a" }, "slp_delegate")).toBe(true);
   });
 
   it("gives a non-Claude Lead no Claude-only options", async () => {

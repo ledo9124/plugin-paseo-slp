@@ -13,6 +13,12 @@ export interface MemberRecord {
   agentId: string | null;
   /** Display name, set for Peers ("SLP Peer 1"). */
   title?: string;
+  /** SLP tools offered at creation (decision 0008); absent for older members: the role default. */
+  tools?: string[];
+  /** Short hash of the instructions the member was created with. */
+  instructionsHash?: string;
+  /** The instructions were Human's replacement text, not the default. */
+  customInstructions?: boolean;
 }
 
 /** A message waiting for its recipient's turn to end (decision 0004). */

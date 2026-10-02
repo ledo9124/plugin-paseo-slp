@@ -3,15 +3,7 @@ import type { Assignment, Brief, Decision, Finding, Ledger, NativeQuestion, Role
 import type { SlpSettings } from "../shared/settings";
 import type { PaseoHost } from "./paseo-host";
 import type { WorkspaceQueue } from "./queue";
-import {
-  GROUP_LABEL,
-  ROLE_LABEL,
-  SlpError,
-  memberInstructions,
-  memberProviderOptions,
-  preapprovedTools,
-  slpMcpServers,
-} from "./slp-service";
+import { GROUP_LABEL, ROLE_LABEL, SlpError, applySetup, memberSetup, slpMcpServers } from "./slp-service";
 import type { GroupRecord, HeldMessage, MemberRecord, SlpStore, WorkspaceRecord } from "./store";
 
 // Group coordination: messaging (decision 0004), delegation, handback,
@@ -207,6 +199,8 @@ export class Coordination {
         agentId: null,
         title: `SLP Peer ${peerNumber}`,
       };
+      const setup = memberSetup("peer", model, settings);
+      applySetup(member, setup);
       caller.group.members.push(member);
       caller.group.ledger.assignments.push(assignment);
       this.save(caller);
@@ -216,10 +210,10 @@ export class Coordination {
           provider: model,
           modeId,
           title: member.title,
-          systemPrompt: memberInstructions("peer", model, settings),
+          systemPrompt: setup.systemPrompt,
           mcpServers: slpMcpServers(this.deps.mcpUrl(member.secret)),
-          preapprovedTools: preapprovedTools("peer"),
-          providerOptions: memberProviderOptions("peer", model),
+          preapprovedTools: setup.preapprovedTools,
+          providerOptions: setup.providerOptions,
           labels: { [GROUP_LABEL]: caller.group.id, [ROLE_LABEL]: "peer" },
           idempotencyKey: `slp:${caller.group.id}:peer:${assignment.id}`,
           prompt: renderBrief(assignment),

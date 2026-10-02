@@ -8,4 +8,18 @@ describe("SLP settings defaults", () => {
     expect(defaults.lead.modeId).toBe("bypassPermissions");
     expect(defaults.peers.modes).toEqual({ claude: "bypassPermissions", codex: "full-access" });
   });
+
+  it("keeps earlier values valid and takes per-role instructions and tools (0008)", () => {
+    const earlier = { supervisor: { provider: "claude/claude-sonnet-5-5", modeId: "auto" } };
+    expect(slpSettings.schema.parse(earlier).supervisor).toEqual(earlier.supervisor);
+
+    const tuned = slpSettings.schema.parse({
+      lead: { provider: "claude/claude-sonnet-5-5", modeId: "auto", instructions: "  Lead text  ", tools: ["slp_send"] },
+    });
+    expect(tuned.lead).toMatchObject({ instructions: "Lead text", tools: ["slp_send"] });
+    expect(() =>
+      slpSettings.schema.parse({ lead: { provider: "claude/x", modeId: "auto", tools: ["slp_teleport"] } }),
+    ).toThrow();
+    expect(() => slpSettings.schema.parse({ lead: { provider: "claude/x", modeId: "auto", instructions: " " } })).toThrow();
+  });
 });

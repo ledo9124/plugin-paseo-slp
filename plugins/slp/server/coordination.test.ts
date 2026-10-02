@@ -597,6 +597,16 @@ describe("telemetry", () => {
     expect(report.usage.lead.costUsd).toBeCloseTo(0.25);
   });
 
+  it("reports which instructions each member was created with", async () => {
+    const { group } = await setup();
+    const report = buildReport(group());
+    expect(report.instructions.map((entry) => [entry.role, entry.custom])).toEqual([
+      ["supervisor", false],
+      ["lead", false],
+    ]);
+    expect(renderReport(report)).toMatch(/- supervisor \S+: [0-9a-f]{12} \(default\)/);
+  });
+
   it("counts the Supervisor's shell commands and file changes on the project, once each", async () => {
     const { host, coordination, idOf, group } = await setup();
     const timeline = [

@@ -9,7 +9,8 @@ added the role-definition task on 2026-10-02 (slices 1 and 3). Slices 1-2
 are done: draft definitions in `docs/product/roles.md`, the suite in
 `docs/product/role-scenarios.md`, the v0.1.0 baseline below, and the role
 contexts in code. Slice 3 is done: R1 and R2 pass, and Human accepted the
-definitions and left delegation to the Lead. Next: slice 4.
+definitions and left delegation to the Lead. Slice 4 (per-role settings)
+is done except a look at the settings screen in the app. Next: slice 5.
 
 ## Outcome
 
@@ -317,7 +318,17 @@ Other observations:
   `vitest` 52 passed, `tsc` passed; the live check is slice 3.
 - [x] Slice 3: tuning until the scenarios pass. R1 and R2 pass (results
   above); Human settled S8 by leaving delegation to the Lead.
-- [ ] Slice 4: settings v2.
+- [x] Slice 4: per-role settings. Each role (and Peers) takes optional
+  `instructions` and `tools`; absent means the default, so earlier
+  settings stay valid without a version bump or migration. Members record
+  their tool list and instruction hash at creation; the MCP endpoint
+  enforces the member's own list, and the report lists each member's hash
+  (default or custom). The settings screen has a multiline editor with the
+  default text shown, a switch per SLP tool, and a reset per field.
+  `vitest` 57 passed, `tsc` passed. Live on the main daemon (no agent
+  turns): `tools/list` gave the Supervisor its 6 tools and refused its
+  `slp_delegate` call; the Lead got all 8; the report showed both default
+  hashes. Not yet seen: the settings screen in the app.
 - [ ] Slice 5: templates.
 - [ ] Slice 6: live proof.
 
@@ -348,6 +359,10 @@ Other observations:
   has no file picker.
 - 2026-10-02 (agent, Human may revisit): the Supervisor keeps
   `slp_finding` by default, for drift it sees across scopes.
+- 2026-10-02 (agent, Human may revisit): per-role instructions and tools
+  are optional fields in the existing settings version, not a v2 with a
+  migration: absent means the default, so nothing needs converting. A
+  custom text replaces the whole default, including the tool line.
 
 ## Validation
 
