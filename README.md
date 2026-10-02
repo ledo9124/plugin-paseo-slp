@@ -13,16 +13,20 @@ completes Human's rough input before work starts. Agents decide what their
 authority covers, and only what really matters reaches Human. Human can see
 and redirect the work without reading transcripts.
 
-Status: v0.1 implemented and proved live on Paseo `v0.10.2` (slices 1-7
-of the completed v0.1 plan, with the gaps it records). Accepted in `docs/decisions/0001-0007`. SLP is a
+Status: v0.2, proved live on Paseo `v0.10.2`. v0.1 built the group, the
+ledger, the panel, and the process report; v0.2 adds per-role
+instructions, tools, and templates (decision 0008), with role definitions
+tuned on a scenario suite. Accepted in `docs/decisions/0001-0008`. SLP is a
 per-workspace toggle: when it is off, agents behave normally. SLP does not
 depend on Repository Harness (`docs/product/slp-and-harness.md`).
 
-- Product behavior: `docs/product/overview.md`
+- Product behavior: `docs/product/overview.md`; each role's routing:
+  `docs/product/roles.md`
 - Architecture and plugin capability map: `docs/ARCHITECTURE.md`
-- v0.1 plan, results, and open follow-ups:
-  `docs/plans/completed/slp-plugin-v0.1.md`
-- Running against a dev Paseo daemon: `docs/RUNBOOK.md`
+- Plans, results, and accepted gaps: `docs/plans/completed/` (v0.1, and
+  role configuration and templates); real runs:
+  `docs/plans/active/slp-real-runs.md`
+- Running the plugin on a Paseo daemon: `docs/RUNBOOK.md`
 
 ## Install On A Paseo Host
 
@@ -37,7 +41,7 @@ Requires Paseo `>=0.10.2`. In the host's `config.json` (default
 Restart the daemon after changing either setting, then install a release:
 
 ```bash
-paseo plugin install https://github.com/ledo9124/plugin-paseo-slp.git:plugins/slp --ref v0.1.0
+paseo plugin install https://github.com/ledo9124/plugin-paseo-slp.git:plugins/slp --ref v0.2.0
 paseo plugin ls          # slp should be running
 ```
 
@@ -51,11 +55,18 @@ paseo plugin ls          # slp should be running
   - Peers chosen by the Lead from Sonnet 5.5, Haiku 4.5, and
     `codex/gpt-6-luna`, at most 4 active;
   - every member in its provider's bypass mode (Claude
-    `bypassPermissions`, Codex `full-access`).
+    `bypassPermissions`, Codex `full-access`);
+  - each role's default instructions and SLP tools, which Settings shows
+    and lets you replace or reset;
+  - five templates (`SKILL.md` texts) in Settings, Templates: add, edit,
+    remove, or import a folder of `SKILL.md` files. The Supervisor and the
+    Lead see the catalog; the Lead loads a template when it uses one.
 - Use: open a new workspace and turn SLP on (header button or SLP panel)
   before the first message. The first message locks the choice. Talk to the
-  Supervisor; it asks its questions in chat, and the SLP panel shows the
-  ledger and the process report. Archiving the workspace ends the group.
+  Supervisor: it asks what it needs at the start, then asks through its
+  question tool, and routes all project work to the Lead. Name a template
+  for a goal if you want one. The SLP panel shows the ledger and the
+  process report. Archiving the workspace ends the group.
 - Update with `paseo plugin update slp`, or install a newer `--ref`.
 
 Agents: start with `AGENTS.md` and `docs/WORKFLOW.md`.
