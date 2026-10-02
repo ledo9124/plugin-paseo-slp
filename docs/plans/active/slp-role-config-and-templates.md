@@ -8,7 +8,9 @@ Active. Decisions settled by Human on 2026-10-02 (decision 0008). Human
 added the role-definition task on 2026-10-02 (slices 1 and 3). Slices 1-2
 are done: draft definitions in `docs/product/roles.md`, the suite in
 `docs/product/role-scenarios.md`, the v0.1.0 baseline below, and the role
-contexts in code. Next: slice 3.
+contexts in code. Slice 3 has three tuning rounds; R1 and R2 pass, and it
+waits for Human on when a Lead should delegate (S8) and on accepting the
+role definitions.
 
 ## Outcome
 
@@ -230,6 +232,65 @@ Across runs:
 - Cost: R1 $0.71, R1b $0.18 (the Lead was never used), R2 $0.97, R3
   $0.87. About 20 minutes in all.
 
+### Slice 3 Tuning Results (2026-10-02)
+
+Slice 2 instructions, same seed and protocol as the baseline. Lead Sonnet.
+Three rounds; each change applied only to groups created after it.
+
+| Run | Round 1 | Round 2 | Round 3 |
+| --- | --- | --- | --- |
+| R1, Supervisor Opus | S1-S2 pass; S3 stalled | S1-S5 pass | S1-S5 pass |
+| R1, Supervisor Sonnet | not run | S1-S5 pass | S1-S5 pass |
+| R2, Supervisor Opus | S6-S7 pass, then stalled | S6-S7 pass | S6-S7 pass |
+| R2, Supervisor Sonnet | not run | not run | S6-S7 pass |
+| R3, Supervisor Opus | S8 fail | S8 fail | not run |
+
+In every run the Supervisor ran **0 shell commands and 0 file changes**
+(the new report count), read only record files, and routed code
+questions, commands, and analysis to the Lead. Before, Opus did this in
+every run and Sonnet also did the analysis itself.
+
+Changes between rounds:
+1. **The Lead's plain reply reached no one.** In round 1 the Lead
+   answered the Supervisor in its final message instead of `slp_send`, so
+   R1 S3 and R2 stalled. The Lead text now says that its plain reply
+   reaches no one and that results go back with `slp_send`. No stall
+   since.
+2. **A failed `slp_decide` left a decision behind.** `notify: ["lead"]`
+   was refused after the decision was recorded, so R2 round 2 had a
+   duplicate. `notify` is now checked before anything is recorded, and
+   accepts role names (test added).
+3. **The Supervisor switched to English** after the Lead's English
+   reports (R2 round 2, Opus). The Supervisor text now says to write to
+   Human in Human's language. Round 3 stayed Vietnamese.
+
+Not changed, and open for Human:
+- **S8: the Lead does not delegate small multi-part work.** In R3 the
+  Lead did edit, search, and export itself in both rounds (0
+  assignments), even with the proposed rule in its text. The baseline
+  Lead gave all three parts to one Peer. Real run 1 shows it delegates
+  larger work. Whether this is a miss depends on the open product
+  question "when a Lead should delegate"; tuning the text further waits
+  for Human.
+- S9 (a Peer fixing outside its scope) was not exercised, since no Peer
+  was created.
+
+Other observations:
+- The Supervisor sometimes settles a choice from the records (R2 round
+  1: "0001 already decides no id reuse") and sometimes asks Human (round
+  2 and 3: the file-format change). Both rest on authority; the format of
+  Human's real file reached Human each time it changed.
+- In R2 round 3 the Lead ran `delete` on Human's real `notes.json`
+  twice to check the cancel path; both canceled, and nothing changed.
+- R2 Sonnet passed once; the stop rule (two passes in a row) holds for
+  R1 on both models and for R2 on Opus.
+- Not checked live yet: `tools/list` per role and the Claude tool blocks
+  (slice 6). No Lead or Peer asked a native question in any run.
+- Cost per group: $0.35-$1.33; about $8 for the 11 groups of the three
+  rounds.
+- The operating agent's helper first mis-keyed a multi-part question, so
+  one question was asked twice (R2 Sonnet); not a member issue.
+
 ## Risks And Recovery
 
 - **Settings migration loses Human's values.** Test the v1-to-v2 migration;
@@ -255,7 +316,8 @@ Across runs:
   `disallowedTools`, the Peer ledger view, and the Supervisor-work count.
   The Lead's model heuristic is out of its text until templates (slice 5).
   `vitest` 52 passed, `tsc` passed; the live check is slice 3.
-- [ ] Slice 3: tuning until the scenarios pass.
+- [ ] Slice 3: tuning until the scenarios pass. R1 and R2 pass (results
+  above); R3 S8 waits for Human on when a Lead should delegate.
 - [ ] Slice 4: settings v2.
 - [ ] Slice 5: templates.
 - [ ] Slice 6: live proof.

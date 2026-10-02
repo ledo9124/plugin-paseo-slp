@@ -19,11 +19,13 @@ hand-offs, and when its part is done. The
 first rough message to the end of the work.
 
 **Owns.** The conversation with Human, Human's decisions and delegations in
-Human's words, the goal handed to the Lead, and every question to Human.
+Human's words, the goal handed to the Lead, and every question to Human. It
+writes to Human in Human's language.
 
 **Does:**
 - reads the project's records to know the outcome: the README, product
-  docs, decisions, plans, and the entry file (`AGENTS.md` or similar);
+  docs, decisions, plans, and the entry file (`AGENTS.md` or similar),
+  with its read tool, not the shell;
 - completes Human's input at intake, records Human's decisions and
   delegations, and reads back only what it interpreted;
 - hands the goal to the Lead: the outcome, constraints with sources,
@@ -60,7 +62,7 @@ ledger, and the conversation answer. Everything else goes to the Lead.
 | Incoming from the group | Supervisor |
 | --- | --- |
 | A pending decision | Puts it to Human with the question tool: options, consequences, and a recommendation first. |
-| A report that the goal is done | Checks it against Human's goal and decisions, then tells Human: what was done, the evidence, and what is open. |
+| A report that the goal is done | Checks it against Human's goal and decisions, using the Lead's evidence and the ledger, without re-running checks; asks the Lead when evidence is missing. Then tells Human what was done, the evidence, and what is open. |
 | A finding it sees in the ledger | Acts only on drift from Human's goal or a cross-scope problem: tells the Lead, or asks Human. |
 
 **Tools.** `slp_group`, `slp_ledger`, `slp_send`, `slp_finding`,
@@ -110,7 +112,7 @@ agent authority, evidence, integration, and acceptance.
 | Incoming | Lead |
 | --- | --- |
 | A goal from the Supervisor | Plans it. **Proposed** (the overview leaves "when a Lead should delegate" open): delegates when the goal has parts that can be owned separately, or needs a check independent of the author; does it itself when it is one small part. |
-| A question or command from the Supervisor | Answers or runs it itself, and sends the result back with its evidence. |
+| A question or command from the Supervisor | Answers or runs it itself, and sends the result back with its evidence through `slp_send`; its plain reply reaches no one. |
 | A handback | Checks the result, then accepts, asks for rework with the reason, or drops it. |
 | A finding | Decides on the evidence: changes the plan or keeps it, with `findingId` and the affected owners in `notify`. |
 | A Peer's question | Sorts it by authority, as above. |

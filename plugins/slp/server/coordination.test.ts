@@ -371,6 +371,19 @@ describe("findings and decisions", () => {
     expect(host.sends[0]).toMatchObject({ agentId: idOf("lead") });
   });
 
+  it("accepts a role name in notify, and records nothing when a notify entry is unknown", async () => {
+    const { host, coordination, secretOf, idOf, group } = await setup();
+    await expect(
+      coordination.decide(host, secretOf("supervisor"), { text: "x", source: "human", status: "settled", notify: ["nobody"] }),
+    ).rejects.toThrow("not a group member");
+    expect(group().ledger.decisions).toEqual([]);
+
+    host.sends.length = 0;
+    await coordination.decide(host, secretOf("supervisor"), { text: "y/n first", source: "human", status: "settled", notify: ["lead"] });
+    expect(group().ledger.decisions.map((d) => d.notified)).toEqual([[idOf("lead")]]);
+    expect(host.sends[0]).toMatchObject({ agentId: idOf("lead"), text: expect.stringContaining("y/n first") });
+  });
+
   it("keeps Human as the only source the Lead cannot claim, and Peers out of decisions", async () => {
     const { host, coordination, secretOf } = await setup();
     await coordination.delegate(host, secretOf("lead"), delegateInput);
