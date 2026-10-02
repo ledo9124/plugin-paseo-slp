@@ -261,7 +261,11 @@ changes member behavior.
       critical review of the Lead's result on Human's behalf, not as
       intake. A cost 2.5-2.9x B; Human's message count was equal; A asked 2
       engineering questions that were not Human's.
-  - [ ] Human's blind comparison (X/Y) and Human's reading of 3a.
+  - [x] Analysis saved: `docs/research/supervisor-ab-2026-10-02.md`.
+    Human skipped the blind comparison and read the results directly.
+  - [ ] A2 (Supervisor on Sonnet) and K runs (Supervisor holds part of the
+    outcome; does it catch the Lead going wrong?), asked by Human
+    2026-10-02.
   - [ ] S5-S10.
 - [ ] Slice 4: settings v2.
 - [ ] Slice 5: templates.
