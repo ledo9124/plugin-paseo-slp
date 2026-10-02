@@ -99,13 +99,17 @@ changes member behavior.
        correction, a choice for Human), whether the role handles it or
        passes it, and to whom;
      - its tools, its hand-offs, and when its part is done.
-   - Draft the Supervisor's routing as option A of the 2026-10-02 analysis:
-     the Supervisor does not work on the project; every request that needs
-     reading or changing the project goes to the Lead. Option B (small
-     read-only questions answered by the Supervisor) is tried only if A
-     proves too slow or costly in slice 3.
-   - Scenario suite, starting from Human's test messages: status question,
-     small command (`git pull`), analysis request, rough change goal,
+   - Draft the Supervisor's routing as a narrow option B (Human,
+     2026-10-02). One rule: the Supervisor answers only from the project's
+     records and the ledger. It reads the records (product docs,
+     decisions, plans, README, `AGENTS.md`) to know the outcome. It reads no
+     code, runs no command on the project, and proposes no design.
+     Anything else goes to the Lead. If tuning shows the Supervisor
+     crossing that line, fall back to option A: everything about the
+     project goes to the Lead.
+   - Scenario suite, starting from Human's test messages: a status question
+     the records answer, a status question only the code answers, small
+     command (`git pull`), analysis request, rough change goal,
      question about the group's own context, mid-run correction, a choice
      outside agent authority; for the Lead, work it is tempted to do itself;
      for a Peer, a fix in another owner's scope. Each scenario states the
@@ -210,8 +214,12 @@ changes member behavior.
 - 2026-10-02: Human asked for a clear definition of each role, tuned and
   tested by experiment, as a task in this plan (slices 1 and 3), after the
   Supervisor did Human's requests itself and never used the Lead.
-- Open: how far the Supervisor works on the project (option A or B). The
-  draft uses A; Human accepts the definition after the tuning evidence.
+- 2026-10-02: Human chose to try a narrow option B: the Supervisor reads
+  the records to know the outcome and answers what the records and the
+  ledger answer; everything else goes to the Lead. Option A is the
+  fallback. Human reminded: keep it simple and effective.
+- Open: Human accepts the Supervisor's definition after the tuning
+  evidence.
 - 2026-10-02 (agent, Human may revisit): templates are stored in plugin
   data rather than in settings, so long bodies do not bloat the settings
   document; the UI also imports from a host folder because the plugin UI
