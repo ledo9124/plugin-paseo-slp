@@ -144,6 +144,44 @@ changes member behavior.
      needs a choice only Human can make.
    - Record per run: the instruction version, routing per scenario, tool
      calls, cost, and time.
+3a. **Experiment: does the Supervisor earn its place?** Proposed,
+   awaiting Human (2026-10-02). Human's question after tuning run 1: with
+   one-off questions, the Supervisor only relayed, and cost more than the
+   Lead ($0.52 against $0.42 for 4 messages). Its value, if any, should show
+   on longer work with rough input and choices. Tuning of the Supervisor's
+   hand-off waits for this result.
+   - Arms, same models for the Lead (Sonnet) and Peers:
+     - **A, with Supervisor:** Human, then Supervisor (Opus), then Lead,
+       then Peers, as on `slp/role-tuning`.
+     - **B, without Supervisor:** Human talks to the Lead, which does intake,
+       asks Human through its question tool, records Human's decisions, and
+       delegates to Peers. Experiment-only: a hidden settings key on the
+       tuning branch, not released.
+   - Tasks, each on a fresh scratch clone of `paseo-plugin` at the same
+     commit, each run in both arms:
+     - **T1, code:** the controller sends a "still running" message for each
+       worker retry notification (seat-continuity scenario 4 follow-up).
+     - **T2, docs:** there is no product doc for `paseo-telegram-account`.
+   - Human's side: the operating agent plays Human with Human's rough first
+     message and a hidden intent sheet (`D:/codes/slp-test/intent-T1.md`,
+     `intent-T2.md`, outside both repositories). It reveals a fact only when
+     asked, or when a result breaks it, and answers anything else "tùy em".
+     Human approves the sheets before the runs.
+   - Measures per run:
+     - hidden facts surfaced before work starts, and facts that caused
+       rework after;
+     - Human's effort: messages sent, questions received, and how many were
+       real owner choices;
+     - the result against the sheet's acceptance list, and tests where they
+       apply;
+     - drift: work outside the asked outcome or scope;
+     - time to done, and cost per role.
+   - Human compares the two results of each task blind, labelled X and Y.
+   - Reading: if A is not clearly better on surfaced facts, rework, Human
+     effort, or result quality, the Supervisor is simplified or made
+     optional, under 0008's tuning. If A is better only on long tasks, the
+     Supervisor gets a lighter path for one-off questions.
+   - Estimated cost: 4 runs at about $3-8 each.
 4. **Settings v2.**
    - Per role: provider and model (Peers: the allowlist), mode,
      instructions, tools. Defaults come from slices 2 and 3.
@@ -199,8 +237,18 @@ changes member behavior.
     `docs/product/role-scenarios.md`. S2-S4 fail, S5 and S7 partial,
     S10 not run.
   - [ ] Human accepts or corrects the definitions.
-- [ ] Slice 2: role contexts.
+- [x] Slice 2 draft: role contexts on branch `slp/role-tuning` (`e53224f`),
+  and a fix for duplicate decisions on a bad notify target (`ca9cde6`).
 - [ ] Slice 3: tuning until the scenarios pass.
+  - [x] Run 1 (2026-10-02, workspace `wks_21bf091544cd3361`, Supervisor
+    Opus, Lead Sonnet, Human's daemon by Human's request, scratch clone):
+    S1-S4 pass, against S2-S4 failing on v0.1.0. Human answered the
+    Supervisor's one question in the app. Found: the Supervisor's hand-off
+    mixes Human's words with its own inferences and methods under "Human
+    asks:", and the Lead follows them (S2 tried to run tests; S4 followed
+    the Supervisor's report outline).
+  - [ ] Slice 3a experiment (above).
+  - [ ] S5-S10.
 - [ ] Slice 4: settings v2.
 - [ ] Slice 5: templates.
 - [ ] Slice 6: live proof.
@@ -215,6 +263,11 @@ changes member behavior.
 - 2026-10-02: Human asked for a clear definition of each role, tuned and
   tested by experiment, as a task in this plan (slices 1 and 3), after the
   Supervisor did Human's requests itself and never used the Lead.
+- 2026-10-02: Human asked to run tuning on Human's own daemon (6767), with
+  the operating agent playing Human through rough, natural messages, not
+  spoon-fed ones. Runs use a scratch clone, never Human's checkout.
+- 2026-10-02: after run 1, Human questioned the Supervisor's value for
+  one-off questions and asked for an evaluation (slice 3a).
 - Open: how far the Supervisor works on the project (option A or B). The
   draft uses A; Human accepts the definition after the tuning evidence.
 - 2026-10-02 (agent, Human may revisit): templates are stored in plugin

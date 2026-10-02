@@ -18,6 +18,7 @@ const SETTINGS = {
     maxActive: 2,
     modes: { claude: "auto", codex: "full-access" },
   },
+  experiment: { noSupervisor: false },
 };
 
 const BRIEF: Brief = {

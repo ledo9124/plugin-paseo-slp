@@ -320,7 +320,7 @@ export class Coordination {
   decide(host: PaseoHost, secret: string, input: DecideInput) {
     return this.withCaller(secret, async (caller) => {
       this.requireRole(caller, ["lead", "supervisor"], "slp_decide");
-      if (input.source === "human" && caller.member.role !== "supervisor") {
+      if (input.source === "human" && !speaksForHuman(caller)) {
         throw new SlpError("forbidden", "Only the Supervisor records Human's decisions (source \"human\").");
       }
       const ledger = caller.group.ledger;
@@ -336,7 +336,7 @@ export class Coordination {
 
       let decision: Decision;
       if (input.settles) {
-        if (caller.member.role !== "supervisor") {
+        if (!speaksForHuman(caller)) {
           throw new SlpError("forbidden", "A pending decision waits for Human; only the Supervisor settles it.");
         }
         const pending = ledger.decisions.find((d) => d.id === input.settles);
@@ -520,7 +520,9 @@ export class Coordination {
       });
       this.deps.store.put(record);
 
-      const supervisor = group.members.find((m) => m.role === "supervisor");
+      // With no Supervisor (experiment arm, slice 3a), the Lead hears Human.
+      const supervisor =
+        group.members.find((m) => m.role === "supervisor") ?? group.members.find((m) => m.role === "lead");
       const notified: string[] = [];
       if (supervisor?.agentId) {
         await this.deliver(
@@ -977,4 +979,10 @@ export function peerView(ledger: Ledger, agentId: string | null): Ledger {
     (d) => (d.source === "human" && d.status === "settled") || (d.findingId !== null && findingIds.has(d.findingId)),
   );
   return { assignments, findings, decisions };
+}
+
+/** The Supervisor records Human's words; with no Supervisor (slice 3a), the Lead does. */
+function speaksForHuman(caller: Caller): boolean {
+  const role = caller.member.role;
+  return role === "supervisor" || (role === "lead" && !caller.group.members.some((m) => m.role === "supervisor"));
 }

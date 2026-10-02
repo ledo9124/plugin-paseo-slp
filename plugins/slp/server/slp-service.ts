@@ -21,6 +21,8 @@ export const MEMBER_TOOLS = [
 ] as const;
 
 const GROUP_ROLES: readonly Role[] = ["supervisor", "lead"];
+/** Experiment arm with no Supervisor (plan slice 3a). */
+const DIRECT_GROUP_ROLES: readonly Role[] = ["lead"];
 
 export function slpMcpServers(url: string) {
   return { [MCP_SERVER_NAME]: { type: "http" as const, url, alwaysLoad: true } };
@@ -144,7 +146,7 @@ export class SlpService {
       id: this.deps.newId(),
       startedAt: this.deps.now(),
       endedAt: null,
-      members: GROUP_ROLES.map((role) => ({ role, secret: this.deps.newSecret(), agentId: null })),
+      members: (settings.experiment.noSupervisor ? DIRECT_GROUP_ROLES : GROUP_ROLES).map((role) => ({ role, secret: this.deps.newSecret(), agentId: null })),
       ledger: emptyLedger(),
       held: [],
       events: [],
@@ -180,17 +182,18 @@ export class SlpService {
     settings: SlpSettings,
   ): Promise<HostAgent> {
     const config = settings[member.role as "supervisor" | "lead"];
+    const direct = settings.experiment.noSupervisor;
     return host.createAgent({
       workspaceId,
       provider: config.provider,
       modeId: config.modeId,
       title: ROLE_TITLES[member.role],
-      systemPrompt: roleInstructions(member.role, config.provider),
+      systemPrompt: roleInstructions(member.role, config.provider, direct),
       mcpServers: slpMcpServers(this.deps.mcpUrl(member.secret)),
       preapprovedTools: preapprovedTools(member.role),
       labels: { [GROUP_LABEL]: group.id, [ROLE_LABEL]: member.role },
       idempotencyKey: `slp:${group.id}:${member.role}`,
-      providerOptions: providerOptionsFor(member.role, config.provider),
+      providerOptions: providerOptionsFor(member.role, config.provider, direct),
     });
   }
 

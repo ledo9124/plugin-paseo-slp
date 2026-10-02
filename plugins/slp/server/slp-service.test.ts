@@ -15,6 +15,7 @@ const SETTINGS = {
     maxActive: 2,
     modes: { claude: "auto", codex: "full-access" },
   },
+  experiment: { noSupervisor: false },
 };
 
 function setup(settings: typeof SETTINGS = SETTINGS) {
@@ -68,6 +69,16 @@ describe("SlpService.setMode", () => {
     expect(supervisor.providerOptions?.disallowedTools).toEqual(expect.arrayContaining(["Edit", "Write", "Agent"]));
     expect(supervisor.providerOptions?.disallowedTools).not.toContain("AskUserQuestion");
     expect(supervisor.systemPrompt).toContain("AskUserQuestion");
+  });
+
+  it("starts only a Lead that talks to Human in the no-Supervisor experiment arm", async () => {
+    const { service, host } = setup({ ...SETTINGS, experiment: { noSupervisor: true } });
+    const view = await service.setMode(host, "ws-1", "on");
+    expect(view.group?.members.map((member) => member.role)).toEqual(["lead"]);
+    const [lead] = host.created;
+    expect(lead.systemPrompt).toContain("there is no Supervisor");
+    expect(lead.providerOptions?.disallowedTools).toContain("Agent");
+    expect(lead.providerOptions?.disallowedTools).not.toContain("AskUserQuestion");
   });
 
   it("gives a non-Claude Lead no Claude-only options", async () => {

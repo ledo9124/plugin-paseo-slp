@@ -33,6 +33,9 @@ export const slpSettings = defineSettings({
         maxActive: 4,
         modes: { claude: "bypassPermissions", codex: "full-access" },
       }),
+    // Experiment only (plan slp-role-config-and-templates, slice 3a), not in
+    // the UI: start groups with no Supervisor; Human talks to the Lead.
+    experiment: z.object({ noSupervisor: z.boolean() }).default({ noSupervisor: false }),
   }),
 });
 
