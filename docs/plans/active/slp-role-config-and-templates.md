@@ -10,7 +10,7 @@ are done: draft definitions in `docs/product/roles.md`, the suite in
 `docs/product/role-scenarios.md`, the v0.1.0 baseline below, and the role
 contexts in code. Slice 3 is done: R1 and R2 pass, and Human accepted the
 definitions and left delegation to the Lead. Slice 4 (per-role settings)
-is done except a look at the settings screen in the app. Slice 5
+is done; Human saw its settings screen in the app. Slice 5
 (templates) is done. Next: slice 6.
 
 ## Outcome
@@ -329,7 +329,7 @@ Other observations:
   `vitest` 57 passed, `tsc` passed. Live on the main daemon (no agent
   turns): `tools/list` gave the Supervisor its 6 tools and refused its
   `slp_delegate` call; the Lead got all 8; the report showed both default
-  hashes. Not yet seen: the settings screen in the app.
+  hashes. Human saw the settings screen in the app (2026-10-02).
 - [x] Slice 5: templates (run 2, through SLP; commit `491f77d`).
   `templates.json` in plugin data, seeded once with the five defaults
   (`independent-review`, `blind-parallel-designs`, `cross-model-question`,
@@ -362,8 +362,8 @@ Other observations:
     (six entries, the probe included), and their hashes match the
     report's; the report showed `test-audit` with 1 load and a
     Templates section.
-  Not seen yet: the Settings screen in the app, and a Lead choosing a
-  template on its own (slice 6).
+  Human saw the Settings screen in the app (2026-10-02). Not seen yet: a
+  Lead choosing a template on its own (slice 6).
 - [ ] Slice 6: live proof.
 
 ## Decisions
