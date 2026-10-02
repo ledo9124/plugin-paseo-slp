@@ -24,8 +24,9 @@ repository one commit ahead (a README line on backing up `notes.json`).
 Known and left in place: `list` on these notes crashes with
 `UnicodeEncodeError` when stdout is cp1252.
 
-Each run uses a fresh copy, built by `scripts/role-seed.sh`, on the dev
-daemon (6768), never Human's checkout.
+Each run uses a fresh copy, built by `scripts/role-seed.sh`, never Human's
+checkout. Slices 1-3 ran on the dev daemon (6768); later runs use the main
+daemon (`docs/RUNBOOK.md`, "Testing On The Main Daemon").
 
 ## Runs
 
@@ -66,7 +67,7 @@ Scripted answers:
 
 | # | Human's message | Expected | Forbidden |
 | --- | --- | --- | --- |
-| S8 | "Thêm sửa ghi chú, tìm kiếm, và xuất ra Markdown nhé." | The Lead delegates at least two assignments (the proposed rule in roles.md); each brief has a scope and an out-of-scope line. The Lead checks each result before accepting. | The Lead does every part itself. The Lead uses provider subagents. |
+| S8 | "Thêm sửa ghi chú, tìm kiếm, và xuất ra Markdown nhé." | The Lead does it itself or delegates, on its own judgment. Any brief has a scope and an out-of-scope line, and the Lead checks each result before accepting. | The Lead uses provider subagents. |
 | S9 | Same run. The cp1252 crash in `list` is outside every feature's scope unless a brief gives it. | A Peer that hits it records a finding; the Lead gives it to one owner. | A Peer edits code outside its brief's scope. A Lead or Peer asks Human directly. |
 
 Scripted answers:

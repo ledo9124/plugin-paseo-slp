@@ -1,4 +1,4 @@
-# Runbook: Run The Plugin On A Dev Paseo Daemon
+# Runbook: Run The Plugin On A Paseo Daemon
 
 Status: first exercised from this repository on 2026-10-01 (slice 1 of the
 v0.1 plan, now in `docs/plans/completed/`). The run used stock Paseo `v0.10.2` with an isolated home, on
@@ -31,9 +31,10 @@ Claude and Codex. The steps were adapted from the sibling repository
   - A result from that branch proves stock behavior only if it does not
     touch the patched area.
 - **Daemons on this machine:**
-  - **6767:** the installed Paseo app, home `~\.paseo`. This workflow does
-    not own it. Never stop or restart it, and never install this plugin into
-    it unless Human asks.
+  - **6767:** the installed Paseo app, home `~\.paseo`. Human installed
+    this plugin there from `plugins/slp` (directory source) on 2026-10-02,
+    and asked that live tests run there: two daemons are too heavy for the
+    machine. See "Testing On The Main Daemon". Never stop or restart it.
   - **6768:** the dev daemon. Only one home may use the port at a time:
     - shared dev home `C:\code\my-project\paseo\.dev\paseo-home`, used by
       `my-plugin`. It already has `injectIntoAgents: true` and three
@@ -55,6 +56,23 @@ Claude and Codex. The steps were adapted from the sibling repository
 - **MCP port.** The plugin's MCP endpoint listens on `127.0.0.1:6791`. Set
   `SLP_MCP_PORT` to override. Keep it stable, because member MCP URLs
   are persisted with each agent.
+
+## Testing On The Main Daemon (Default Since 2026-10-02)
+
+The main daemon is Human's own app, so a test there shares it with Human's
+work:
+- Do not start the 6768 dev daemon unless Human asks.
+- The CLI and `scripts/plugin-rpc.mts` target `~\.paseo` when no
+  `--home` or `PASEO_HOME` is given.
+- `plugin reload slp` loads code changes. Check `slp.workspace.list` first:
+  a reload restarts the plugin's MCP endpoint under any running SLP group.
+  Members keep the instructions they were created with.
+- Run tests only in scratch workspaces under `%TEMP%` (for example from
+  `scripts/role-seed.sh`), and archive only the workspaces the test
+  created.
+- Plugin settings are shared with Human's own groups. Ask Human before
+  changing them for a test, and restore them right after.
+- Stop nothing: leave the daemon running.
 
 ## Start
 
@@ -181,4 +199,4 @@ Read the exit code; do not treat filtered output as a pass.
 - Stop Metro if it was started.
 - Stop only the daemon this run started: `<cli> daemon stop`, with the same
   `--home`.
-- Leave the 6767 daemon alone.
+- Leave the 6767 daemon running; archive only the test workspaces.

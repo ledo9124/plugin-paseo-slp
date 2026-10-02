@@ -8,9 +8,8 @@ Active. Decisions settled by Human on 2026-10-02 (decision 0008). Human
 added the role-definition task on 2026-10-02 (slices 1 and 3). Slices 1-2
 are done: draft definitions in `docs/product/roles.md`, the suite in
 `docs/product/role-scenarios.md`, the v0.1.0 baseline below, and the role
-contexts in code. Slice 3 has three tuning rounds; R1 and R2 pass, and it
-waits for Human on when a Lead should delegate (S8) and on accepting the
-role definitions.
+contexts in code. Slice 3 is done: R1 and R2 pass, and Human accepted the
+definitions and left delegation to the Lead. Next: slice 4.
 
 ## Outcome
 
@@ -316,8 +315,8 @@ Other observations:
   `disallowedTools`, the Peer ledger view, and the Supervisor-work count.
   The Lead's model heuristic is out of its text until templates (slice 5).
   `vitest` 52 passed, `tsc` passed; the live check is slice 3.
-- [ ] Slice 3: tuning until the scenarios pass. R1 and R2 pass (results
-  above); R3 S8 waits for Human on when a Lead should delegate.
+- [x] Slice 3: tuning until the scenarios pass. R1 and R2 pass (results
+  above); Human settled S8 by leaving delegation to the Lead.
 - [ ] Slice 4: settings v2.
 - [ ] Slice 5: templates.
 - [ ] Slice 6: live proof.
@@ -336,8 +335,13 @@ Other observations:
   the records to know the outcome and answers what the records and the
   ledger answer; everything else goes to the Lead. Option A is the
   fallback. Human reminded: keep it simple and effective.
-- Open: Human accepts the Supervisor's definition after the tuning
-  evidence.
+- 2026-10-02: Human accepted the role definitions (`docs/product/roles.md`),
+  including the narrow option B; chose that the Lead decides on its own
+  when to delegate (so S8 now passes either way); and kept routing project
+  work to the Lead even when Human asks the Supervisor directly.
+- 2026-10-02: Human installed the plugin into the main daemon (6767) and
+  asked that live tests run there, not on a second daemon, because two
+  daemons are too heavy for the machine.
 - 2026-10-02 (agent, Human may revisit): templates are stored in plugin
   data rather than in settings, so long bodies do not bloat the settings
   document; the UI also imports from a host folder because the plugin UI

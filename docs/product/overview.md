@@ -129,6 +129,9 @@ group (decisions 0002, 0005, 0008). Each role's provider, mode,
 instructions, SLP tools, and templates are configurable by Human; each
 member's context holds only what its role acts on (decision 0008).
 
+The Lead decides on its own judgment when to delegate (Human,
+2026-10-02). Per-role routing is in [roles.md](roles.md).
+
 Which Peers the Lead creates, for which kind of work and on which models,
 is a template choice (layer 4), not part of the roles.
 
@@ -248,7 +251,6 @@ is a template choice (layer 4), not part of the roles.
 - Who writes a durable plan when the project keeps one.
 - Whether the ledger keeps earning its place.
 - The scope of decision 0006.
-- When a Lead should delegate to Peers.
 
 ## Development Principle
 

@@ -1,12 +1,12 @@
 # SLP Roles: Definitions
 
-Status: draft, slice 1 of
-[slp-role-config-and-templates](../plans/active/slp-role-config-and-templates.md).
-Human accepts these definitions after the tuning evidence (slice 3). Until
-then, [overview.md](overview.md) and decisions 0001-0008 are the authority,
-and this file only spells out what each role does with each kind of
-message. Points that go beyond the accepted records are marked
-**proposed**.
+Status: accepted by Human on 2026-10-02, after the tuning evidence in
+[slp-role-config-and-templates](../plans/active/slp-role-config-and-templates.md)
+(slice 3). It spells out, per role, what [overview.md](overview.md) and
+decisions 0001-0008 say, plus Human's choices of 2026-10-02: the
+Supervisor's narrow routing, the Lead's own judgment on delegating, and a
+Supervisor that routes project work to the Lead even when Human asks it
+directly.
 
 Each definition says, for one role: its purpose, what it owns, what it does
 and never does, how it routes each kind of incoming message, its tools, its
@@ -67,7 +67,7 @@ ledger, and the conversation answer. Everything else goes to the Lead.
 
 **Tools.** `slp_group`, `slp_ledger`, `slp_send`, `slp_finding`,
 `slp_decide`, `slp_revise_decision`; its provider's question tool; reading
-files. Not file-editing tools, and not subagents (proposed, slice 2).
+files. Not file-editing tools, and not subagents.
 
 **Hand-offs.** To the Lead: the goal, corrections, Human's answers, and
 questions only the project answers. To Human: answers, read-backs,
@@ -111,7 +111,7 @@ agent authority, evidence, integration, and acceptance.
 
 | Incoming | Lead |
 | --- | --- |
-| A goal from the Supervisor | Plans it. **Proposed** (the overview leaves "when a Lead should delegate" open): delegates when the goal has parts that can be owned separately, or needs a check independent of the author; does it itself when it is one small part. |
+| A goal from the Supervisor | Plans it, and decides on its own judgment whether to do it or delegate it (Human, 2026-10-02). Small work it may do itself. |
 | A question or command from the Supervisor | Answers or runs it itself, and sends the result back with its evidence through `slp_send`; its plain reply reaches no one. |
 | A handback | Checks the result, then accepts, asks for rework with the reason, or drops it. |
 | A finding | Decides on the evidence: changes the plan or keeps it, with `findingId` and the affected owners in `notify`. |
@@ -165,12 +165,12 @@ No question tool.
 
 **Done.** When the Lead accepts its handback.
 
-## Open
+## Settled By Human (2026-10-02)
 
-- Whether the Supervisor's narrow routing holds, or falls back to option A
-  (everything about the project to the Lead). Decided from slice 3.
-- When a Lead should delegate (overview, Open). The rule above is a
-  proposal to test.
+- The Supervisor's narrow routing holds; option A is not needed (slice 3:
+  0 Supervisor shell commands or file changes in 11 groups).
+- The Lead decides when to delegate. A rule to delegate multi-part work was
+  tried in slice 3, and the Lead still did small work itself; Human chose
+  the Lead's judgment.
 - If Human tells the Supervisor itself to run a command or read the code,
-  the draft still routes it to the Lead, and says so. Human decides
-  whether that holds.
+  the Supervisor still routes it to the Lead, and says so.
