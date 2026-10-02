@@ -258,6 +258,54 @@ with the operating agent playing Human.
   - archive the workspace (and its worktree) once the branch is merged or
     kept.
 
+### Run 2 Results (2026-10-02)
+
+Workspace `slp-run2-slice5` (`wks_ee5044fdd22bc717`), from 15:45 to 15:57
+UTC. Supervisor and Lead on Opus, three Sonnet Peers. Cost about $5.03
+(Supervisor $0.52, Lead $3.23, Peers $1.28).
+- **Intake.** The Supervisor read the plan and asked nothing: the plan
+  and 0008 settle slice 5. It read back three points it inferred (live
+  checks on 6767, not slice 6, no push), all matching Human's answers.
+  The operating agent confirmed them and added the commit answer.
+- **Delegation.** The Opus Lead split the slice into three assignments:
+  A1 server, A2 client, A3 the five default templates. Each brief had a
+  "May change" list and an out-of-scope list naming the other owners.
+  All three were accepted after the Lead ran the tests on the integrated
+  result. No findings.
+- **Supervisor.** 0 shell commands and 0 file changes (the report count);
+  answers to Human in Vietnamese.
+- **Question to Human.** One, through the question tool, with options and
+  a recommendation: switching the 6767 plugin source to the worktree
+  needs `plugin remove`, which deletes the plugin's settings directory.
+  The operating agent took it to Human, who answered A (back up, remove,
+  install from the worktree, restore) directly in the app.
+- **Live check by the group.** On 6767, settings backed up and restored
+  byte-identical; template RPCs, per-role `tools/list` (Lead 9 with
+  `slp_template`, Supervisor 6 and refused), catalogs in the stored
+  instructions, and the report's Templates section. Only its scratch
+  workspace archived.
+- **Lead's own choices it reported for Human:** the catalog follows
+  custom instructions too; template names are lowercase with hyphens;
+  import reads the folder's `SKILL.md` and its direct subfolders'.
+- **Operating agent's check:** on the branch, `tsc` passed and `vitest`
+  72 passed; the diff covers every slice 5 item. Merged into `main` as
+  `2bd4a99` (`--no-ff`), tests passing again there. The 6767 plugin was
+  pointed back at the main checkout (settings backed up, `plugin remove`,
+  `plugin install`, settings restored, reload). A scratch group then
+  showed the five defaults, the Lead's `slp_template` returning a body,
+  and the Supervisor refused. Run workspace archived, which removed its
+  worktree; the branch remains.
+
+Reading of run 2:
+- With an Opus Lead, a multi-part slice was split across Peers with
+  clean scope lines, and nothing crossed a scope.
+- The narrow Supervisor held on real work in this repository.
+- The one Human question was a real owner choice (Human's settings at
+  risk), and it reached Human well formed. The operating agent was slow
+  to relay it, and Human answered in the app first.
+- The Peers' short turns (30 seconds to 3 minutes) suggest the Lead's
+  briefs were detailed; the Lead carried most of the cost.
+
 ## Risks And Recovery
 
 - **Edits to Human's real repositories.** Edits stay on new branches in
@@ -280,8 +328,8 @@ with the operating agent playing Human.
 - [ ] A comparison with a single agent: deferred by Human (2026-10-02).
   SLP will be judged and improved through use, by its own process data
   (behavior 10), once it matures.
-- [ ] Run 2: slice 5 (templates) of this repository, through SLP
-  (registered above).
+- [x] Run 2: slice 5 (templates) of this repository, through SLP
+  (results above; merged as `2bd4a99`).
 
 ## Decisions
 

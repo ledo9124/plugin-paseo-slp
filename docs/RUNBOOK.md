@@ -73,6 +73,12 @@ work:
 - Plugin settings are shared with Human's own groups. Ask Human before
   changing them for a test, and restore them right after.
 - Stop nothing: leave the daemon running.
+- To run the plugin from another checkout (a worktree), `plugin install`
+  refuses while `slp` is configured, and `plugin remove slp` deletes
+  `~\.paseo\plugin-settings\slp`. Back that folder up, remove, install
+  from the other path, copy the settings back, and reload; do the same to
+  point it back. `plugin-data\slp` (state and templates) survives a
+  remove (run 2).
 
 ## Start
 
