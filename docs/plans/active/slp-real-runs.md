@@ -200,6 +200,64 @@ the fixes' quality.
 - `dsh-personal`: `main` `2797233`, merged in Human's clean checkout.
 - Neither is pushed. The `docs/slp-harness-review` branches remain.
 
+### Run 2: slice 5 (templates) of this repository, through SLP
+
+Registered before the run (2026-10-02). Human asked that an SLP group
+implement slice 5 of `docs/plans/active/slp-role-config-and-templates.md`,
+with the operating agent playing Human.
+- Human's answers, given to the operating agent before the run:
+  - result: commit on a new branch, no push. If the tests pass and the
+    operating agent's live check passes, the operating agent merges into
+    `main` without waiting for Human;
+  - scope: all of slice 5, including the five default templates the plan
+    lists;
+  - testing: the group may install or reload the plugin on the main
+    daemon (6767) from its worktree. No second daemon: Human's machine
+    cannot carry two;
+  - models: the Lead on Opus. The Supervisor stays on Opus, and Peers are
+    the Lead's choice from the allowed list.
+- Settled records the group should find on its own: decision 0008, the
+  slice 5 approach in the plan (including the agent choices Human may
+  revisit: templates in plugin data, import from a host folder), the
+  accepted `docs/product/roles.md`, and `docs/RUNBOOK.md` "Testing On The
+  Main Daemon".
+- Setup:
+  - a Paseo worktree workspace from this repository, branch-off `main`,
+    new branch `feat/slice-5-templates`, so the operating agent's
+    checkout does not change;
+  - SLP on, with the Lead created on `claude-opus-5-5`: the operating
+    agent sets the Lead's provider in Settings for the group's creation,
+    then restores it (Human allowed this change);
+  - the plugin on 6767 runs from the main checkout's `plugins/slp` with
+    slice 4 (`1486d75`) loaded.
+- Human's first message, close to Human's words: "Triển khai slice 5
+  (templates) trong plan slp-role-config-and-templates nhé."
+- The operating agent answers only from Human's answers above. Anything
+  else goes to Human first, and is recorded as asked. It does not message
+  the Lead or Peers.
+- Observed:
+  - intake: what the Supervisor asks, given that the plan settles most of
+    the slice;
+  - whether the Opus Lead delegates a multi-part slice, and its briefs;
+  - the Supervisor's own project work (the report count), and its
+    language;
+  - live testing on the main daemon by the group: what it installs or
+    reloads, and whether its own coordination survives a reload;
+  - questions to Human, cost, and duration.
+- Stop: the Supervisor reports the work done, or Human stops it. The
+  operating agent pauses and asks Human if the cost passes $15.
+- After the run, by the operating agent:
+  - check the branch: `npm test`, `npm run typecheck`, the diff against
+    the plan's slice 5, and a live check on 6767 (a template loaded,
+    listed, loaded by a Lead, and counted);
+  - if both pass, merge into `main` and record it; if not, report to
+    Human and leave the branch;
+  - point the 6767 plugin back at the main checkout's `plugins/slp`
+    (`plugin install` from that path, then `plugin reload slp`) if the
+    group installed it from the worktree;
+  - archive the workspace (and its worktree) once the branch is merged or
+    kept.
+
 ## Risks And Recovery
 
 - **Edits to Human's real repositories.** Edits stay on new branches in
@@ -208,14 +266,22 @@ the fixes' quality.
 - **Cost.** A docs review across about 40 files with several Peers may
   cost several dollars. The report shows cost per role while the run
   goes on.
+- **Run 2 reloads the plugin the group runs on.** A failed reload stays
+  failed and takes the group's SLP tools down with it. Recovery: the
+  operating agent reinstalls the plugin from the main checkout's
+  `plugins/slp` and reloads; the group's state stays in plugin data. A
+  reload also restarts the MCP endpoint under any of Human's own SLP
+  groups; at registration none was running.
 
 ## Progress
 
 - [x] Run 1: docs review of `paseo-plugin` and `dsh-personal` (results
   above; merged by Human's choice without a diff review).
-- [ ] Run 2, a comparison with a single agent: deferred by Human
-  (2026-10-02). SLP will be judged and improved through use, by its own
-  process data (behavior 10), once it matures.
+- [ ] A comparison with a single agent: deferred by Human (2026-10-02).
+  SLP will be judged and improved through use, by its own process data
+  (behavior 10), once it matures.
+- [ ] Run 2: slice 5 (templates) of this repository, through SLP
+  (registered above).
 
 ## Decisions
 
@@ -223,6 +289,8 @@ the fixes' quality.
   its focus. Human asked the operating agent to play Human.
 - 2026-10-02: Human deferred the single-agent comparison. SLP is judged
   and improved through real use and its own process data.
+- 2026-10-02: Human chose run 2: slice 5 through SLP, the operating agent
+  playing Human, with the answers registered above.
 
 ## Validation
 
