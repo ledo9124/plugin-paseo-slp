@@ -306,6 +306,28 @@ Reading of run 2:
 - The Peers' short turns (30 seconds to 3 minutes) suggest the Lead's
   briefs were detailed; the Lead carried most of the cost.
 
+### Run 3: templates in use (slice 6 of the role-config plan)
+
+Registered before the run (2026-10-02). Human asked to test both cases:
+a template Human names for a goal, and none named. Human left the tasks to
+the operating agent, which plays Human again.
+- Two groups in parallel on the main daemon, default settings (Supervisor
+  Opus, Lead Sonnet), each in a fresh notes-CLI seed from
+  `scripts/role-seed.sh` under `%TEMP%`. The five default templates are
+  stored.
+- 3a, named: "Review code notes.py theo template independent-review, chỉ
+  báo lỗi, chưa sửa nhé."
+- 3b, not named: "Kiểm tra giúp test của dự án có đủ tốt không, chỉ báo
+  cáo thôi." `test-audit` fits; nothing tells the group so.
+- Answers the operating agent gives: report only, change no code, no
+  commit; anything else goes to Human first.
+- Observed: in 3a, the template reaching the Lead as a constraint with
+  source Human, a `slp_template` load, and `template` on the assignment;
+  in 3b, whether the Supervisor suggests a template or the Lead loads one
+  on its own; the report's Templates section; cost.
+- Stop: the Supervisor reports the result, or $5 per group. Cleanup:
+  archive both workspaces.
+
 ## Risks And Recovery
 
 - **Edits to Human's real repositories.** Edits stay on new branches in
@@ -330,6 +352,7 @@ Reading of run 2:
   (behavior 10), once it matures.
 - [x] Run 2: slice 5 (templates) of this repository, through SLP
   (results above; merged as `2bd4a99`).
+- [ ] Run 3: templates in use, named and not named (registered above).
 
 ## Decisions
 
