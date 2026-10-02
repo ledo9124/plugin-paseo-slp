@@ -133,6 +133,8 @@ export const DecisionSchema = z.object({
   revisedAt: z.string().nullable().optional(),
   /** Why the author withdrew it. */
   withdrawnReason: z.string().nullable().optional(),
+  /** Agent ids told about it; a Peer's ledger view shows these (0008). */
+  notified: z.array(z.string()).optional(),
 });
 export type Decision = z.infer<typeof DecisionSchema>;
 
@@ -214,6 +216,8 @@ export const ReportSchema = z.object({
   /** Questions to Human through a provider's own tool (slice 7, I2), by role. */
   nativeQuestions: z.object({ byRole: CountsSchema, unanswered: z.number().int() }),
   outsideAgents: z.object({ created: z.number().int(), builtinCreateCalls: CountsSchema }),
+  /** The Supervisor working on the project, which roles.md rules out (0008). */
+  supervisorWork: z.object({ shellCommands: z.number().int(), fileChanges: z.number().int() }),
   usage: z.record(z.string(), UsageTotalsSchema),
 });
 export type Report = z.infer<typeof ReportSchema>;

@@ -8,7 +8,7 @@ import { emptyLedger, type GroupRecord, type MemberRecord, type SlpStore, type W
 export const GROUP_LABEL = "slp.group";
 export const ROLE_LABEL = "slp.role";
 export const MCP_SERVER_NAME = "slp";
-/** Plugin MCP tools every member may call without a prompt; each tool checks the caller's role. */
+/** Plugin MCP tools; each member is offered only its role's list (decision 0008). */
 export const MEMBER_TOOLS = [
   "slp_group",
   "slp_ledger",
@@ -19,25 +19,57 @@ export const MEMBER_TOOLS = [
   "slp_decide",
   "slp_revise_decision",
 ] as const;
+export type MemberTool = (typeof MEMBER_TOOLS)[number];
+
+/** Default SLP tools per role (decision 0008); a call outside the list is refused. */
+export const ROLE_TOOLS: Record<Role, readonly MemberTool[]> = {
+  supervisor: ["slp_group", "slp_ledger", "slp_send", "slp_finding", "slp_decide", "slp_revise_decision"],
+  lead: MEMBER_TOOLS,
+  peer: ["slp_ledger", "slp_send", "slp_finding"],
+};
+
+export function roleAllows(role: Role, tool: string): boolean {
+  return (ROLE_TOOLS[role] as readonly string[]).includes(tool);
+}
 
 const GROUP_ROLES: readonly Role[] = ["supervisor", "lead"];
 
 /** Claude Code's subagent tool; older versions call it Task (decision 0006). */
 export const CLAUDE_SUBAGENT_TOOLS = ["Agent", "Task"];
+/** Claude Code's tool for asking the user; only the Supervisor asks Human (0008). */
+export const CLAUDE_QUESTION_TOOL = "AskUserQuestion";
 
 /**
- * The Lead delegates only through slp_delegate (decision 0006). Claude can
- * drop a tool per agent; other providers follow the role instructions.
+ * Claude tools removed per role. The Supervisor does not work on the project,
+ * the Lead delegates only through slp_delegate (0006), and only the
+ * Supervisor asks Human (0008). Other providers follow the role instructions.
  */
-function leadProviderOptions(provider: string): Record<string, string[]> | undefined {
-  return provider.split("/")[0] === "claude" ? { disallowedTools: CLAUDE_SUBAGENT_TOOLS } : undefined;
+const CLAUDE_DISALLOWED: Record<Role, readonly string[]> = {
+  supervisor: ["Edit", "Write", "NotebookEdit", ...CLAUDE_SUBAGENT_TOOLS],
+  lead: [...CLAUDE_SUBAGENT_TOOLS, CLAUDE_QUESTION_TOOL],
+  peer: [CLAUDE_QUESTION_TOOL],
+};
+
+export function providerId(provider: string): string {
+  return provider.split("/")[0];
+}
+
+export function memberProviderOptions(role: Role, provider: string): { disallowedTools: string[] } | undefined {
+  return providerId(provider) === "claude" ? { disallowedTools: [...CLAUDE_DISALLOWED[role]] } : undefined;
+}
+
+/** A member's system prompt, with its provider and settings filled in. */
+export function memberInstructions(role: Role, provider: string, settings: SlpSettings): string {
+  return roleInstructions(role, { provider: providerId(provider), maxActivePeers: settings.peers.maxActive });
 }
 
 export function slpMcpServers(url: string) {
   return { [MCP_SERVER_NAME]: { type: "http" as const, url, alwaysLoad: true } };
 }
 
-export const PREAPPROVED_TOOLS = MEMBER_TOOLS.map((tool) => ({ server: MCP_SERVER_NAME, tool }));
+export function preapprovedTools(role: Role) {
+  return ROLE_TOOLS[role].map((tool) => ({ server: MCP_SERVER_NAME, tool }));
+}
 
 export class SlpError extends Error {
   constructor(
@@ -193,12 +225,12 @@ export class SlpService {
       provider: config.provider,
       modeId: config.modeId,
       title: ROLE_TITLES[member.role],
-      systemPrompt: roleInstructions(member.role),
+      systemPrompt: memberInstructions(member.role, config.provider, settings),
       mcpServers: slpMcpServers(this.deps.mcpUrl(member.secret)),
-      preapprovedTools: PREAPPROVED_TOOLS,
+      preapprovedTools: preapprovedTools(member.role),
       labels: { [GROUP_LABEL]: group.id, [ROLE_LABEL]: member.role },
       idempotencyKey: `slp:${group.id}:${member.role}`,
-      ...(member.role === "lead" ? { providerOptions: leadProviderOptions(config.provider) } : {}),
+      providerOptions: memberProviderOptions(member.role, config.provider),
     });
   }
 

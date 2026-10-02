@@ -47,9 +47,11 @@ export function ProcessSection({ report, markdown }: { report: Report; markdown:
           total(report.busySendViolations) +
           report.outsideAgents.created +
           total(report.outsideAgents.builtinCreateCalls) +
-          total(nativeQuestionBreaks(report.nativeQuestions.byRole))
+          total(nativeQuestionBreaks(report.nativeQuestions.byRole)) +
+          report.supervisorWork.shellCommands +
+          report.supervisorWork.fileChanges
         }`}
-        hint={`Questions to Human through a provider's own tool by the Lead or a Peer ${total(nativeQuestionBreaks(report.nativeQuestions.byRole))} (${counts(nativeQuestionBreaks(report.nativeQuestions.byRole))}); built-in send_agent_prompt calls ${total(report.busySendViolations)} (${counts(report.busySendViolations)}); agents created outside slp_delegate ${report.outsideAgents.created}; built-in create_agent calls ${total(report.outsideAgents.builtinCreateCalls)}.`}
+        hint={`Questions to Human through a provider's own tool by the Lead or a Peer ${total(nativeQuestionBreaks(report.nativeQuestions.byRole))} (${counts(nativeQuestionBreaks(report.nativeQuestions.byRole))}); built-in send_agent_prompt calls ${total(report.busySendViolations)} (${counts(report.busySendViolations)}); agents created outside slp_delegate ${report.outsideAgents.created}; built-in create_agent calls ${total(report.outsideAgents.builtinCreateCalls)}; Supervisor shell commands ${report.supervisorWork.shellCommands} and file changes ${report.supervisorWork.fileChanges} on the project.`}
         testID="slp-process-breaks"
       />
       {Object.entries(report.usage).map(([role, usage]) => (

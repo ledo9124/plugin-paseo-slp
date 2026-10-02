@@ -74,7 +74,7 @@ export function memberTools(coordination: Coordination, host: () => PaseoHost): 
     {
       name: "slp_ledger",
       description:
-        "The coordination ledger: assignments with their briefs and status, findings, and decisions with their source. The Lead also sees the allowed Peer models.",
+        "The coordination ledger: assignments with their briefs and status, findings, and decisions with their source. A Peer sees only its own work; the Lead also sees the allowed Peer models.",
       inputSchema: empty,
       call: (_args, secret) => coordination.ledger(secret),
     },

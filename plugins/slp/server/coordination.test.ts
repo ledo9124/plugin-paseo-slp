@@ -128,8 +128,9 @@ describe("slp_delegate", () => {
       title: "SLP Peer 1",
       labels: { "slp.role": "peer", "slp.group": group().id },
     });
-    // Decision 0006 blocks subagents for the Lead only.
-    expect(created.providerOptions).toBeUndefined();
+    // Only the Supervisor asks Human (0008); a Peer gets only its own SLP tools.
+    expect(created.providerOptions).toEqual({ disallowedTools: ["AskUserQuestion"] });
+    expect(created.preapprovedTools?.map((t) => t.tool)).toEqual(["slp_ledger", "slp_send", "slp_finding"]);
     expect(created.systemPrompt).toContain("Your role: Peer");
     expect(created.prompt).toContain("Goal: Users can export reports as CSV");
     expect(created.prompt).toContain("No new runtime dependency (source: Human)");
@@ -142,6 +143,8 @@ describe("slp_delegate", () => {
     const { host, coordination, secretOf } = await setup();
     await coordination.delegate(host, secretOf("lead"), { ...delegateInput, model: "codex/gpt-6-luna" });
     expect(host.created.at(-1)).toMatchObject({ provider: "codex/gpt-6-luna", modeId: "full-access" });
+    // Codex has no per-agent tool block; its Peers follow the instructions.
+    expect(host.created.at(-1)!.providerOptions).toBeUndefined();
     await expect(
       coordination.delegate(host, secretOf("lead"), { ...delegateInput, model: "claude/claude-opus-5-5" }),
     ).rejects.toThrow("not allowed");
@@ -306,6 +309,37 @@ describe("findings and decisions", () => {
     expect(host.sends).toEqual([
       { agentId: peerAgentId, text: expect.stringContaining("drop streaming"), activeTurnBehavior: "steer" },
     ]);
+  });
+
+  it("shows a Peer only its own assignments, findings, and the decisions it was told about", async () => {
+    const { host, coordination, secretOf, idOf } = await setup();
+    const first = await coordination.delegate(host, secretOf("lead"), delegateInput);
+    await coordination.delegate(host, secretOf("lead"), { ...delegateInput, title: "PDF export", scope: "src/pdf/" });
+    const { findingId } = await coordination.finding(host, secretOf("peer", 1), {
+      kind: "blocker",
+      assignmentId: "A2",
+      text: "PDF fonts missing",
+      evidence: "fc-list is empty",
+    });
+    await coordination.decide(host, secretOf("lead"), { text: "Bundle a font", source: "agent", status: "settled", findingId });
+    await coordination.decide(host, secretOf("lead"), {
+      text: "Both exports share one header row",
+      source: "agent",
+      status: "settled",
+      notify: [first.peerAgentId!],
+    });
+
+    const view = await coordination.ledger(secretOf("peer", 0));
+    expect(view.assignments.map((a) => a.id)).toEqual(["A1"]);
+    expect(view.findings).toEqual([]);
+    expect(view.decisions.map((d) => d.text)).toEqual(["Both exports share one header row"]);
+    const other = await coordination.ledger(secretOf("peer", 1));
+    expect(other.assignments.map((a) => a.id)).toEqual(["A2"]);
+    expect(other.findings.map((f) => f.id)).toEqual([findingId]);
+    expect(other.decisions.map((d) => d.text)).toEqual(["Bundle a font"]);
+    // The Lead and the Supervisor still see everything.
+    expect((await coordination.ledger(secretOf("lead"))).assignments).toHaveLength(2);
+    expect(other.you.agentId).toBe(idOf("peer", 1));
   });
 
   it("sends pending Lead decisions to the Supervisor, who settles them for Human", async () => {
@@ -548,6 +582,23 @@ describe("telemetry", () => {
     expect(report.busySendViolations).toEqual({ lead: 1 });
     expect(report.usage.lead).toMatchObject({ turns: 2, inputTokens: 30, outputTokens: 3 });
     expect(report.usage.lead.costUsd).toBeCloseTo(0.25);
+  });
+
+  it("counts the Supervisor's shell commands and file changes on the project, once each", async () => {
+    const { host, coordination, idOf, group } = await setup();
+    const timeline = [
+      { type: "tool_call", callId: "s1", name: "Bash", detail: { type: "shell", command: "git pull" } },
+      { type: "tool_call", callId: "s2", name: "Write", detail: { type: "write", filePath: "notes.py" } },
+      { type: "tool_call", callId: "s3", name: "Read", detail: { type: "read", filePath: "docs/plan.md" } },
+    ];
+    await coordination.onTurnEnded(host, turn(idOf("supervisor"), timeline));
+    await coordination.onTurnEnded(host, turn(idOf("supervisor"), timeline));
+    // The Lead works on the project by design.
+    await coordination.onTurnEnded(host, turn(idOf("lead"), [{ ...timeline[0], callId: "l1" }]));
+
+    const report = buildReport(group());
+    expect(report.supervisorWork).toEqual({ shellCommands: 1, fileChanges: 1 });
+    expect(renderReport(report)).toContain("Supervisor working on the project: 1 shell commands, 1 file changes");
   });
 
   it("records agents created in the workspace without the group label, not the group's own Peers", async () => {

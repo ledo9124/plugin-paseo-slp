@@ -35,6 +35,7 @@ export function buildReport(group: GroupRecord): Report {
     busySendViolations: {},
     nativeQuestions: { byRole: {}, unanswered: 0 },
     outsideAgents: { created: 0, builtinCreateCalls: {} },
+    supervisorWork: { shellCommands: 0, fileChanges: 0 },
     usage: {},
   };
 
@@ -96,6 +97,10 @@ export function buildReport(group: GroupRecord): Report {
         break;
       case "outside-agent":
         report.outsideAgents.created += 1;
+        break;
+      case "supervisor-work":
+        if (data.kind === "shell") report.supervisorWork.shellCommands += 1;
+        else report.supervisorWork.fileChanges += 1;
         break;
       case "usage": {
         const role = String(data.role);
@@ -169,6 +174,7 @@ export function renderReport(report: Report): string {
     `- Questions to Human through a provider's own tool, by the Lead or a Peer: ${total(nativeQuestionBreaks(report.nativeQuestions.byRole))} (${counts(nativeQuestionBreaks(report.nativeQuestions.byRole))})`,
     `- Busy-send violations (built-in send_agent_prompt): ${total(report.busySendViolations)} (${counts(report.busySendViolations)})`,
     `- Agents created outside slp_delegate: ${report.outsideAgents.created}; built-in create_agent calls ${total(report.outsideAgents.builtinCreateCalls)} (${counts(report.outsideAgents.builtinCreateCalls)})`,
+    `- Supervisor working on the project: ${report.supervisorWork.shellCommands} shell commands, ${report.supervisorWork.fileChanges} file changes`,
     "",
     "## Tokens and cost (estimates)",
     "Tokens are summed from the usage each provider reported after completed turns. Cost counts the growth of each agent's cumulative session cost. Codex reports no cost.",

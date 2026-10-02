@@ -5,10 +5,10 @@ Date: 2026-10-02
 ## Status
 
 Active. Decisions settled by Human on 2026-10-02 (decision 0008). Human
-added the role-definition task on 2026-10-02 (slices 1 and 3). Slice 1 is
-done: draft definitions in `docs/product/roles.md`, the suite in
-`docs/product/role-scenarios.md`, and the v0.1.0 baseline below. No code
-changed yet. Next: slice 2.
+added the role-definition task on 2026-10-02 (slices 1 and 3). Slices 1-2
+are done: draft definitions in `docs/product/roles.md`, the suite in
+`docs/product/role-scenarios.md`, the v0.1.0 baseline below, and the role
+contexts in code. Next: slice 3.
 
 ## Outcome
 
@@ -248,7 +248,13 @@ Across runs:
 - [x] Analysis and Human's decisions (0008).
 - [x] Slice 1: role definitions (draft), scenario suite, v0.1.0 baseline
   (results below).
-- [ ] Slice 2: role contexts.
+- [x] Slice 2: role contexts. Per-role instructions (`roles.ts`, from the
+  draft definitions and the baseline: records read with the read tool, no
+  shell, and the Supervisor checks results from the Lead's evidence),
+  per-role tool lists offered and enforced, per-role Claude
+  `disallowedTools`, the Peer ledger view, and the Supervisor-work count.
+  The Lead's model heuristic is out of its text until templates (slice 5).
+  `vitest` 52 passed, `tsc` passed; the live check is slice 3.
 - [ ] Slice 3: tuning until the scenarios pass.
 - [ ] Slice 4: settings v2.
 - [ ] Slice 5: templates.

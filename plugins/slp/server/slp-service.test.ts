@@ -54,12 +54,28 @@ describe("SlpService.setMode", () => {
     expect(supervisor.labels?.[GROUP_LABEL]).toBe(view.group?.id);
     const secrets = store.get("ws-1")!.group!.members.map((member) => member.secret);
     expect(supervisor.mcpServers?.slp).toMatchObject({ type: "http", url: `http://mcp.test/mcp/${secrets[0]}` });
-    expect(supervisor.preapprovedTools).toContainEqual({ server: "slp", tool: "slp_group" });
-    expect(supervisor.preapprovedTools).toContainEqual({ server: "slp", tool: "slp_send" });
     expect(supervisor.prompt).toBeUndefined();
-    // Decision 0006: only the Lead loses Claude's subagent tool.
-    expect(lead.providerOptions).toEqual({ disallowedTools: ["Agent", "Task"] });
-    expect(supervisor.providerOptions).toBeUndefined();
+    // Decision 0008: each role is preapproved for its own SLP tools only.
+    const tools = (agent: typeof lead) => agent.preapprovedTools?.map((t) => t.tool);
+    expect(tools(supervisor)).toEqual([
+      "slp_group",
+      "slp_ledger",
+      "slp_send",
+      "slp_finding",
+      "slp_decide",
+      "slp_revise_decision",
+    ]);
+    expect(tools(lead)).toContain("slp_delegate");
+    expect(tools(lead)).toHaveLength(8);
+    // The Supervisor does not work on the project; the Lead delegates only
+    // through slp_delegate (0006); only the Supervisor asks Human (0008).
+    expect(supervisor.providerOptions).toEqual({
+      disallowedTools: ["Edit", "Write", "NotebookEdit", "Agent", "Task"],
+    });
+    expect(lead.providerOptions).toEqual({ disallowedTools: ["Agent", "Task", "AskUserQuestion"] });
+    // Runtime facts are filled in per member.
+    expect(supervisor.systemPrompt).toContain("question tool (AskUserQuestion)");
+    expect(lead.systemPrompt).toContain("At most 2 Peers can be active");
   });
 
   it("gives a non-Claude Lead no Claude-only options", async () => {

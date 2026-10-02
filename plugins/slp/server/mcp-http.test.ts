@@ -9,7 +9,10 @@ afterEach(async () => {
 });
 
 async function start() {
-  const members = new Map([["s3cret", { label: "lead" }]]);
+  const members = new Map([
+    ["s3cret", { label: "lead" }],
+    ["peer", { label: "peer" }],
+  ]);
   handle = await startMcpHttp({
     host: "127.0.0.1",
     port: 0,
@@ -22,7 +25,14 @@ async function start() {
         inputSchema: { type: "object", properties: {} },
         call: (_args, caller) => caller,
       },
+      {
+        name: "delegate",
+        description: "Lead only",
+        inputSchema: { type: "object", properties: {} },
+        call: () => "delegated",
+      },
     ],
+    toolAllowed: (caller, name) => name !== "delegate" || caller.label === "lead",
   });
   return handle;
 }
@@ -54,7 +64,7 @@ describe("startMcpHttp", () => {
     expect(notified.status).toBe(202);
 
     const list = await post(url, { jsonrpc: "2.0", id: 2, method: "tools/list" });
-    expect(list.json.result.tools.map((tool: { name: string }) => tool.name)).toEqual(["whoami"]);
+    expect(list.json.result.tools.map((tool: { name: string }) => tool.name)).toEqual(["whoami", "delegate"]);
 
     const call = await post(url, {
       jsonrpc: "2.0",
@@ -63,6 +73,20 @@ describe("startMcpHttp", () => {
       params: { name: "whoami", arguments: {} },
     });
     expect(JSON.parse(call.json.result.content[0].text)).toEqual({ label: "lead" });
+  });
+
+  it("offers each caller only its allowed tools and refuses a call to any other", async () => {
+    const mcp = await start();
+    const url = mcp.url("peer");
+    const list = await post(url, { jsonrpc: "2.0", id: 1, method: "tools/list" });
+    expect(list.json.result.tools.map((tool: { name: string }) => tool.name)).toEqual(["whoami"]);
+    const call = await post(url, {
+      jsonrpc: "2.0",
+      id: 2,
+      method: "tools/call",
+      params: { name: "delegate", arguments: {} },
+    });
+    expect(call.json.result).toMatchObject({ isError: true, content: [{ text: "delegate is not available to you." }] });
   });
 
   it("rejects an unknown secret", async () => {

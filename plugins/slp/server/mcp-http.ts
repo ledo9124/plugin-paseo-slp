@@ -17,6 +17,8 @@ export interface McpHttpOptions<Caller> {
   serverName: string;
   resolveCaller(secret: string): Caller | null;
   tools: readonly McpTool<Caller>[];
+  /** Whether this caller is offered the tool; a call to any other is refused. Default: all. */
+  toolAllowed?(caller: Caller, name: string): boolean;
   onRequest?(event: { secret: string; method: string; known: boolean }): void;
 }
 
@@ -101,12 +103,17 @@ async function dispatch<Caller>(
       return rpcResult(id, {});
     case "tools/list":
       return rpcResult(id, {
-        tools: options.tools.map(({ name, description, inputSchema }) => ({ name, description, inputSchema })),
+        tools: options.tools
+          .filter((tool) => allowed(options, caller, tool.name))
+          .map(({ name, description, inputSchema }) => ({ name, description, inputSchema })),
       });
     case "tools/call": {
       const name = message.params?.name;
       const tool = options.tools.find((candidate) => candidate.name === name);
       if (!tool) return rpcError(id, -32602, `unknown tool: ${String(name)}`);
+      if (!allowed(options, caller, tool.name)) {
+        return rpcResult(id, { content: [{ type: "text", text: `${tool.name} is not available to you.` }], isError: true });
+      }
       const args = (message.params?.arguments ?? {}) as Record<string, unknown>;
       try {
         const value = await tool.call(args, caller);
@@ -118,6 +125,10 @@ async function dispatch<Caller>(
     default:
       return isNotification ? null : rpcError(id, -32601, `method not found: ${message.method}`);
   }
+}
+
+function allowed<Caller>(options: McpHttpOptions<Caller>, caller: Caller, name: string): boolean {
+  return options.toolAllowed ? options.toolAllowed(caller, name) : true;
 }
 
 function rpcResult(id: JsonRpcRequest["id"], result: unknown) {

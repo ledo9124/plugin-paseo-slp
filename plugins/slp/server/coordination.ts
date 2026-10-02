@@ -3,8 +3,15 @@ import type { Assignment, Brief, Decision, Finding, Ledger, NativeQuestion, Role
 import type { SlpSettings } from "../shared/settings";
 import type { PaseoHost } from "./paseo-host";
 import type { WorkspaceQueue } from "./queue";
-import { roleInstructions } from "./roles";
-import { GROUP_LABEL, PREAPPROVED_TOOLS, ROLE_LABEL, SlpError, slpMcpServers } from "./slp-service";
+import {
+  GROUP_LABEL,
+  ROLE_LABEL,
+  SlpError,
+  memberInstructions,
+  memberProviderOptions,
+  preapprovedTools,
+  slpMcpServers,
+} from "./slp-service";
 import type { GroupRecord, HeldMessage, MemberRecord, SlpStore, WorkspaceRecord } from "./store";
 
 // Group coordination: messaging (decision 0004), delegation, handback,
@@ -95,7 +102,7 @@ export class Coordination {
     const settings = await this.deps.settings();
     return {
       you: { role: caller.member.role, agentId: caller.member.agentId },
-      ...caller.group.ledger,
+      ...(caller.member.role === "peer" ? peerView(caller.group.ledger, caller.member.agentId) : caller.group.ledger),
       ...(caller.member.role === "lead"
         ? { peerModels: settings.peers.models, maxActivePeers: settings.peers.maxActive }
         : {}),
@@ -209,9 +216,10 @@ export class Coordination {
           provider: model,
           modeId,
           title: member.title,
-          systemPrompt: roleInstructions("peer"),
+          systemPrompt: memberInstructions("peer", model, settings),
           mcpServers: slpMcpServers(this.deps.mcpUrl(member.secret)),
-          preapprovedTools: PREAPPROVED_TOOLS,
+          preapprovedTools: preapprovedTools("peer"),
+          providerOptions: memberProviderOptions("peer", model),
           labels: { [GROUP_LABEL]: caller.group.id, [ROLE_LABEL]: "peer" },
           idempotencyKey: `slp:${caller.group.id}:peer:${assignment.id}`,
           prompt: renderBrief(assignment),
@@ -378,6 +386,7 @@ export class Coordination {
           throw new SlpError("invalid", `notify: ${agentId} is not a group member.`);
         }
       }
+      decision.notified = [...new Set([...(decision.notified ?? []), ...recipients])];
       for (const agentId of recipients) {
         await this.deliver(
           host,
@@ -686,6 +695,8 @@ export class Coordination {
     for (const entry of timeline) {
       const item = entry as unknown as Record<string, unknown>;
       if (item.type === "tool_call" && typeof item.name === "string" && typeof item.callId === "string") {
+        const work = member.role === "supervisor" ? supervisorWork(item.detail) : null;
+        if (work && first(`tool:${item.callId}`)) this.event(group, "supervisor-work", { ...by, ...work });
         const builtin = BUILTIN_TOOLS.find(([pattern]) => pattern.test(item.name as string));
         if (!builtin || !first(`tool:${item.callId}`)) continue;
         // A built-in send arrives as a plain user message; the report uses
@@ -852,6 +863,24 @@ export class Coordination {
 }
 
 /** Native questions recorded for the group and not yet resolved (slice 7, I2). */
+/**
+ * A Peer sees its own work (decision 0008): its assignments, the findings it
+ * recorded or that concern its assignments, and the decisions it was told
+ * about or that settle those findings. Other Peers' briefs stay hidden.
+ */
+export function peerView(ledger: Ledger, agentId: string | null): Ledger {
+  const assignments = ledger.assignments.filter((a) => a.peerAgentId !== null && a.peerAgentId === agentId);
+  const mine = new Set(assignments.map((a) => a.id));
+  const findings = ledger.findings.filter(
+    (f) => (agentId !== null && f.by.agentId === agentId) || (f.assignmentId !== null && mine.has(f.assignmentId)),
+  );
+  const findingIds = new Set(findings.map((f) => f.id));
+  const decisions = ledger.decisions.filter(
+    (d) => (agentId !== null && d.notified?.includes(agentId)) || (d.findingId !== null && findingIds.has(d.findingId)),
+  );
+  return { assignments, findings, decisions };
+}
+
 export function openNativeQuestions(group: GroupRecord): NativeQuestion[] {
   const resolved = new Set(
     group.events.filter((e) => e.kind === "native-question-resolved").map((e) => e.data.requestId),
@@ -886,6 +915,16 @@ function questionText(request: PermissionRequest): string {
     : [];
   const text = lines.join("\n") || request.title || request.description || request.name;
   return text.length > QUESTION_TEXT_LIMIT ? `${text.slice(0, QUESTION_TEXT_LIMIT)}…` : text;
+}
+
+/** A Supervisor tool call that works on the project: a shell command or a file change. */
+function supervisorWork(detail: unknown): { kind: "shell" | "file-change"; what: string } | null {
+  const d = (detail ?? {}) as Record<string, unknown>;
+  if (d.type === "shell" && typeof d.command === "string") return { kind: "shell", what: d.command.slice(0, 200) };
+  if ((d.type === "edit" || d.type === "write") && typeof d.filePath === "string") {
+    return { kind: "file-change", what: d.filePath };
+  }
+  return null;
 }
 
 function summary(message: HeldMessage) {
