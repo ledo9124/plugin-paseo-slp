@@ -263,9 +263,10 @@ changes member behavior.
       engineering questions that were not Human's.
   - [x] Analysis saved: `docs/research/supervisor-ab-2026-10-02.md`.
     Human skipped the blind comparison and read the results directly.
-  - [ ] A2 (Supervisor on Sonnet) and K runs (Supervisor holds part of the
+  - [x] A2 (Supervisor on Sonnet) and K runs (Supervisor holds part of the
     outcome; does it catch the Lead going wrong?), asked by Human
-    2026-10-02.
+    2026-10-02. Results and proposed tuning in the research note.
+  - [ ] Human's choice on the proposed tuning; rerun on the tuned text.
   - [ ] S5-S10.
 - [ ] Slice 4: settings v2.
 - [ ] Slice 5: templates.
