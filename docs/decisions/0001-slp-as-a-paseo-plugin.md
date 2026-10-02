@@ -15,6 +15,10 @@ Amended on 2026-10-01 by [0006](0006-slp-lead-cannot-use-provider-subagents.md):
 item 3 no longer covers the SLP Lead's provider subagent tool, which is
 blocked for a Claude Lead. No other rule is enforced.
 
+Amended on 2026-10-02 by [0008](0008-per-role-configuration-and-templates.md):
+item 3 no longer covers the question tool of a Claude Lead or Peer, which
+is removed so that only the Supervisor asks Human.
+
 ## Context
 
 SLP is a way of organizing agent work: roles defined by responsibility,

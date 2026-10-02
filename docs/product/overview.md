@@ -9,7 +9,10 @@ accepted in decisions
 [0005](../decisions/0005-slp-mode-locks-at-the-first-message.md), and
 [0006](../decisions/0006-slp-lead-cannot-use-provider-subagents.md). What
 SLP is, its layers, and its boundary with Repository Harness are accepted in
-[0007](../decisions/0007-what-slp-is.md).
+[0007](../decisions/0007-what-slp-is.md). Per-role configuration, templates
+as plugin skills, and the group's shape are accepted in
+[0008](../decisions/0008-per-role-configuration-and-templates.md), not yet
+implemented.
 
 ## Outcome
 
@@ -78,6 +81,15 @@ it still SLP?"
    - each must show that it changes outcomes, or it is dropped
      (behavior 10).
 
+   A template coordinates agents toward one goal, not the whole workspace;
+   a run may use several, or none. It is a `SKILL.md` text that Human loads
+   in the plugin's UI. The
+   Supervisor and the Lead see the catalog: each template's name,
+   description, and when to use it. The Lead loads a template's body when it
+   uses one. Human may choose a template for a goal, the Supervisor may
+   suggest one, and the Lead may use, combine, or adapt them on its own
+   (decision 0008).
+
 SLP is independent of Repository Harness, and the two can run together
 ([SLP and Harness](slp-and-harness.md)).
 
@@ -108,9 +120,14 @@ and escalation paths stay the same.
 | Role | Responsibility |
 | --- | --- |
 | Human | Owns the outcome, priorities, trade-offs, and product policy. May delegate a class of choices. Can see the work and redirect it. |
-| Supervisor | Holds Human's conversation, intent, and continuity. Completes Human's input before work starts. Its handoff to the Lead stops at the outcome and constraints: it proposes no design, not even a non-binding one. Watches for cross-scope problems and drift from Human's goal. Brings choices outside agent authority to Human. Has no technical authority over the Lead. |
+| Supervisor | Holds Human's conversation, intent, and continuity. Completes Human's input before work starts. Its handoff to the Lead stops at the outcome and constraints: it proposes no design, not even a non-binding one. The one exception: it may suggest a template, named as its own non-binding suggestion (decision 0008). Watches for cross-scope problems and drift from Human's goal. Brings choices outside agent authority to Human. Has no technical authority over the Lead. |
 | Lead | Holds project coherence: ownership, dependencies, decisions, evidence, integration, and engineering acceptance. Sorts every question by authority before answering it. |
 | Peer | Owns one assignment in a bounded scope, with independent technical judgment. May question the assignment's premise with evidence and propose a scope change. |
+
+A group has exactly one Supervisor and one Lead, and a workspace has one
+group (decisions 0002, 0005, 0008). Each role's provider, mode,
+instructions, SLP tools, and templates are configurable by Human; each
+member's context holds only what its role acts on (decision 0008).
 
 Which Peers the Lead creates, for which kind of work and on which models,
 is a template choice (layer 4), not part of the roles.
@@ -206,8 +223,11 @@ is a template choice (layer 4), not part of the roles.
   the project (decision 0003).
 - A trust boundary. Rules are conventions that well-behaved agents follow;
   the plugin makes violations visible but does not prevent them (decision
-  0001). The one exception: within SLP, a Claude Lead has no subagent tool,
-  so it delegates only through the plugin (decision 0006).
+  0001). The exceptions, within SLP: a Claude Lead or Peer has no
+  question tool, so only the Supervisor asks Human (decision 0008; Codex
+  has none unless Human enables it in Codex's config), and a
+  Claude Lead has no subagent tool, so it delegates only through the
+  plugin (decision 0006).
 - Agents settling choices for an absent Human. This rules out deciding by
   how reversible a choice is, and a quota on questions to Human. Fewer
   questions come from better intake and explicit delegation (decision

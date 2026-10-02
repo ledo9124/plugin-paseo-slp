@@ -13,7 +13,7 @@ documents here as real choices are accepted, then index them in this file.
 
 - [0001 SLP As A Coordination Plugin On Paseo Primitives](0001-slp-as-a-paseo-plugin.md):
   Accepted, messaging layer amended by 0004, enforcement amended by 0006
-  for one rule. Conventions plus a plugin
+  and 0008 for one rule each. Conventions plus a plugin
   coordination service; no runtime enforcement without evidence. Rests on
   plugin SDK 0.10.2, read from upstream main `d30e99c85` and probed on
   `v0.10.2`; re-check after a Paseo upgrade.
@@ -39,3 +39,8 @@ documents here as real choices are accepted, then index them in this file.
   (including explicit delegation), and keeps Human in control. Four layers:
   core, coordination contracts, runtime, templates; templates are not SLP.
   SLP and Repository Harness stay independent.
+- [0008 Per-Role Configuration, Templates As Plugin Skills, And One Supervisor And One Lead](0008-per-role-configuration-and-templates.md):
+  Accepted. Each role's provider, mode, instructions, tools, and templates
+  are configurable. Lead and Peer lose their provider's question tool.
+  Templates are `SKILL.md` texts loaded in the UI and served by a plugin
+  tool. One Supervisor and one Lead per group stays.
