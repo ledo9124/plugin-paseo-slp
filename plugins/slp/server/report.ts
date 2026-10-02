@@ -43,6 +43,7 @@ export function buildReport(group: GroupRecord): Report {
       custom: member.customInstructions ?? false,
     })),
     usage: {},
+    templates: {},
   };
 
   const events = group.events as Array<{ kind: string; data: Data }>;
@@ -58,6 +59,26 @@ export function buildReport(group: GroupRecord): Report {
   // Providers such as Claude report cost cumulatively per session: count the
   // increase per agent, and a drop as a new session starting from zero.
   const lastCost = new Map<string, number>();
+
+  const templateEntry = (name: string) =>
+    (report.templates[name] ??= { loads: 0, assignments: 0, accepted: 0, rework: 0, dropped: 0, reopens: 0 });
+  const templateOf = (assignmentId: unknown) => {
+    const name = group.ledger.assignments.find((a) => a.id === assignmentId)?.template;
+    return name ? templateEntry(name) : null;
+  };
+  for (const assignment of group.ledger.assignments) {
+    if (!assignment.template) continue;
+    const entry = templateEntry(assignment.template);
+    entry.assignments += 1;
+    if (assignment.status === "accepted") entry.accepted += 1;
+    if (assignment.status === "dropped") entry.dropped += 1;
+  }
+  for (const finding of group.ledger.findings) {
+    if (finding.kind === "reopen") {
+      const entry = templateOf(finding.assignmentId);
+      if (entry) entry.reopens += 1;
+    }
+  }
 
   for (const { kind, data } of events) {
     switch (kind) {
@@ -82,8 +103,14 @@ export function buildReport(group: GroupRecord): Report {
       case "handback":
         report.assignments.handbacks += 1;
         break;
-      case "acceptance":
+      case "acceptance": {
         bump(report.assignments.outcomes, String(data.outcome));
+        const entry = templateOf(data.assignmentId);
+        if (entry && data.outcome === "rework") entry.rework += 1;
+        break;
+      }
+      case "template-load":
+        templateEntry(String(data.name)).loads += 1;
         break;
       case "message":
         if (data.outcome === "held") report.delivery.held += 1;
@@ -171,6 +198,16 @@ export function renderReport(report: Report): string {
     `- Findings: ${counts(report.findings.byKind)}; by ${counts(report.findings.byRole)}; open ${report.findings.open}`,
     `- Assignments: ${report.assignments.total}; handbacks ${report.assignments.handbacks}; Lead outcomes ${counts(report.assignments.outcomes)}`,
     "",
+    ...(Object.keys(report.templates).length
+      ? [
+          "## Templates",
+          ...Object.entries(report.templates).map(
+            ([name, t]) =>
+              `- ${name}: loaded ${t.loads}; assignments ${t.assignments} (accepted ${t.accepted}, dropped ${t.dropped}); rework ${t.rework}; reopens ${t.reopens}`,
+          ),
+          "",
+        ]
+      : []),
     "## Messages",
     `- Member messages: ${total(report.messages)} (${counts(report.messages)})`,
     `- Delivery: ${report.delivery.delivered} delivered, ${report.delivery.held} held for a busy recipient, ${report.delivery.steered} steered into a running turn`,

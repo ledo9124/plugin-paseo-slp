@@ -3,9 +3,11 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { FakePaseoHost } from "./paseo-host.fake";
-import { GROUP_LABEL, ROLE_LABEL, SlpError, SlpService, memberAllows } from "./slp-service";
+import { toTemplateView } from "../shared/templates";
+import { GROUP_LABEL, ROLE_LABEL, SlpError, SlpService, memberAllows, memberSetup } from "./slp-service";
 import { WorkspaceQueue } from "./queue";
 import { SlpStore } from "./store";
+import { TemplateStore } from "./template-store";
 
 const SETTINGS = {
   supervisor: { provider: "claude/claude-opus-5-5", modeId: "auto" },
@@ -17,14 +19,18 @@ const SETTINGS = {
   },
 };
 
-function setup(settings: typeof SETTINGS = SETTINGS) {
+const REVIEW = "---\nname: review\ndescription: Review a diff\n---\nWhen to use: a diff needs review\nSteps\n";
+const BUGFIX = "---\nname: bugfix\ndescription: Fix a bug\n---\nSteps\n";
+
+function setup(settings: object = SETTINGS, defaults: string[] = []) {
   let counter = 0;
   const store = new SlpStore(mkdtempSync(join(tmpdir(), "slp-service-")));
   const service = new SlpService({
     store,
+    templates: new TemplateStore(mkdtempSync(join(tmpdir(), "slp-service-tpl-")), defaults),
     queue: new WorkspaceQueue(),
     mcpUrl: (secret) => `http://mcp.test/mcp/${secret}`,
-    settings: async () => settings,
+    settings: async () => settings as typeof SETTINGS,
     now: () => `2026-10-01T00:00:${String(counter++).padStart(2, "0")}Z`,
     newId: () => `group-${++counter}`,
     newSecret: () => `secret-${++counter}`,
@@ -66,7 +72,7 @@ describe("SlpService.setMode", () => {
       "slp_revise_decision",
     ]);
     expect(tools(lead)).toContain("slp_delegate");
-    expect(tools(lead)).toHaveLength(8);
+    expect(tools(lead)).toHaveLength(9);
     // The Supervisor does not work on the project; the Lead delegates only
     // through slp_delegate (0006); only the Supervisor asks Human (0008).
     expect(supervisor.providerOptions).toEqual({
@@ -87,7 +93,7 @@ describe("SlpService.setMode", () => {
     );
     const [supervisorRecord, leadRecord] = store.get("ws-1")!.group!.members;
     expect(supervisorRecord).toMatchObject({ customInstructions: false, instructionsHash: expect.stringMatching(/^[0-9a-f]{12}$/) });
-    expect(leadRecord.tools).toHaveLength(8);
+    expect(leadRecord.tools).toHaveLength(9);
   });
 
   it("uses Human's instructions and tool list for a role when set (0008)", async () => {
@@ -108,6 +114,35 @@ describe("SlpService.setMode", () => {
     // A member stored before 0008 falls back to its role's default list.
     expect(memberAllows({ role: "peer", secret: "s", agentId: "a" }, "slp_delegate")).toBe(false);
     expect(memberAllows({ role: "lead", secret: "s", agentId: "a" }, "slp_delegate")).toBe(true);
+  });
+
+  it("appends the template catalog to the Supervisor's and Lead's instructions, not the Peer's (0008)", async () => {
+    const { service, host } = setup(SETTINGS, [REVIEW, BUGFIX]);
+    await service.setMode(host, "ws-1", "on");
+    const [supervisor, lead] = host.created;
+    for (const agent of [supervisor, lead]) {
+      expect(agent.systemPrompt).toContain("- review: Review a diff When to use: a diff needs review");
+      expect(agent.systemPrompt).toContain("- bugfix: Fix a bug");
+    }
+    expect(supervisor.systemPrompt).toContain("constraint with source Human");
+    expect(lead.systemPrompt).toContain("slp_template");
+    const peer = memberSetup("peer", "claude/x", SETTINGS as never, [toTemplateView(REVIEW)]);
+    expect(peer.systemPrompt).not.toContain("Catalog:");
+  });
+
+  it("filters the catalog by the role's templates, adds it to custom text, and omits an empty catalog", async () => {
+    const tuned = {
+      ...SETTINGS,
+      supervisor: { ...SETTINGS.supervisor, templates: ["bugfix"], instructions: "Only talk to Human." },
+      lead: { ...SETTINGS.lead, templates: [] as string[] },
+    };
+    const { service, host } = setup(tuned, [REVIEW, BUGFIX]);
+    await service.setMode(host, "ws-1", "on");
+    const [supervisor, lead] = host.created;
+    expect(supervisor.systemPrompt?.startsWith("Only talk to Human.\n\nTemplates")).toBe(true);
+    expect(supervisor.systemPrompt).toContain("- bugfix:");
+    expect(supervisor.systemPrompt).not.toContain("- review:");
+    expect(lead.systemPrompt).not.toContain("Catalog:");
   });
 
   it("gives a non-Claude Lead no Claude-only options", async () => {

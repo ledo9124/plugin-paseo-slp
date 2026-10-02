@@ -3,6 +3,7 @@ import type { Assignment, Brief, Decision, Finding, Ledger, NativeQuestion, Role
 import type { SlpSettings } from "../shared/settings";
 import type { PaseoHost } from "./paseo-host";
 import type { WorkspaceQueue } from "./queue";
+import type { TemplateStore } from "./template-store";
 import { GROUP_LABEL, ROLE_LABEL, SlpError, applySetup, memberSetup, slpMcpServers } from "./slp-service";
 import type { GroupRecord, HeldMessage, MemberRecord, SlpStore, WorkspaceRecord } from "./store";
 
@@ -27,6 +28,7 @@ const BUILTIN_TOOLS: ReadonlyArray<readonly [RegExp, string]> = [
 
 export interface CoordinationDeps {
   store: SlpStore;
+  templates: TemplateStore;
   queue: WorkspaceQueue;
   mcpUrl(secret: string): string;
   settings(): Promise<SlpSettings>;
@@ -50,6 +52,8 @@ export interface DelegateInput {
   model?: string;
   /** Give the assignment to this existing Peer instead of creating one. */
   peerAgentId?: string;
+  /** A stored template the assignment follows, by name. */
+  template?: string;
 }
 
 /** A provider permission request; only the fields SLP reads. */
@@ -127,6 +131,9 @@ export class Coordination {
     return this.withCaller(secret, async (caller) => {
       this.requireRole(caller, ["lead"], "slp_delegate");
       const settings = await this.deps.settings();
+      if (input.template && !this.deps.templates.has(input.template)) {
+        throw new SlpError("invalid", `No template "${input.template}". ${this.knownTemplates()}`);
+      }
       const assignment: Assignment = {
         id: this.shortId("A", caller.group.ledger.assignments.length),
         title: input.title,
@@ -134,6 +141,7 @@ export class Coordination {
         scope: input.scope,
         brief: input.brief,
         peerAgentId: null,
+        ...(input.template ? { template: input.template } : {}),
         status: "assigned",
         createdAt: this.deps.now(),
         briefDeliveredAt: null,
@@ -169,7 +177,7 @@ export class Coordination {
           },
           "after-turn",
         );
-        this.event(caller.group, "delegate", { assignmentId: assignment.id, peer: peer.agentId, reused: true });
+        this.event(caller.group, "delegate", { assignmentId: assignment.id, peer: peer.agentId, reused: true, template: input.template ?? null });
         this.save(caller);
         return { assignmentId: assignment.id, peerAgentId: peer.agentId, created: false };
       }
@@ -228,10 +236,30 @@ export class Coordination {
         this.save(caller);
         throw error;
       }
-      this.event(caller.group, "delegate", { assignmentId: assignment.id, peer: member.agentId, model, reused: false });
+      this.event(caller.group, "delegate", { assignmentId: assignment.id, peer: member.agentId, model, reused: false, template: input.template ?? null });
       this.save(caller);
       return { assignmentId: assignment.id, peerAgentId: member.agentId, created: true };
     });
+  }
+
+  /** The body of a stored template; the load is an event. */
+  template(secret: string, input: { name: string }) {
+    return this.withCaller(secret, async (caller) => {
+      const found = this.deps.templates.get(input.name);
+      if (!found) throw new SlpError("invalid", `No template "${input.name}". ${this.knownTemplates()}`);
+      this.event(caller.group, "template-load", {
+        name: found.name,
+        agentId: caller.member.agentId,
+        role: caller.member.role,
+      });
+      this.save(caller);
+      return found;
+    });
+  }
+
+  private knownTemplates(): string {
+    const names = this.deps.templates.names();
+    return names.length ? `Known: ${names.join(", ")}.` : "No templates are stored.";
   }
 
   accept(
@@ -959,6 +987,7 @@ export function renderBrief(assignment: Assignment): string {
   return [
     `${BRIEF_INTRO}${assignment.id}: ${assignment.title}`,
     `Kind: ${assignment.kind}`,
+    ...(assignment.template ? [`Template: ${assignment.template}`] : []),
     `You own this scope until the Lead hands it elsewhere: ${assignment.scope}`,
     "",
     `Goal: ${brief.goal}`,

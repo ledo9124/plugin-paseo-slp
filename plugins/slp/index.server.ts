@@ -3,7 +3,18 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import type { PaseoApi } from "@getpaseo/client";
 import type { PluginServerContext } from "@getpaseo/plugin/server";
-import { getLedger, getReport, getWorkspace, humanDecide, listWorkspaceModes, setWorkspaceMode } from "./shared/contracts";
+import {
+  getLedger,
+  getReport,
+  getWorkspace,
+  humanDecide,
+  importTemplates,
+  listTemplates,
+  listWorkspaceModes,
+  removeTemplate,
+  saveTemplate,
+  setWorkspaceMode,
+} from "./shared/contracts";
 import { slpSettings } from "./shared/settings";
 import { startMcpHttp, type McpHttpHandle } from "./server/mcp-http";
 import { Coordination } from "./server/coordination";
@@ -14,6 +25,7 @@ import { lastAssistantText } from "./server/timeline";
 import { memberTools } from "./server/tools";
 import { MCP_SERVER_NAME, SlpError, SlpService, memberAllows } from "./server/slp-service";
 import { SlpStore } from "./server/store";
+import { TemplateStore } from "./server/template-store";
 
 const MCP_HOST = "127.0.0.1";
 // Keep stable: member MCP URLs are persisted with each agent.
@@ -26,6 +38,7 @@ export default function contribute(server: PluginServerContext) {
   const settings = server.registerSettings(slpSettings);
   const deps = {
     store: new SlpStore(dataDir),
+    templates: new TemplateStore(dataDir),
     queue: new WorkspaceQueue(),
     mcpUrl: (secret: string) => `http://${MCP_HOST}:${MCP_PORT}/mcp/${secret}`,
     settings: async () => {
@@ -107,6 +120,13 @@ export default function contribute(server: PluginServerContext) {
   server.handle(humanDecide,({ workspaceId, ...input }, { paseo }) =>
     userFacing(() => coordination.humanDecide(bind(paseo), workspaceId, input)),
   );
+
+  server.handle(listTemplates, () => ({ templates: deps.templates.list() }));
+  server.handle(saveTemplate, ({ text, previousName }) =>
+    userFacing(async () => ({ template: deps.templates.save(text, previousName) })),
+  );
+  server.handle(removeTemplate, ({ name }) => ({ removed: deps.templates.remove(name) }));
+  server.handle(importTemplates, ({ path }) => userFacing(async () => deps.templates.importFolder(path)));
 
   const unsubscribers = [
     server.on("agent.turn_started", ({ agent }, { paseo }) => {

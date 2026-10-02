@@ -9,6 +9,7 @@ import { buildReport, renderReport } from "./report";
 import { WorkspaceQueue } from "./queue";
 import { SlpService } from "./slp-service";
 import { SlpStore } from "./store";
+import { TemplateStore } from "./template-store";
 
 const SETTINGS = {
   supervisor: { provider: "claude/claude-opus-5-5", modeId: "auto" },
@@ -19,6 +20,11 @@ const SETTINGS = {
     modes: { claude: "auto", codex: "full-access" },
   },
 };
+
+const skill = (name: string, when: string) =>
+  `---\nname: ${name}\ndescription: The ${name} way\n---\n# ${name}\nWhen to use: ${when}\n1. Step one\n`;
+const REVIEW = skill("review", "a diff needs review");
+const BUGFIX = skill("bugfix", "something is broken");
 
 const BRIEF: Brief = {
   goal: "Users can export reports as CSV",
@@ -32,6 +38,7 @@ async function setup() {
   let counter = 0;
   const deps = {
     store: new SlpStore(mkdtempSync(join(tmpdir(), "slp-coord-"))),
+    templates: new TemplateStore(mkdtempSync(join(tmpdir(), "slp-coord-tpl-")), [REVIEW, BUGFIX]),
     queue: new WorkspaceQueue(),
     mcpUrl: (secret: string) => `http://mcp.test/mcp/${secret}`,
     settings: async () => SETTINGS,
@@ -182,6 +189,71 @@ describe("slp_delegate", () => {
     await expect(
       coordination.delegate(host, secretOf("lead"), { ...delegateInput, peerAgentId: first.peerAgentId! }),
     ).rejects.toThrow("still holds A1");
+  });
+});
+
+describe("templates", () => {
+  it("slp_template returns the body and records the load; unknown names list the known ones", async () => {
+    const { coordination, secretOf, idOf, group } = await setup();
+    const loaded = await coordination.template(secretOf("lead"), { name: "review" });
+    expect(loaded.name).toBe("review");
+    expect(loaded.body).toContain("1. Step one");
+    expect(loaded.body).not.toContain("description:");
+    expect(group().events.at(-1)).toMatchObject({
+      kind: "template-load",
+      data: { name: "review", agentId: idOf("lead"), role: "lead" },
+    });
+    await expect(coordination.template(secretOf("lead"), { name: "nope" })).rejects.toThrow(/Known: review, bugfix/);
+  });
+
+  it("slp_delegate stores the template, shows it in the brief, and refuses an unknown one", async () => {
+    const { host, coordination, secretOf, group } = await setup();
+    await expect(
+      coordination.delegate(host, secretOf("lead"), { ...delegateInput, template: "nope" }),
+    ).rejects.toMatchObject({ code: "invalid" });
+    expect(group().ledger.assignments).toHaveLength(0);
+
+    await coordination.delegate(host, secretOf("lead"), { ...delegateInput, template: "review" });
+    expect(group().ledger.assignments[0].template).toBe("review");
+    expect(host.created.at(-1)?.prompt).toContain("Template: review");
+    expect(group().events.find((e) => e.kind === "delegate")?.data.template).toBe("review");
+
+    await coordination.delegate(host, secretOf("lead"), delegateInput);
+    expect(group().ledger.assignments[1].template).toBeUndefined();
+    expect(host.created.at(-1)?.prompt).not.toContain("Template:");
+  });
+
+  it("keeps the template when an existing Peer is reassigned", async () => {
+    const { host, coordination, secretOf, group } = await setup();
+    const first = await coordination.delegate(host, secretOf("lead"), delegateInput);
+    await coordination.accept(host, secretOf("lead"), { assignmentId: first.assignmentId, outcome: "dropped", reason: "x" });
+    await coordination.delegate(host, secretOf("lead"), {
+      ...delegateInput,
+      peerAgentId: first.peerAgentId!,
+      template: "bugfix",
+    });
+    expect(group().ledger.assignments[1].template).toBe("bugfix");
+    expect(host.sends.at(-1)?.text).toContain("Template: bugfix");
+  });
+
+  it("counts loads, assignments, outcomes, rework, and reopens per template in the report", async () => {
+    const { host, coordination, secretOf, group } = await setup();
+    await coordination.template(secretOf("lead"), { name: "review" });
+    await coordination.template(secretOf("lead"), { name: "review" });
+    const a1 = await coordination.delegate(host, secretOf("lead"), { ...delegateInput, template: "review" });
+    const a2 = await coordination.delegate(host, secretOf("lead"), { ...delegateInput, template: "review" });
+    await coordination.delegate(host, secretOf("lead"), { ...delegateInput, template: "bugfix" }).catch(() => null);
+    await coordination.accept(host, secretOf("lead"), { assignmentId: a1.assignmentId, outcome: "rework", reason: "again" });
+    await coordination.accept(host, secretOf("lead"), { assignmentId: a1.assignmentId, outcome: "dropped", reason: "no" });
+    await coordination.finding(host, secretOf("lead"), {
+      kind: "reopen",
+      assignmentId: a2.assignmentId,
+      text: "t",
+      evidence: "e",
+    });
+    const report = buildReport(group());
+    expect(report.templates.review).toEqual({ loads: 2, assignments: 2, accepted: 0, rework: 1, dropped: 1, reopens: 1 });
+    expect(renderReport(report)).toContain("- review: loaded 2; assignments 2 (accepted 0, dropped 1); rework 1; reopens 1");
   });
 });
 
