@@ -10,7 +10,8 @@ are done: draft definitions in `docs/product/roles.md`, the suite in
 `docs/product/role-scenarios.md`, the v0.1.0 baseline below, and the role
 contexts in code. Slice 3 is done: R1 and R2 pass, and Human accepted the
 definitions and left delegation to the Lead. Slice 4 (per-role settings)
-is done except a look at the settings screen in the app. Next: slice 5.
+is done except a look at the settings screen in the app. Slice 5
+(templates) is done. Next: slice 6.
 
 ## Outcome
 
@@ -329,7 +330,40 @@ Other observations:
   turns): `tools/list` gave the Supervisor its 6 tools and refused its
   `slp_delegate` call; the Lead got all 8; the report showed both default
   hashes. Not yet seen: the settings screen in the app.
-- [ ] Slice 5: templates.
+- [x] Slice 5: templates (run 2, through SLP; commit `491f77d`).
+  `templates.json` in plugin data, seeded once with the five defaults
+  (`independent-review`, `blind-parallel-designs`, `cross-model-question`,
+  `test-audit`, `model-choice`, which carries the Lead's former model
+  heuristic), so a removed default stays removed. A template is a
+  `SKILL.md` text: front matter `name` (lowercase, hyphens) and
+  `description`, and a body line `When to use: ...`. RPCs list, save
+  (rename by `previousName`), remove, and import a host folder's own
+  `SKILL.md` and its subfolders' `SKILL.md`. The Settings screen has a
+  Templates section and, for the Supervisor and the Lead, a catalog switch
+  per template (optional `templates` setting; absent means all). The
+  catalog and the 0008 per-goal rules are appended after the role's text,
+  default or custom, so the instruction hash covers them; Peers get none.
+  `slp_template` (Lead default) returns a body and records a
+  `template-load` event; `slp_delegate` takes an optional `template` that
+  must name a stored one; the report counts loads, assignments, accepted,
+  rework, dropped, and reopens per template. `vitest` 72 passed, `tsc`
+  passed. Live on the main daemon (D3: Human allowed swapping the plugin
+  source to the run-2 worktree, settings backed up and restored
+  byte-identical), no member turns:
+  - template RPCs: the five defaults seeded with their when-to-use lines;
+    a folder import took one `SKILL.md` and listed the other's parse
+    error; save renamed by `previousName`; a bad name was refused;
+    remove worked;
+  - a scratch group under `%TEMP%`: `tools/list` gave the Lead 9 tools
+    with `slp_template` and the Supervisor 6; the Supervisor's
+    `slp_template` call was refused; the Lead's returned the
+    `test-audit` body, and an unknown name listed the known ones;
+  - both members' stored instructions end with their catalog section
+    (six entries, the probe included), and their hashes match the
+    report's; the report showed `test-audit` with 1 load and a
+    Templates section.
+  Not seen yet: the Settings screen in the app, and a Lead choosing a
+  template on its own (slice 6).
 - [ ] Slice 6: live proof.
 
 ## Decisions
