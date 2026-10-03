@@ -599,6 +599,9 @@ export class Coordination {
       if (member.role === "peer" && event.outcome.kind !== "canceled") {
         await this.relayPeerReply(host, group, member, event);
       }
+      if (member.role === "lead" && event.outcome.kind === "completed" && event.lastReply?.trim()) {
+        await this.relayLeadReply(host, group, member, event.lastReply);
+      }
       await this.flush(host, group, event.agentId);
       this.deps.store.put(record);
     });
@@ -783,6 +786,28 @@ export class Coordination {
       host,
       group,
       { fromAgentId: peer.agentId, fromRole: "peer", toAgentId: lead.agentId, kind, text },
+      "after-turn",
+    );
+  }
+
+  /**
+   * The Supervisor follows the Lead without the Lead reporting to it: the
+   * Lead's reply at the end of each turn reaches the Supervisor (experiment,
+   * Human 2026-10-03).
+   */
+  private async relayLeadReply(host: PaseoHost, group: GroupRecord, lead: MemberRecord, reply: string): Promise<void> {
+    const supervisor = group.members.find((m) => m.role === "supervisor");
+    if (!supervisor?.agentId || !lead.agentId) return;
+    await this.deliver(
+      host,
+      group,
+      {
+        fromAgentId: lead.agentId,
+        fromRole: "lead",
+        toAgentId: supervisor.agentId,
+        kind: "message",
+        text: `The Lead's reply at the end of its turn:\n\n${reply}`,
+      },
       "after-turn",
     );
   }

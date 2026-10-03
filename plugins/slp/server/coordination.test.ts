@@ -86,12 +86,25 @@ describe("slp_send", () => {
       agentId: idOf("lead"),
       workspaceId: "ws",
       outcome: { kind: "completed" },
-      lastReply: "done",
+      lastReply: null,
     });
     expect(group().held).toHaveLength(0);
     expect(host.sends).toHaveLength(1);
     expect(host.sends[0].text).toMatch(/first[\s\S]*second/);
     expect(host.sends[0].activeTurnBehavior).toBe("steer");
+  });
+
+  it("passes the Lead's end-of-turn reply to the Supervisor, so the Lead reports nothing itself", async () => {
+    const { host, coordination, idOf, group } = await setup();
+    const turn = (kind: string, lastReply: string | null) =>
+      coordination.onTurnEnded(host, { agentId: idOf("lead"), workspaceId: "ws", outcome: { kind }, lastReply });
+    await turn("completed", "list does not sort; evidence notes.py:67");
+    await turn("completed", "   ");
+    await turn("canceled", "half a thought");
+    expect(host.sends).toEqual([
+      expect.objectContaining({ agentId: idOf("supervisor"), text: expect.stringContaining("list does not sort") }),
+    ]);
+    expect(group().events.filter((e) => e.kind === "message").map((e) => e.data.from)).toEqual(["lead"]);
   });
 
   it("steers into a busy recipient when asked to", async () => {

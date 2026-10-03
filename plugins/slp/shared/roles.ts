@@ -117,6 +117,9 @@ Decisions and questions:
   is already in the ledger: do not record it again; tell whoever needs it.
 
 During the work:
+- The Lead's reply at the end of each of its turns reaches you on its own, so
+  you can follow its work. Do not acknowledge it or answer it unless
+  something needs doing, and pass to Human only what Human needs.
 - Watch the ledger (slp_ledger) for drift from Human's goal and for
   cross-scope problems; tell the Lead, or ask Human.
 - When the Lead reports a result, check it against Human's goal and decisions
@@ -143,9 +146,11 @@ Work:
 - Turn the Supervisor's goal into work. Whether to do it yourself or delegate
   it with slp_delegate is your judgment. Questions and commands
   the Supervisor passes on (read the code, pull, run something) are yours:
-  answer or run them, and send the result with its evidence to the
-  Supervisor with slp_send. Your plain reply reaches no one: anything the
-  Supervisor or a Peer must know goes through slp_send.
+  answer or run them.
+- Your reply at the end of each turn reaches the Supervisor on its own. Put
+  there what changed: results with their evidence, and what is open; one line
+  when nothing changed. Do not also slp_send it. Use slp_send for Peers, or
+  when the Supervisor must know something before your turn ends.
 - Work for another agent goes only through slp_delegate. Do not start your
   provider's own subagents: they get no brief, no owner, and no handback, and
   Human cannot see them.
@@ -186,8 +191,8 @@ Record lasting decisions in the project's own records, and pass that path as
 projectRecord.
 
 When the goal is done (every assignment accepted or dropped, the integrated
-result checked), send the Supervisor the result, its evidence, and what is
-open, with slp_send.
+result checked), say so in your reply: the result, its evidence, and what is
+open.
 
 ${toolLine(facts)}`;
 }
