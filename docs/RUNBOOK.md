@@ -31,10 +31,11 @@ Claude and Codex. The steps were adapted from the sibling repository
   - A result from that branch proves stock behavior only if it does not
     touch the patched area.
 - **Daemons on this machine:**
-  - **6767:** the installed Paseo app, home `~\.paseo`. Human installed
-    this plugin there from `plugins/slp` (directory source) on 2026-10-02,
-    and asked that live tests run there: two daemons are too heavy for the
-    machine. See "Testing On The Main Daemon". Never stop or restart it.
+  - **6767:** the installed Paseo app, home `~\.paseo`. Since 2026-10-03
+    it runs the release `v0.3.1` from Git, for Human's real projects (it
+    ran `plugins/slp` as a directory source from 2026-10-02). Human asked
+    that live tests run there: two daemons are too heavy for the machine.
+    See "Testing On The Main Daemon". Never stop or restart it.
   - **6768:** the dev daemon. Only one home may use the port at a time:
     - shared dev home `C:\code\my-project\paseo\.dev\paseo-home`, used by
       `my-plugin`. It already has `injectIntoAgents: true` and three
@@ -114,6 +115,16 @@ npm install                     # in this repository, before every install or re
 
 - A failed reload stays failed; Paseo does not restore the previous code.
 - To change the plugin id, run `plugin remove <old-id>` first.
+- A Git install (`<url>:plugins/slp --ref <tag>`) clones without
+  `node_modules`, so the build resolves only the plugin SDK
+  (`@getpaseo/plugin*`); a directory install hides this. Before a release
+  tag, compile a clean copy with Paseo's own compiler
+  (`packages/server/src/server/plugins/compiler.ts`, `compilePlugin`);
+  v0.2.0 and v0.3.0 failed to install from Git for a type import of
+  `@getpaseo/client`.
+- To test unreleased code on 6767, back up `~\.paseo\plugin-settings\slp`,
+  `plugin remove slp`, install from the directory, restore the settings,
+  and reload; switch back to the release the same way.
 
 ## Calling Plugin RPCs
 
