@@ -4,9 +4,9 @@ Date: 2026-10-02
 
 ## Status
 
-Active. Runs 1-4 are done and recorded below. Run 4's fixes are merged
-and pushed in `paseo-plugin`, `dsh-personal`, and the Harness fork
-(core `harness-v0.1.17`, now installed in `paseo-plugin`).
+Completed 2026-10-03. Runs 1-4 are done and recorded below, and the
+changes they led to ship in v0.3.0. Human now uses SLP on real projects
+without a plan per run.
 
 ## Outcome
 
@@ -599,6 +599,9 @@ Human approved (2026-10-03) fixing the two gaps that repeated.
 - 2026-10-03: Human chose run 4: an outcome check of `paseo-plugin` and
   `dsh-personal` against the simple-and-effective rule, fix and
   self-merge, docs plus code plus tests, a Lead on Opus, a $20 pause.
+- 2026-10-03: Human approved changing the Supervisor for the two gaps
+  that repeated, then chose to package v0.3.0, install it on the main
+  daemon from the release, and close this plan.
 
 ## Validation
 
@@ -607,4 +610,40 @@ Human approved (2026-10-03) fixing the two gaps that repeated.
 
 ## Result
 
-Pending.
+SLP ran on real work four times, with the operating agent playing Human
+and asking Human what no answer settled:
+- Run 1: a docs review of two repositories, three Peers in scope, one
+  overreach caught and reversed.
+- Run 2: slice 5 of this repository built by an SLP group and merged.
+- Run 3: a named template reached the brief and was counted; an unnamed
+  one stayed the Lead's call.
+- Run 4: the largest run, five assignments across two repositories, a
+  Peer's reopen that stopped an access-widening migration, and 8 policy
+  questions to Human, all well formed.
+
+Against the three jobs:
+- **Human cares about the outcome only.** Every question that reached
+  Human was an owner choice no record settled; none was an
+  over-escalation.
+- **Decomposition keeps the goal.** Peers kept to their scopes, and
+  cross-scope problems went through findings and owners.
+- **Human sees and redirects.** Corrections reached the work in every
+  run.
+
+Changes the runs led to, by Human's repeat rule:
+- the Supervisor follows the Lead through its end-of-turn reply (an
+  experiment, kept);
+- the council as the only default template;
+- the Supervisor asks for the result when Human's words leave it open,
+  and every question carries a recommendation (both repeated in runs 1
+  and 4; R2 passes).
+
+Watched, seen once, not changed:
+- the Supervisor writing to Human in English (R2 after the change);
+- a Lead switching a checkout of Human's outside the group's workspace;
+- a Lead reporting a managed-file rule it had not kept;
+- a Lead committing without being asked (relay experiment R2);
+- decisions on findings that did not close them (run 1; run 4 closed
+  its finding).
+
+Not done: the single-agent comparison, deferred by Human.

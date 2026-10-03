@@ -36,7 +36,7 @@ on demand, and measured in the process report.
   `disallowedTools` works per agent for Claude (0006); the plugin client UI
   has `SettingsInput` and React Native `TextInput` (multiline possible), and
   no file picker.
-- Run 1 evidence: `docs/plans/active/slp-real-runs.md`.
+- Run 1 evidence: `docs/plans/completed/slp-real-runs.md`.
 - Human's own test, 2026-10-02, on Human's daemon in `D:/codes/paseo-plugin`
   (plugin v0.1.0, Supervisor on `claude-sonnet-5-5`):
   - group `f6de6739` (workspace `wks_67887d7fae7faf5b`): Human sent 4

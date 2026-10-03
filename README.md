@@ -13,19 +13,22 @@ completes Human's rough input before work starts. Agents decide what their
 authority covers, and only what really matters reaches Human. Human can see
 and redirect the work without reading transcripts.
 
-Status: v0.2, proved live on Paseo `v0.10.2`. v0.1 built the group, the
-ledger, the panel, and the process report; v0.2 adds per-role
-instructions, tools, and templates (decision 0008), with role definitions
-tuned on a scenario suite. Accepted in `docs/decisions/0001-0008`. SLP is a
+Status: v0.3, proved live on Paseo `v0.10.2` and on four real runs. v0.1
+built the group, the ledger, the panel, and the process report; v0.2 added
+per-role instructions, tools, and templates (decision 0008), with role
+definitions tuned on a scenario suite. v0.3 comes from the real runs: the
+Supervisor follows the Lead through its end-of-turn reply, asks for the
+result (report or changes, and how far) when Human's words leave it open,
+and puts a recommendation on every question; the council is the default
+template. Accepted in `docs/decisions/0001-0008`. SLP is a
 per-workspace toggle: when it is off, agents behave normally. SLP does not
 depend on Repository Harness (`docs/product/slp-and-harness.md`).
 
 - Product behavior: `docs/product/overview.md`; each role's routing:
   `docs/product/roles.md`
 - Architecture and plugin capability map: `docs/ARCHITECTURE.md`
-- Plans, results, and accepted gaps: `docs/plans/completed/` (v0.1, and
-  role configuration and templates); real runs:
-  `docs/plans/active/slp-real-runs.md`
+- Plans, results, and accepted gaps: `docs/plans/completed/` (v0.1, role
+  configuration and templates, and the real runs)
 - Running the plugin on a Paseo daemon: `docs/RUNBOOK.md`
 
 ## Install On A Paseo Host
@@ -41,7 +44,7 @@ Requires Paseo `>=0.10.2`. In the host's `config.json` (default
 Restart the daemon after changing either setting, then install a release:
 
 ```bash
-paseo plugin install https://github.com/ledo9124/plugin-paseo-slp.git:plugins/slp --ref v0.2.0
+paseo plugin install https://github.com/ledo9124/plugin-paseo-slp.git:plugins/slp --ref v0.3.0
 paseo plugin ls          # slp should be running
 ```
 
