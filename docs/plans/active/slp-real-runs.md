@@ -4,9 +4,9 @@ Date: 2026-10-02
 
 ## Status
 
-Active. Run 1 (a docs review of `paseo-plugin` and `dsh-personal`) is done,
-recorded below, and merged into both repositories' `main` (local, not
-pushed).
+Active. Runs 1-4 are done and recorded below. Run 4's fixes are merged
+into `paseo-plugin` and `dsh-personal` `main` (local, not pushed); its
+Harness fork branch waits for Human.
 
 ## Outcome
 
@@ -379,6 +379,156 @@ no ping-pong, and at most 20% more cost than tuning round 3.
 - Seen: in R2 the Lead committed locally without being asked about
   commits (the script never raised it). Watch whether it repeats.
 
+### Run 4: outcome check of `paseo-plugin` and `dsh-personal`
+
+Registered before the run (2026-10-03). Human asked for a real-project
+run to judge SLP, on the same two repositories as run 1, with the operating
+agent playing Human. The task, in Human's words: "nắm outcome rồi xem dự án
+hiện tại có đang đạt outcome với quy tắc đơn giản và hiệu quả không".
+- Human's answers, given to the operating agent before the run:
+  - result: fix on a new branch in each repository, no push. If the tests
+    pass and the operating agent's check passes, the operating agent
+    merges into `main` without waiting for Human;
+  - basis: docs, code, and tests. The group may run the repositories'
+    tests. It does not run the Telegram bot, the DSH runtime, or a daemon;
+  - models: the Lead on Opus; the Supervisor on Opus; Peers the Lead's
+    choice;
+  - cost: the operating agent pauses and asks Human at $20.
+- "Simple and effective" is Human's standing principle: one crisp,
+  checkable rule beats a flexible judgment rule or parallel variants, and
+  machinery is added only when a problem repeats. The operating agent may
+  give this if the group asks what it means.
+- Setup:
+  - `paseo-plugin` (`C:\code\my-project\my-plugin`; Human's checkout on
+    `feat/telegram-account`, already contained in `main` `8c7eef6`): a
+    Paseo worktree workspace, branch-off `main`, new branch
+    `review/slp-outcome-run4`;
+  - `dsh-personal` (`main` `2797233`): a git worktree at
+    `C:\code\my-project\dsh-personal-run4` on the new branch
+    `review/slp-outcome-run4`, prepared by the operating agent;
+  - Lead on `claude-opus-5-5`: the operating agent backs up the plugin
+    settings, sets the Lead's provider for the group's creation, then
+    restores the file byte-identical;
+  - the plugin on 6767 runs from this checkout's `plugins/slp` at
+    `f3f2220` (council template, Lead-reply relay).
+- Human's first message, close to Human's words: "Nắm outcome của dự án
+  paseo-plugin (repo này) và dsh-personal (bản làm việc ở
+  `C:\code\my-project\dsh-personal-run4`), rồi xem dự án hiện tại có đang
+  đạt outcome với quy tắc đơn giản và hiệu quả không."
+- The operating agent answers only from the answers above; anything else
+  goes to Human first and is recorded as asked. It does not message the
+  Lead or Peers.
+- Observed:
+  - intake: whether the Supervisor asks for the result (report or fix)
+    and the basis, which the first message leaves open;
+  - whether "simple and effective" reaches the Lead and the briefs as a
+    criterion with source Human;
+  - the Opus Lead's decomposition across two repositories and docs plus
+    code, and whether Peers keep to scope;
+  - the follow-ups from runs 1-3 and the relay experiment: decisions that
+    close findings, cut question text, a question without a
+    recommendation, Supervisor remarks from its own session, uninvited
+    commits, the Supervisor's template suggestion;
+  - questions to Human, cost, and duration.
+- Stop: the Supervisor reports the work done, or Human stops it.
+- After the run, by the operating agent:
+  - check each branch: the repositories' tests and typecheck where they
+    exist, and each fix against its evidence;
+  - if both pass, merge into `main` (`--no-ff`; `paseo-plugin` in a
+    temporary worktree so Human's checkout stays on its branch) and
+    record it; if not, report to Human and leave the branch;
+  - archive the workspace (which removes its worktree) and remove the
+    `dsh-personal` worktree. The branches stay.
+
+### Run 4 Results (2026-10-03)
+
+Workspace `slp-real-4` (`wks_d51360ffbdcf2634`), from 07:04 to 07:50 UTC.
+Supervisor and Lead on Opus, two Sonnet Peers. Cost about $14.90
+(Supervisor $1.44, Lead $6.39, Peers $7.08).
+- **Intake.** The Supervisor read both repositories' outcomes and asked
+  two questions in a plain reply: what "simple and effective" applies to,
+  with three options and no recommendation, and how far to verify, with
+  a recommendation. Both were open in the first message. It also inferred
+  "read-only" from `AGENTS.md`, against Human's fix-and-merge answer,
+  the second wrong inference about the result after run 1's "no commit".
+  Human's correction became D3. A second read-back (fixing Harness is
+  allowed; accepted decisions and visible policy come back as proposals)
+  was confirmed as D4.
+- **Delegation.** Five assignments, all accepted, one after rework:
+  - A1 product audit of `paseo-plugin` and A2 audit of `dsh-personal`;
+  - A3 rewriting the product docs so each states the current rule once;
+  - A4 D5 (grants) and A5 D6-D9, on the code.
+
+  A Peer raised F1, a reopen: D5 as worded would widen access for a
+  topic grant without `controller.chat`. The Lead decided it as D13
+  with `findingId`, so it closed (`talk: false` keeps the refusal).
+- **"Simple and effective" reached the work.** D1 carried Human's
+  definition with source Human. The scorecard judged each of the 8
+  product boundaries for "reached" and "simple", and every recommended
+  option chose the smaller mechanism (2 grant names instead of 9, no full
+  audit while no problem repeats).
+- **Questions to Human.** 3 native questions with 8 decisions (D5-D12),
+  all through the Supervisor's tool, and all policy changes no record
+  settled. All had a recommendation except D10, a multi-select whose
+  question text said "approve all". Human chose the recommendation every
+  time.
+- **Outcome, Lead's scorecard:** both repositories mostly reach their
+  outcome and the code is ahead of the records. Boundaries 1-3 and 8 are
+  reached; 4-6 partly (a seat with Paseo tools on; gate 3 checks only
+  announced creations); 7 rests on an accepted premise. The main
+  simplicity gap was amendments layered over replaced rules in the
+  product docs, and 7 inert capability names.
+- **Not verified under D2:** Phase H scenario 6, whether the patched
+  Paseo is the deployed one, whether the DSH compaction safety net ever
+  fires, learning quality, and the grants screen in the app.
+- **Report:** Human 3 messages, 0 to the Lead; escalations 8, all
+  answered; member messages 26, with 34 held deliveries and 0 steers;
+  convention breaks 0; Supervisor work 0.
+- **Operating agent's check:**
+  - `paseo-plugin` branch, 13 commits from `main` `8c7eef6`: typecheck
+    clean, 759 tests pass (747 before). D5's migration keeps meaning
+    (`talk` from `controller.chat`, `admin` from `controller.admin`; a
+    grant without talk still refuses); D6, D7, D8 are small and tested.
+  - `dsh-personal` branch, 2 commits: 107 tests pass (98 before; the
+    learning tests joined the command). Persona is built
+    (`personaPrefix` in `config/personal.cordis.yml`).
+  - Commit `94f48b8` edited `docs/README.md`, a Harness-managed file that
+    was still stock, although the Lead reported managed files untouched
+    and D11 sends core fixes to the fork. Human chose to merge anyway;
+    the source fix belongs in the fork with D11.
+  - A nit: `controller-service.ts` keeps an orphaned doc comment where
+    `COMMAND_CAPABILITY` was.
+- **Merged** by Human's rule: `paseo-plugin` `main` `c8c63ab` (in a
+  temporary worktree; Human's checkout stays on `feat/telegram-account`),
+  `dsh-personal` `main` `4143bce`, 107 tests passing again there. Not
+  pushed. The fork's D11 commit `861c71e` stays on
+  `review/slp-outcome-run4` in `repository-harness` for Human to merge.
+- **Checkout switch.** For D11 the Lead checked out the new branch in
+  Human's `repository-harness` checkout instead of a worktree. The tree
+  was clean; the operating agent put it back on `main`.
+- **Operating agent's own gaps:** it saw a pending question and the
+  group's end only when Human pointed them out. A native question blocks
+  the Supervisor's turn, so no finish notice arrives; and after
+  `respond_to_permission` no finish notice arrives either. A watcher on
+  the report's unanswered count caught the later questions.
+- Cleanup: workspace archived (its worktree removed), the `dsh-personal`
+  worktree removed, settings restored byte-identical after the group's
+  creation. The branches remain.
+
+Reading of run 4:
+- **Intake inferred the result wrongly again** (run 1: "no commit"; run 4:
+  "read-only"). Both times the first message left the result open, and
+  the Supervisor filled it from repository rules instead of asking. This
+  is the first repeat; it qualifies for a change by Human's rule.
+- **A question without a recommendation repeated** (run 1 D7, run 4
+  intake and D10).
+- **Decomposition and escalation held** on the largest run so far: five
+  assignments, one cross-scope reopen settled through its finding, and
+  every policy choice reached Human well formed.
+- **New:** a Lead switched a checkout of Human's outside the group's
+  workspace, and reported a managed-file rule it had not kept. Act if
+  either repeats.
+
 ## Risks And Recovery
 
 - **Edits to Human's real repositories.** Edits stay on new branches in
@@ -404,6 +554,9 @@ no ping-pong, and at most 20% more cost than tuning round 3.
 - [x] Run 2: slice 5 (templates) of this repository, through SLP
   (results above; merged as `2bd4a99`).
 - [x] Run 3: templates in use, named and not named (results above).
+- [x] Run 4: outcome check of `paseo-plugin` and `dsh-personal`
+  (results above; merged by Human's rule, the fork branch left for
+  Human).
 
 ## Decisions
 
@@ -413,6 +566,9 @@ no ping-pong, and at most 20% more cost than tuning round 3.
   and improved through real use and its own process data.
 - 2026-10-02: Human chose run 2: slice 5 through SLP, the operating agent
   playing Human, with the answers registered above.
+- 2026-10-03: Human chose run 4: an outcome check of `paseo-plugin` and
+  `dsh-personal` against the simple-and-effective rule, fix and
+  self-merge, docs plus code plus tests, a Lead on Opus, a $20 pause.
 
 ## Validation
 
