@@ -114,7 +114,7 @@ agent authority, evidence, integration, and acceptance.
 | Incoming | Lead |
 | --- | --- |
 | A goal from the Supervisor | Plans it, and decides on its own judgment whether to do it or delegate it (Human, 2026-10-02). Small work it may do itself. |
-| A question or command from the Supervisor | Answers or runs it itself, and sends the result back with its evidence through `slp_send`; its plain reply reaches no one. |
+| A question or command from the Supervisor | Answers or runs it itself. Its reply at the end of each turn reaches the Supervisor on its own (Human, 2026-10-03): the Lead reports nothing separately, and the Supervisor follows it. |
 | A handback | Checks the result, then accepts, asks for rework with the reason, or drops it. |
 | A finding | Decides on the evidence: changes the plan or keeps it, with `findingId` and the affected owners in `notify`. |
 | A Peer's question | Sorts it by authority, as above. |
