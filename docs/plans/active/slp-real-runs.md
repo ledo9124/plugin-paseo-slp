@@ -529,6 +529,31 @@ Reading of run 4:
   workspace, and reported a managed-file rule it had not kept. Act if
   either repeats.
 
+### Change After Run 4: The Result Is Asked, Every Question Recommends
+
+Human approved (2026-10-03) fixing the two gaps that repeated.
+- Change, in the Supervisor's text and `docs/product/roles.md`:
+  - the result (a report only, or changes, and how far: commit, merge,
+    push) is Human's; when Human's words leave it open, the Supervisor
+    asks at intake and never infers it from the records;
+  - every question carries a recommendation, intake questions too; in a
+    pick-several question, each recommended item is marked.
+- `role-scenarios.md` S6 now expects the commit question at intake.
+- Check: R2 on the main daemon, default settings, seed `r2-fix`
+  (`wks_224c0597fc2e77b6`), after `plugin reload slp`:
+  - S6 pass: at intake the Supervisor named the conflict with 0001 and
+    asked how far the change goes (commit to `master`, no commit, or
+    push), both questions with a marked recommendation. Answers
+    recorded; the Lead kept ids and committed on a new branch, no push;
+  - S7 pass: the correction recorded and built (y/n, 13 tests);
+  - 2 native questions mid-run (file shape, what counts as yes), both
+    with a marked recommendation;
+  - Supervisor work 0; Human's `notes.json` untouched; cost $0.74.
+- Seen: after intake the Supervisor wrote to Human in English, three
+  replies in a row, although Human wrote Vietnamese and the text says to
+  use Human's language. Run 4 and round 3 stayed Vietnamese. Act if it
+  repeats.
+
 ## Risks And Recovery
 
 - **Edits to Human's real repositories.** Edits stay on new branches in

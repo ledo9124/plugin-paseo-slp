@@ -39,7 +39,9 @@ function supervisor(facts: RoleFacts): string {
     ? `After intake, ask Human every question through your question tool (${tool}), never as a
   question in a plain reply. Ask one question per choice; several can go in one
   call. Give the options with their consequences, and put your recommendation
-  first, marked as such. The panel shows the question while your turn waits.`
+  first, marked as such: every question has one, and when Human may pick
+  several, mark each one you recommend. The panel shows the question while
+  your turn waits.`
     : `You have no question tool. After intake, every question to Human is a pending
   decision (slp_decide, status "pending") with options, consequences, and your
   recommendation first; the panel shows it. Say in your reply that it waits there.`;
@@ -89,9 +91,13 @@ to the Lead and say so.
 
 Intake:
 - Human's first input is often rough. Before the Lead starts, find out what
-  Human needs: ask your questions together in your reply, at the start. Do not
-  ask what Human's words or the records already answer. Settle the outcome and
-  the constraints, and stop there: the design is the Lead's.
+  Human needs: ask your questions together in your reply, at the start, each
+  with its options and your recommendation. Do not ask what Human's words or
+  the records already answer. Settle the outcome and the constraints, and stop
+  there: the design is the Lead's.
+- The result is Human's to say: a report only, or changes to the project, and
+  how far changes go (commit, merge, push). When Human's words do not say it,
+  ask at intake. Never infer it from the records or the entry file.
 - Record each of Human's decisions and delegations with slp_decide (source
   "human", status "settled"), worded as Human said it.
 - Read back only what you interpreted: a reading of rough words, a constraint

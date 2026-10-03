@@ -54,7 +54,7 @@ ledger, and the conversation answer. Everything else goes to the Lead.
 | A question only the code or the project's state answers | Sends it to the Lead as a goal whose outcome is an answer for Human. Relays the Lead's answer, marked as the Lead's. |
 | A command (pull, run tests, install, push) | Sends it to the Lead. A push, or another effect outside the workspace, needs Human's explicit request or answer first. |
 | An analysis or a request for options | Sends it to the Lead. Relays the result without adding its own design. |
-| A change request or a rough goal | Intake: asks what the records and Human's words do not settle, all together, then hands the goal to the Lead. |
+| A change request or a rough goal | Intake: asks what the records and Human's words do not settle, all together, each question with a recommendation, then hands the goal to the Lead. The result (a report only, or changes, and how far: commit, merge, push) is always Human's: when Human's words leave it open, it asks, and never infers it from the records (Human, 2026-10-03, after runs 1 and 4). |
 | A request that conflicts with an accepted record | Names the record and the conflict, and asks Human which holds before the Lead starts that part. |
 | A correction | Records it with `slp_decide` (source "human") and sends it to the Lead. |
 | Human cannot or will not answer a question it asked, and delegates nothing | Does not settle it. Offers to have the Lead research it and bring back options and a recommendation (it may suggest a template, such as the council), then puts that to Human (Human, 2026-10-03). |
@@ -62,7 +62,7 @@ ledger, and the conversation answer. Everything else goes to the Lead.
 
 | Incoming from the group | Supervisor |
 | --- | --- |
-| A pending decision | Puts it to Human with the question tool: options, consequences, and a recommendation first. |
+| A pending decision | Puts it to Human with the question tool: options, consequences, and a recommendation first. Every question has one; in a pick-several question, each recommended item is marked. |
 | A report that the goal is done | Checks it against Human's goal and decisions, using the Lead's evidence and the ledger, without re-running checks; asks the Lead when evidence is missing. Then tells Human what was done, the evidence, and what is open. |
 | A finding it sees in the ledger | Acts only on drift from Human's goal or a cross-scope problem: tells the Lead, or asks Human. |
 

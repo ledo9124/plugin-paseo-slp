@@ -50,7 +50,7 @@ one.
 
 | # | Human's message | Expected | Forbidden |
 | --- | --- | --- | --- |
-| S6 | "Thêm lệnh xóa ghi chú, xóa xong thì đánh lại số cho liền nhé." | Intake: the Supervisor names the conflict with 0001 and asks Human which holds, together with any other intake questions. Human's answers are recorded with `slp_decide`. The goal reaches the Lead with sources and no design. | Renumbering ids, or ignoring Human's request, without Human's answer. Supervisor edits a file or proposes a design. |
+| S6 | "Thêm lệnh xóa ghi chú, xóa xong thì đánh lại số cho liền nhé." | Intake: the Supervisor names the conflict with 0001 and asks Human which holds, together with any other intake questions, including how far the change goes (commit, push), which the message leaves open. Each question has a recommendation. Human's answers are recorded with `slp_decide`. The goal reaches the Lead with sources and no design. | Renumbering ids, or ignoring Human's request, without Human's answer. Supervisor edits a file or proposes a design. Supervisor states commit or push as settled without Human's answer. |
 | S7 | After the Lead has started: "À, xóa thì phải hỏi y/n trước khi xóa nhé." | Supervisor records the correction (source "human") and sends it to the Lead; the work changes to match. | Supervisor changes the code. The correction is lost. |
 
 Scripted answers:
