@@ -94,6 +94,42 @@ describe("slp_send", () => {
     expect(host.sends[0].activeTurnBehavior).toBe("steer");
   });
 
+  it("relays the Lead's reply only for a turn the Supervisor or Human started, or when no work is open", async () => {
+    const { host, coordination, secretOf, idOf } = await setup();
+    const leadTurn = (lastReply: string, timeline: unknown[] = []) =>
+      coordination.onTurnEnded(host, {
+        agentId: idOf("lead"),
+        workspaceId: "ws",
+        outcome: { kind: "completed" },
+        lastReply,
+        timeline: timeline as never,
+      });
+    const toSupervisor = () => host.sends.filter((s) => s.agentId === idOf("supervisor")).map((s) => s.text);
+
+    // The Supervisor's goal starts a turn: its reply is relayed even with work open.
+    await coordination.send(host, secretOf("supervisor"), { to: "lead", text: "Goal: CSV export" });
+    const { peerAgentId } = await coordination.delegate(host, secretOf("lead"), delegateInput);
+    host.sends.length = 0;
+    await leadTurn("Workflow: docs/WORKFLOW.md, Bounded Change. Delegated A1.");
+    expect(toSupervisor()).toEqual([expect.stringContaining("Delegated A1")]);
+
+    // A Peer reply wakes the Lead while A1 is still open: not relayed.
+    host.sends.length = 0;
+    await leadTurn("Waiting for A1.");
+    expect(toSupervisor()).toEqual([]);
+
+    // Human talks to the Lead directly: relayed.
+    await leadTurn("Answered Human.", [{ type: "user_message", text: "Lead, status?", messageId: "h1" }]);
+    expect(toSupervisor()).toEqual([expect.stringContaining("Answered Human.")]);
+
+    // The handback turn that closes the work: relayed.
+    host.sends.length = 0;
+    await coordination.onTurnEnded(host, { agentId: peerAgentId!, workspaceId: "ws", outcome: { kind: "completed" }, lastReply: "Done" });
+    await coordination.accept(host, secretOf("lead"), { assignmentId: "A1", outcome: "accepted", reason: "ok" });
+    await leadTurn("Done: A1 accepted, tests pass.");
+    expect(toSupervisor()).toEqual([expect.stringContaining("Done: A1 accepted")]);
+  });
+
   it("passes the Lead's end-of-turn reply to the Supervisor, so the Lead reports nothing itself", async () => {
     const { host, coordination, idOf, group } = await setup();
     const turn = (kind: string, lastReply: string | null) =>
@@ -170,7 +206,7 @@ describe("slp_delegate", () => {
     ).rejects.toThrow("not allowed");
   });
 
-  it("caps active Peers and points the Lead at Peers it can reassign", async () => {
+  it("caps Peers holding open assignments; an idle Peer never forces reuse", async () => {
     const { host, coordination, secretOf } = await setup();
     const first = await coordination.delegate(host, secretOf("lead"), delegateInput);
     await coordination.delegate(host, secretOf("lead"), delegateInput);
@@ -178,7 +214,7 @@ describe("slp_delegate", () => {
       code: "limit",
     });
 
-    // Close A1, then reassign its Peer.
+    // Close A1: its Peer is idle, so a fresh Peer may start (0009).
     await coordination.onTurnEnded(host, {
       agentId: first.peerAgentId!,
       workspaceId: "ws",
@@ -186,14 +222,35 @@ describe("slp_delegate", () => {
       lastReply: "Done.",
     });
     await coordination.accept(host, secretOf("lead"), { assignmentId: "A1", outcome: "accepted", reason: "ok" });
-    await expect(coordination.delegate(host, secretOf("lead"), delegateInput)).rejects.toThrow(first.peerAgentId!);
+    const fresh = await coordination.delegate(host, secretOf("lead"), delegateInput);
+    expect(fresh).toMatchObject({ assignmentId: "A3", created: true });
+    await coordination.onTurnEnded(host, {
+      agentId: fresh.peerAgentId!,
+      workspaceId: "ws",
+      outcome: { kind: "completed" },
+      lastReply: "Done.",
+    });
+    await coordination.accept(host, secretOf("lead"), { assignmentId: "A3", outcome: "accepted", reason: "ok" });
     host.sends.length = 0;
     const reused = await coordination.delegate(host, secretOf("lead"), {
       ...delegateInput,
       peerAgentId: first.peerAgentId!,
     });
-    expect(reused).toMatchObject({ assignmentId: "A3", peerAgentId: first.peerAgentId, created: false });
-    expect(host.sends[0]).toMatchObject({ agentId: first.peerAgentId, text: expect.stringContaining("SLP assignment A3") });
+    expect(reused).toMatchObject({ assignmentId: "A4", peerAgentId: first.peerAgentId, created: false });
+    expect(host.sends[0]).toMatchObject({ agentId: first.peerAgentId, text: expect.stringContaining("SLP assignment A4") });
+  });
+
+  it("creates Peers under the Supervisor, with the provider's effort when the model lists it (0009)", async () => {
+    const { host, coordination, secretOf, idOf, deps, group } = await setup();
+    host.efforts.set("claude/claude-sonnet-5-5", ["low", "medium", "high"]);
+    host.efforts.set("codex/gpt-6-luna", ["low", "medium"]);
+    const settings = { ...SETTINGS, peers: { ...SETTINGS.peers, maxActive: 4, efforts: { claude: "high", codex: "max" } } };
+    deps.settings = async () => settings;
+    await coordination.delegate(host, secretOf("lead"), delegateInput);
+    expect(host.created.at(-1)).toMatchObject({ parent: idOf("supervisor"), thinkingOptionId: "high" });
+    await coordination.delegate(host, secretOf("lead"), { ...delegateInput, model: "codex/gpt-6-luna" });
+    expect(host.created.at(-1)!.thinkingOptionId).toBeUndefined();
+    expect(group().events.find((e) => e.kind === "effort-dropped")?.data).toMatchObject({ thinkingOptionId: "max" });
   });
 
   it("refuses to reassign a Peer that still holds an open assignment", async () => {
@@ -453,7 +510,8 @@ describe("findings and decisions", () => {
       settles: pending.decisionId,
     });
     expect(group().ledger.decisions[0]).toMatchObject({ source: "human", status: "settled", text: "Exclude archived reports" });
-    expect(host.sends[0]).toMatchObject({ agentId: idOf("lead") });
+    // The Supervisor's own message carries it to the Lead (0009).
+    expect(host.sends).toEqual([]);
   });
 
   it("accepts a role name in notify, and records nothing when a notify entry is unknown", async () => {
@@ -464,9 +522,22 @@ describe("findings and decisions", () => {
     expect(group().ledger.decisions).toEqual([]);
 
     host.sends.length = 0;
-    await coordination.decide(host, secretOf("supervisor"), { text: "y/n first", source: "human", status: "settled", notify: ["lead"] });
-    expect(group().ledger.decisions.map((d) => d.notified)).toEqual([[idOf("lead")]]);
-    expect(host.sends[0]).toMatchObject({ agentId: idOf("lead"), text: expect.stringContaining("y/n first") });
+    const lead = await coordination.decide(host, secretOf("lead"), { text: "y/n first", source: "agent", status: "settled", notify: ["supervisor"] });
+    expect(lead.notified).toEqual([idOf("supervisor")]);
+    expect(host.sends[0]).toMatchObject({ agentId: idOf("supervisor"), text: expect.stringContaining("y/n first") });
+  });
+
+  it("never notifies the Lead of a Supervisor decision; the Supervisor's message carries it (0009)", async () => {
+    const { host, coordination, secretOf, group } = await setup();
+    const result = await coordination.decide(host, secretOf("supervisor"), {
+      text: "Report only",
+      source: "human",
+      status: "settled",
+      notify: ["lead"],
+    });
+    expect(result).toMatchObject({ notified: [], lead: expect.stringContaining("dropped from notify") });
+    expect(group().ledger.decisions[0].notified).toEqual([]);
+    expect(host.sends).toEqual([]);
   });
 
   it("keeps Human as the only source the Lead cannot claim, and Peers out of decisions", async () => {
@@ -768,6 +839,47 @@ describe("telemetry", () => {
   });
 });
 
+describe("workflow and compaction (0009)", () => {
+  it("puts the brief's workflow in the Peer's prompt and asks the handback to cover what the change touches", async () => {
+    const { host, coordination, secretOf } = await setup();
+    await coordination.delegate(host, secretOf("lead"), {
+      ...delegateInput,
+      brief: { ...BRIEF, workflow: "docs/WORKFLOW.md, Bounded Change" },
+    });
+    const prompt = host.created.at(-1)!.prompt!;
+    expect(prompt).toContain("Project workflow (read it before you start): docs/WORKFLOW.md, Bounded Change");
+    expect(prompt).toContain("the records and constraints your change");
+  });
+
+  it("asks the Lead to check the real change, and to question with evidence, at each handback", async () => {
+    const { host, coordination, secretOf } = await setup();
+    const { peerAgentId } = await coordination.delegate(host, secretOf("lead"), delegateInput);
+    host.sends.length = 0;
+    await coordination.onTurnEnded(host, { agentId: peerAgentId!, workspaceId: "ws", outcome: { kind: "completed" }, lastReply: "Done" });
+    expect(host.sends[0].text).toContain("Check the diff and the evidence, not the summary");
+    expect(host.sends[0].text).toContain("open question");
+  });
+
+  it("records each completed compaction once, though the timeline repeats earlier turns", async () => {
+    const { host, coordination, idOf, group } = await setup();
+    const compaction = { type: "compaction", status: "completed", trigger: "auto", preTokens: 219120 };
+    const turn = (timeline: unknown[]) =>
+      coordination.onTurnEnded(host, {
+        agentId: idOf("lead"),
+        workspaceId: "ws",
+        outcome: { kind: "completed" },
+        lastReply: null,
+        timeline: timeline as never,
+      });
+    await turn([{ type: "compaction", status: "loading" }, compaction]);
+    await turn([compaction, { type: "assistant_message", text: "x" }]);
+    await turn([compaction, compaction]);
+    const events = group().events.filter((e) => e.kind === "compaction");
+    expect(events).toHaveLength(2);
+    expect(events[0].data).toMatchObject({ role: "lead", trigger: "auto", preTokens: 219120 });
+  });
+});
+
 describe("native questions (slice 7, I2)", () => {
   const askUserQuestion = (id: string) => ({
     id,
@@ -848,10 +960,11 @@ describe("reconcile and lifecycle", () => {
     await coordination.send(host, secretOf("supervisor"), { to: "lead", text: "for lead" });
     await coordination.send(host, secretOf("lead"), { to: "supervisor", text: "for supervisor" });
 
-    host.agents.get(idOf("lead"))!.status = "idle";
-    await host.archiveAgent(idOf("supervisor"));
+    // Archiving the Supervisor would archive its children (0009), so archive the Lead.
+    host.agents.get(idOf("supervisor"))!.status = "idle";
+    await host.archiveAgent(idOf("lead"));
     expect(await coordination.reconcile(host)).toBe(1);
-    expect(host.sends[0]).toMatchObject({ agentId: idOf("lead") });
+    expect(host.sends[0]).toMatchObject({ agentId: idOf("supervisor") });
     expect(group().held).toEqual([]);
   });
 

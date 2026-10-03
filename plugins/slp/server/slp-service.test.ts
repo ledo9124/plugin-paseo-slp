@@ -54,6 +54,10 @@ describe("SlpService.setMode", () => {
       title: "SLP Supervisor",
     });
     expect(lead).toMatchObject({ provider: "claude/claude-sonnet-5-5", modeId: "auto", title: "SLP Lead" });
+    // Only the Supervisor notifies Human: the Lead is its child (0009).
+    expect(supervisor.parent).toBeUndefined();
+    expect(lead.parent).toBe(view.group?.members[0].agentId);
+    expect(supervisor.thinkingOptionId).toBeUndefined();
     expect(supervisor.systemPrompt).toContain("Your role: Supervisor");
     expect(lead.systemPrompt).toContain("Your role: Lead");
     expect(supervisor.labels?.[ROLE_LABEL]).toBe("supervisor");
@@ -81,7 +85,7 @@ describe("SlpService.setMode", () => {
     expect(lead.providerOptions).toEqual({ disallowedTools: ["Agent", "Task", "AskUserQuestion"] });
     // Runtime facts are filled in per member.
     expect(supervisor.systemPrompt).toContain("question tool (AskUserQuestion)");
-    expect(lead.systemPrompt).toContain("At most 2 Peers can be active");
+    expect(lead.systemPrompt).toContain("At most 2 Peers can hold an open assignment");
   });
 
   it("lists the role's tools in its default text and records what each member was created with", async () => {

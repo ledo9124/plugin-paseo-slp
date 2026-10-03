@@ -8,7 +8,8 @@ Accepted by Human on 2026-10-02. Amends decision 0001, item 3 ("no
 runtime enforcement"), for one more rule: Lead and Peer lose their
 provider's question tool (item 3 below). Amends the Supervisor's role in
 `docs/product/overview.md` for templates only (item 5). Confirms 0002's
-group shape (item 7).
+group shape (item 7). Item 1 is amended by 0009: a role's settings also
+include its effort.
 
 ## Context
 

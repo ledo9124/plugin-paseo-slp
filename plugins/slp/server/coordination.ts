@@ -4,7 +4,16 @@ import type { SlpSettings } from "../shared/settings";
 import type { PaseoHost } from "./paseo-host";
 import type { WorkspaceQueue } from "./queue";
 import type { TemplateStore } from "./template-store";
-import { GROUP_LABEL, ROLE_LABEL, SlpError, applySetup, memberSetup, slpMcpServers } from "./slp-service";
+import {
+  GROUP_LABEL,
+  ROLE_LABEL,
+  SlpError,
+  applySetup,
+  memberSetup,
+  resolveEffort,
+  slpMcpServers,
+  supervisorOf,
+} from "./slp-service";
 import type { GroupRecord, HeldMessage, MemberRecord, SlpStore, WorkspaceRecord } from "./store";
 
 // Group coordination: messaging (decision 0004), delegation, handback,
@@ -100,7 +109,11 @@ export class Coordination {
       you: { role: caller.member.role, agentId: caller.member.agentId },
       ...(caller.member.role === "peer" ? peerView(caller.group.ledger, caller.member.agentId) : caller.group.ledger),
       ...(caller.member.role === "lead"
-        ? { peerModels: settings.peers.models, maxActivePeers: settings.peers.maxActive }
+        ? {
+            defaultPeerModel: settings.peers.models[0],
+            peerModels: settings.peers.models,
+            maxActivePeers: settings.peers.maxActive,
+          }
         : {}),
     };
   }
@@ -188,15 +201,16 @@ export class Coordination {
       }
       const modeId = settings.peers.modes[model.split("/")[0]];
       if (!modeId) throw new SlpError("invalid", `No Peer mode is configured for provider ${model.split("/")[0]}.`);
-      const active = await this.activePeers(host, caller.group);
-      if (active.length >= settings.peers.maxActive) {
-        const free = active.filter((peer) => !this.openAssignmentOf(caller.group.ledger, peer.agentId!));
+      // Only Peers holding an open assignment count: an idle Peer never
+      // forces the next assignment onto a context it does not fit (0009).
+      const busy = (await this.activePeers(host, caller.group)).filter((peer) =>
+        this.openAssignmentOf(caller.group.ledger, peer.agentId!),
+      );
+      if (busy.length >= settings.peers.maxActive) {
         throw new SlpError(
           "limit",
-          `${active.length} Peers are active (max ${settings.peers.maxActive}). ` +
-            (free.length
-              ? `Reassign one with no open assignment via peerAgentId: ${free.map((p) => p.agentId).join(", ")}.`
-              : "Accept or drop an assignment, then reassign its Peer."),
+          `${busy.length} Peers hold open assignments (max ${settings.peers.maxActive}). ` +
+            "Accept or drop one first; reassign its Peer only for the next step of that Peer's own scope.",
         );
       }
 
@@ -208,6 +222,8 @@ export class Coordination {
         title: `SLP Peer ${peerNumber}`,
       };
       const setup = memberSetup("peer", model, settings);
+      const effort = await resolveEffort(host, model, settings.peers.efforts?.[model.split("/")[0]]);
+      if (effort.dropped) this.event(caller.group, "effort-dropped", { role: "peer", provider: model, thinkingOptionId: effort.dropped });
       applySetup(member, setup);
       caller.group.members.push(member);
       caller.group.ledger.assignments.push(assignment);
@@ -217,6 +233,8 @@ export class Coordination {
           workspaceId: caller.record.workspaceId,
           provider: model,
           modeId,
+          thinkingOptionId: effort.thinkingOptionId,
+          parent: supervisorOf(caller.group) ?? undefined,
           title: member.title,
           systemPrompt: setup.systemPrompt,
           mcpServers: slpMcpServers(this.deps.mcpUrl(member.secret)),
@@ -404,10 +422,10 @@ export class Coordination {
         const supervisor = caller.group.members.find((m) => m.role === "supervisor");
         if (supervisor?.agentId) recipients.add(supervisor.agentId);
       }
-      if (input.settles && caller.member.role === "supervisor") {
-        const lead = caller.group.members.find((m) => m.role === "lead");
-        if (lead?.agentId) recipients.add(lead.agentId);
-      }
+      // A Supervisor decision reaches the Lead in the Supervisor's own
+      // message, not as a notice that starts a Lead turn before it (0009).
+      const lead = caller.group.members.find((m) => m.role === "lead");
+      const leadSkipped = caller.member.role === "supervisor" && !!lead?.agentId && recipients.delete(lead.agentId);
       recipients.delete(caller.member.agentId ?? "");
       decision.notified = [...new Set([...(decision.notified ?? []), ...recipients])];
       for (const agentId of recipients) {
@@ -433,7 +451,16 @@ export class Coordination {
         by: caller.member.role,
       });
       this.save(caller);
-      return { decisionId: decision.id, status: decision.status, notified: [...recipients] };
+      return {
+        decisionId: decision.id,
+        status: decision.status,
+        notified: [...recipients],
+        ...(caller.member.role === "supervisor"
+          ? {
+              lead: `Not notified${leadSkipped ? " (dropped from notify)" : ""}: tell the Lead in your slp_send message and cite ${decision.id}.`,
+            }
+          : {}),
+      };
     });
   }
 
@@ -599,8 +626,14 @@ export class Coordination {
       if (member.role === "peer" && event.outcome.kind !== "canceled") {
         await this.relayPeerReply(host, group, member, event);
       }
-      if (member.role === "lead" && event.outcome.kind === "completed" && event.lastReply?.trim()) {
-        await this.relayLeadReply(host, group, member, event.lastReply);
+      if (member.role === "lead" && event.outcome.kind === "completed") {
+        // Relay what the Supervisor or Human asked for, and the end of the
+        // work; not the Lead's turns between Peer handbacks (0009).
+        const workOpen = group.ledger.assignments.some((a) => a.status === "assigned" || a.status === "handed-back");
+        if (event.lastReply?.trim() && (member.owesSupervisor || !workOpen)) {
+          await this.relayLeadReply(host, group, member, event.lastReply);
+        }
+        member.owesSupervisor = false;
       }
       await this.flush(host, group, event.agentId);
       this.deps.store.put(record);
@@ -718,6 +751,20 @@ export class Coordination {
       return true;
     };
     const by = { role: member.role, agentId: member.agentId };
+    // The timeline holds the agent's earlier turns too, and compactions carry
+    // no id: record each one past the count already seen (0009).
+    const compactions = timeline.filter((entry) => {
+      const item = entry as unknown as Record<string, unknown>;
+      return item.type === "compaction" && item.status === "completed";
+    }) as unknown as Array<{ trigger?: unknown; preTokens?: unknown }>;
+    for (const item of compactions.slice(member.compactions ?? 0)) {
+      this.event(group, "compaction", {
+        ...by,
+        trigger: typeof item.trigger === "string" ? item.trigger : null,
+        preTokens: typeof item.preTokens === "number" ? item.preTokens : null,
+      });
+    }
+    member.compactions = Math.max(member.compactions ?? 0, compactions.length);
     for (const entry of timeline) {
       const item = entry as unknown as Record<string, unknown>;
       if (item.type === "tool_call" && typeof item.name === "string" && typeof item.callId === "string") {
@@ -738,6 +785,8 @@ export class Coordination {
         const id = typeof item.messageId === "string" ? item.messageId : key;
         if (first(`msg:${member.agentId}:${id}`)) {
           this.event(group, "human-message", { to: member.role, agentId: member.agentId, textKey: key });
+          // Human talking to the Lead directly: the reply reaches the Supervisor too.
+          if (member.role === "lead") member.owesSupervisor = true;
         }
       }
     }
@@ -777,7 +826,10 @@ export class Coordination {
       text =
         `Handback for ${assignment.id} "${assignment.title}" from ${peer.title ?? "Peer"} (${peer.agentId}):\n\n` +
         `${event.lastReply ?? "(no reply text)"}\n\n` +
-        `Judge it against the goal, then slp_accept ${assignment.id} with accepted, rework, or dropped.`;
+        `Judge it against the goal, then slp_accept ${assignment.id} with accepted, rework, or dropped. ` +
+        "Before you accept: does the real change meet the workflow and each constraint the brief names? " +
+        "Check the diff and the evidence, not the summary. If something looks off, ask the Peer an open " +
+        "question that names where to look and asks for evidence; do not assert a fault you have not shown.";
       this.event(group, "handback", { assignmentId: assignment.id, peer: peer.agentId });
     } else {
       text = `Reply from ${peer.title ?? "Peer"} (${peer.agentId}):\n\n${event.lastReply ?? "(no reply text)"}`;
@@ -830,6 +882,7 @@ export class Coordination {
     }
     await host.sendPrompt(message.toAgentId, renderMessages([full]), { activeTurnBehavior: "steer" });
     this.markDelivered(group, [full]);
+    this.markOwed(group, [full]);
     const outcome = delivery === "steer" ? "steered" : "delivered";
     this.event(group, "message", { ...summary(full), delivery, outcome });
     return outcome;
@@ -846,8 +899,18 @@ export class Coordination {
       throw error;
     }
     this.markDelivered(group, pending);
+    this.markOwed(group, pending);
     this.event(group, "held-delivered", { to: agentId, count: pending.length });
     return pending.length;
+  }
+
+  /** A Supervisor or Human message reached the Lead: its next reply is for the Supervisor. */
+  private markOwed(group: GroupRecord, messages: HeldMessage[]): void {
+    for (const message of messages) {
+      if (message.fromRole !== "supervisor" && message.fromRole !== "human") continue;
+      const lead = group.members.find((m) => m.role === "lead" && m.agentId === message.toAgentId);
+      if (lead) lead.owesSupervisor = true;
+    }
   }
 
   private markDelivered(group: GroupRecord, messages: HeldMessage[]): void {
@@ -1016,6 +1079,7 @@ export function renderBrief(assignment: Assignment): string {
     `You own this scope until the Lead hands it elsewhere: ${assignment.scope}`,
     "",
     `Goal: ${brief.goal}`,
+    ...(brief.workflow ? [`Project workflow (read it before you start): ${brief.workflow}`] : []),
     "",
     "Binding constraints (each with its source):",
     list(brief.constraints.map((c) => `${c.text} (source: ${c.source})`)),
@@ -1028,8 +1092,9 @@ export function renderBrief(assignment: Assignment): string {
     "Evidence that would reopen this direction:",
     list(brief.reopenEvidence),
     "",
-    "End your turn with a handback: what you did, the evidence, what is unresolved, and anything that",
-    "should change the plan. If the premise looks wrong, record slp_finding (kind reopen) with evidence.",
+    "End your turn with a handback: what you did, the evidence, the records and constraints your change",
+    "touches with the evidence that each still holds, what is unresolved, and anything that should change",
+    "the plan. If the premise looks wrong, record slp_finding (kind reopen) with evidence.",
   ].join("\n");
 }
 

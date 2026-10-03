@@ -19,6 +19,13 @@ export interface MemberRecord {
   instructionsHash?: string;
   /** The instructions were Human's replacement text, not the default. */
   customInstructions?: boolean;
+  /**
+   * Lead only: a Supervisor or Human message reached it since its last
+   * relayed turn, so its next completed reply goes to the Supervisor (0009).
+   */
+  owesSupervisor?: boolean;
+  /** Completed context compactions seen in the member's timeline (0009). */
+  compactions?: number;
 }
 
 /** A message waiting for its recipient's turn to end (decision 0004). */

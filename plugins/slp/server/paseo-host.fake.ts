@@ -13,6 +13,8 @@ export class FakePaseoHost implements PaseoHost {
   readonly created: CreateAgentInput[] = [];
   readonly sends: FakeSend[] = [];
   injectIntoAgents = true;
+  /** Effort ids per `provider/model`; unknown models answer null. */
+  readonly efforts = new Map<string, string[]>();
   /** Makes the next createAgent call whose title matches fail. */
   failCreateFor: string | null = null;
   private readonly byKey = new Map<string, string>();
@@ -85,6 +87,10 @@ export class FakePaseoHost implements PaseoHost {
     for (const child of this.agents.values()) {
       if (child.parentAgentId === agentId && child.archivedAt === null) await this.archiveAgent(child.id);
     }
+  }
+
+  async thinkingOptions(providerModel: string): Promise<string[] | null> {
+    return this.efforts.get(providerModel) ?? null;
   }
 
   async injectsPaseoTools(): Promise<boolean> {

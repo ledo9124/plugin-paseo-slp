@@ -43,4 +43,12 @@ documents here as real choices are accepted, then index them in this file.
   Accepted. Each role's provider, mode, instructions, tools, and templates
   are configurable. Lead and Peer lose their provider's question tool.
   Templates are `SKILL.md` texts loaded in the UI and served by a plugin
-  tool. One Supervisor and one Lead per group stays.
+  tool. One Supervisor and one Lead per group stays. Item 1 amended by 0009
+  (effort).
+- [0009 Group Traffic And Member Inputs After The First Real Run](0009-group-traffic-and-inputs-after-the-first-real-run.md):
+  Accepted. The Lead is relayed only for turns the Supervisor or Human
+  started or when no work is open; Supervisor decisions reach the Lead in its
+  message; only the Supervisor notifies Human (members are its children);
+  Peers are one line of work on the default model; the Lead names the
+  workflow per goal and briefs carry it; checks ask open questions with
+  evidence; effort per role, settings as selects.
