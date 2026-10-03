@@ -358,6 +358,27 @@ counted; an unnamed one is the Lead's call, and it declined openly on a
 small task, as Human's "the Lead decides" allows. The Supervisor's
 optional template suggestion has not been seen.
 
+### Experiment: The Supervisor Follows The Lead (2026-10-03)
+
+Human's choice after reviewing the Hydra and council notes: the Lead is
+autonomous and should not report to the Supervisor, which only follows
+it. Tried as an experiment, to keep only if R1 and R2 of
+`docs/product/role-scenarios.md` still pass with no stall, no duplicate,
+no ping-pong, and at most 20% more cost than tuning round 3.
+- Change: the plugin relays each completed Lead turn's last reply to the
+  Supervisor; the Lead's text drops "report with slp_send", and the
+  Supervisor's text says not to acknowledge the relays.
+- Main daemon, default settings, one run each:
+  - R1 (S1-S5): all routed as defined; the Lead's three answers reached
+    the Supervisor only by relay; Supervisor $0.53, Lead $0.12;
+  - R2 (S6-S7): the conflict with 0001 went to Human, the correction
+    reached the Lead, and the work changed; 9 Lead relays, 5 Supervisor
+    messages, all with content; Supervisor $0.54, Lead $0.41;
+  - Supervisor work 0 in both; no Lead `slp_send` to the Supervisor.
+- Total $1.60 against $1.87 in round 3. Kept and merged.
+- Seen: in R2 the Lead committed locally without being asked about
+  commits (the script never raised it). Watch whether it repeats.
+
 ## Risks And Recovery
 
 - **Edits to Human's real repositories.** Edits stay on new branches in
