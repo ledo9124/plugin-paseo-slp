@@ -5,8 +5,8 @@ Date: 2026-10-02
 ## Status
 
 Active. Runs 1-4 are done and recorded below. Run 4's fixes are merged
-into `paseo-plugin` and `dsh-personal` `main` (local, not pushed); its
-Harness fork branch waits for Human.
+and pushed in `paseo-plugin`, `dsh-personal`, and the Harness fork
+(core `harness-v0.1.17`, now installed in `paseo-plugin`).
 
 ## Outcome
 
@@ -500,9 +500,14 @@ Supervisor and Lead on Opus, two Sonnet Peers. Cost about $14.90
     `COMMAND_CAPABILITY` was.
 - **Merged** by Human's rule: `paseo-plugin` `main` `c8c63ab` (in a
   temporary worktree; Human's checkout stays on `feat/telegram-account`),
-  `dsh-personal` `main` `4143bce`, 107 tests passing again there. Not
-  pushed. The fork's D11 commit `861c71e` stays on
-  `review/slp-outcome-run4` in `repository-harness` for Human to merge.
+  `dsh-personal` `main` `4143bce`, 107 tests passing again there.
+- **Pushed and released** at Human's request ("Ok làm đi", 2026-10-03):
+  both `main`s pushed. The fork's D11 commit went through PR #14 (CI
+  green on Linux and Windows), whose post-merge workflow released
+  `harness-v0.1.17`. `paseo-plugin` moved its core to 0.1.17
+  (`d443068`): the three-way update changed `AGENTS.md`,
+  `docs/WORKFLOW.md`, and `docs/plans/README.md`, preserved every
+  consumer-modified file, and `harness doctor` passes.
 - **Checkout switch.** For D11 the Lead checked out the new branch in
   Human's `repository-harness` checkout instead of a worktree. The tree
   was clean; the operating agent put it back on `main`.
@@ -580,8 +585,8 @@ Human approved (2026-10-03) fixing the two gaps that repeated.
   (results above; merged as `2bd4a99`).
 - [x] Run 3: templates in use, named and not named (results above).
 - [x] Run 4: outcome check of `paseo-plugin` and `dsh-personal`
-  (results above; merged by Human's rule, the fork branch left for
-  Human).
+  (results above; merged, pushed, and the fork released as
+  `harness-v0.1.17`).
 
 ## Decisions
 
