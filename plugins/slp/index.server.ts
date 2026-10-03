@@ -1,7 +1,6 @@
 import { randomBytes, randomUUID } from "node:crypto";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import type { PaseoApi } from "@getpaseo/client";
 import type { PluginServerContext } from "@getpaseo/plugin/server";
 import {
   getLedger,
@@ -18,7 +17,7 @@ import {
 import { slpSettings } from "./shared/settings";
 import { startMcpHttp, type McpHttpHandle } from "./server/mcp-http";
 import { Coordination } from "./server/coordination";
-import { createPaseoHost, type PaseoHost } from "./server/paseo-host";
+import { createPaseoHost, type PaseoApi, type PaseoHost } from "./server/paseo-host";
 import { WorkspaceQueue } from "./server/queue";
 import { buildReport, renderReport } from "./server/report";
 import { lastAssistantText } from "./server/timeline";

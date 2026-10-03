@@ -1,5 +1,11 @@
-import type { PaseoApi } from "@getpaseo/client";
-import type { McpServerConfig } from "@getpaseo/protocol/agent-types";
+import type { PluginHandlerContext } from "@getpaseo/plugin/server";
+
+// A plugin installed from Git is built without node_modules, so only the
+// plugin SDK resolves: the Paseo API and its types come from the context the
+// host hands handlers and hooks, not from `@getpaseo/client` or the protocol.
+export type PaseoApi = PluginHandlerContext["paseo"];
+type AgentCreateOptions = Parameters<PaseoApi["agents"]["create"]>[0];
+type McpServerConfig = NonNullable<NonNullable<AgentCreateOptions["config"]>["mcpServers"]>[string];
 
 // The only seam between SLP logic and the Paseo API. Keep it to the calls the
 // plugin makes; tests use FakePaseoHost instead.
