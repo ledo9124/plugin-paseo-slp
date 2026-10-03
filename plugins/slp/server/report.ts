@@ -185,7 +185,7 @@ export function renderReport(report: Report): string {
     `Started ${report.startedAt}${report.endedAt ? `, ended ${report.endedAt}` : ", still running"}.`,
     "",
     "## Human",
-    `- Interventions (messages straight to the Lead or a Peer): ${total(report.humanInterventions)} (${counts(report.humanInterventions)})`,
+    `- Messages straight to the Lead or a Peer (Human's choice, not a break): ${total(report.humanInterventions)} (${counts(report.humanInterventions)})`,
     `- Messages to the Supervisor: ${report.humanMessagesToSupervisor}`,
     `- Decisions: ${report.humanDecisions.fromPanel} from the panel, ${report.humanDecisions.relayedBySupervisor} relayed by the Supervisor`,
     "",

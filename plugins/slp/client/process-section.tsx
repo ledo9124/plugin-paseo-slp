@@ -21,8 +21,8 @@ export function ProcessSection({ report, markdown }: { report: Report; markdown:
   return (
     <SettingsSection title="Process" testID="slp-process">
       <SettingsRow
-        label={`Human interventions: ${total(report.humanInterventions)}`}
-        hint={`Messages straight to the Lead or a Peer (${counts(report.humanInterventions)}). Messages to the Supervisor: ${report.humanMessagesToSupervisor}. Decisions: ${report.humanDecisions.fromPanel} from this panel, ${report.humanDecisions.relayedBySupervisor} relayed by the Supervisor.`}
+        label={`Human messages to the Lead or a Peer: ${total(report.humanInterventions)}`}
+        hint={`Human's own choice, not a break (${counts(report.humanInterventions)}). Messages to the Supervisor: ${report.humanMessagesToSupervisor}. Decisions: ${report.humanDecisions.fromPanel} from this panel, ${report.humanDecisions.relayedBySupervisor} relayed by the Supervisor.`}
         testID="slp-process-human"
       />
       <SettingsRow

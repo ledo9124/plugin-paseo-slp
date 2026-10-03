@@ -750,7 +750,7 @@ describe("telemetry", () => {
     expect(report.usage.peer).toEqual({ turns: 1, inputTokens: 50, cachedInputTokens: 0, outputTokens: 5, costUsd: null });
 
     const markdown = renderReport(report);
-    expect(markdown).toContain("Interventions (messages straight to the Lead or a Peer): 1 (peer 1)");
+    expect(markdown).toContain("Messages straight to the Lead or a Peer (Human's choice, not a break): 1 (peer 1)");
     expect(markdown).toContain("| peer | 1 | 50 | 0 | 5 | not reported |");
   });
 });

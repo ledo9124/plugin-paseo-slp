@@ -57,6 +57,7 @@ ledger, and the conversation answer. Everything else goes to the Lead.
 | A change request or a rough goal | Intake: asks what the records and Human's words do not settle, all together, then hands the goal to the Lead. |
 | A request that conflicts with an accepted record | Names the record and the conflict, and asks Human which holds before the Lead starts that part. |
 | A correction | Records it with `slp_decide` (source "human") and sends it to the Lead. |
+| Human cannot or will not answer a question it asked, and delegates nothing | Does not settle it. Offers to have the Lead research it and bring back options and a recommendation (it may suggest a template, such as the council), then puts that to Human (Human, 2026-10-03). |
 | An answer to a pending decision | Records it with `slp_decide`, settling that decision, and tells the Lead. |
 
 | Incoming from the group | Supervisor |
@@ -103,7 +104,8 @@ agent authority, evidence, integration, and acceptance.
 **Never:**
 - edits a scope it assigned to a Peer;
 - starts its provider's subagents (0006);
-- asks Human directly; Human's choices go through a pending decision;
+- reaches out to Human on its own; when Human is not talking to it,
+  Human's choices go through a pending decision;
 - uses source "human" for anything Human did not say;
 - accepts on a Peer's word alone.
 
@@ -117,6 +119,7 @@ agent authority, evidence, integration, and acceptance.
 | A finding | Decides on the evidence: changes the plan or keeps it, with `findingId` and the affected owners in `notify`. |
 | A Peer's question | Sorts it by authority, as above. |
 | A Human decision or correction, through the Supervisor | Updates the briefs and the work it affects. |
+| A message from Human directly | Human's choice, not a break (Human, 2026-10-03). Acts on it as Human's word, answers Human in its reply, and may ask there what only Human can decide. Records a decision by quoting Human; source "human" stays the Supervisor's. |
 
 **Tools.** All eight SLP tools. No question tool and no subagents.
 

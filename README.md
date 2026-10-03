@@ -58,9 +58,11 @@ paseo plugin ls          # slp should be running
     `bypassPermissions`, Codex `full-access`);
   - each role's default instructions and SLP tools, which Settings shows
     and lets you replace or reset;
-  - five templates (`SKILL.md` texts) in Settings, Templates: add, edit,
-    remove, or import a folder of `SKILL.md` files. The Supervisor and the
-    Lead see the catalog; the Lead loads a template when it uses one.
+  - one template, `council` (`SKILL.md` text): two blind proposals, one
+    challenge round, an anonymous compile, and an arbiter. Settings,
+    Templates: add, edit, remove, or import a folder of `SKILL.md` files.
+    The Supervisor and the Lead see the catalog; the Lead loads a template
+    when it uses one.
 - Use: open a new workspace and turn SLP on (header button or SLP panel)
   before the first message. The first message locks the choice. Talk to the
   Supervisor: it asks what it needs at the start, then asks through its

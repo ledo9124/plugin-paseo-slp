@@ -186,7 +186,8 @@ is a template choice (layer 4), not part of the roles.
     - escalations and reopens;
     - Lead acceptance outcomes;
     - message rounds;
-    - Human interventions.
+    - Human messages straight to the Lead or a Peer, which are Human's
+      choice, not a break.
 
     That data supports keeping, changing, or removing mechanisms
     (Better-SLP).
@@ -242,7 +243,7 @@ is a template choice (layer 4), not part of the roles.
 
 - Supervisor visibility across several workspaces, such as coordinating who
   holds the machine for a benchmark. It is useful, but it waits until a single
-  group works.
+  group works. Human kept it deferred on 2026-10-03, after real runs 1-3.
 - Any runtime enforcement of ownership or routing. It needs evidence and a new
   decision.
 

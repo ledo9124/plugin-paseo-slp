@@ -35,15 +35,9 @@ describe("parseSkill", () => {
 });
 
 describe("default templates", () => {
-  it("ship the five plan templates, each with a when-to-use line (0008, slice 5)", () => {
+  it("ship only the council, with a when-to-use line (Human, 2026-10-03)", () => {
     const views = DEFAULT_TEMPLATES.map(toTemplateView);
-    expect(views.map((view) => view.name)).toEqual([
-      "independent-review",
-      "blind-parallel-designs",
-      "cross-model-question",
-      "test-audit",
-      "model-choice",
-    ]);
-    for (const view of views) expect(view.whenToUse).toBeTruthy();
+    expect(views.map((view) => view.name)).toEqual(["council"]);
+    expect(views[0].whenToUse).toMatch(/Human cannot answer/);
   });
 });
