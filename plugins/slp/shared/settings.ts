@@ -43,6 +43,8 @@ const RoleConfigSchema = z.object({
   provider: z.string().min(3).regex(/^[^/\s]+\/\S+$/, "use provider/model"),
   /** Provider mode id; members must not depend on permission prompts. */
   modeId: z.string().min(1),
+  /** Reasoning effort (Paseo thinkingOptionId); absent means the provider default (0009). */
+  thinkingOptionId: z.string().min(1).optional(),
   ...RoleOverrides,
   ...CatalogOverride,
 });
@@ -66,6 +68,8 @@ export const slpSettings = defineSettings({
         maxActive: z.number().int().min(1).max(16),
         /** Mode id per provider id, for example claude: bypassPermissions. */
         modes: z.record(z.string(), z.string().min(1)),
+        /** Effort per provider id; absent means the provider default (0009). */
+        efforts: z.record(z.string(), z.string().min(1)).optional(),
         ...RoleOverrides,
       })
       .default({

@@ -38,7 +38,7 @@ SLP adapts to the project's records. Harness needs no change.
 | Durable working memory | The project's records, when it keeps them | `docs/plans/active/`. Who writes it in a group is open, to be decided from real runs |
 | Stopping when authority is missing | A Peer hands back to the Lead; the Lead sorts the question; policy goes to Human | Matches Harness's "stop before edits" |
 | Acceptance | Evidence on the revision being accepted | Harness's completion standard |
-| Members follow the project's rules | SLP does not hide or rewrite project instructions | Every member loads the Harness entry file |
+| Members follow the project's rules | SLP does not hide or rewrite project instructions. Every member reads the entry file and the workflow it names before it first acts and after a compaction; the Lead names the workflow per goal and briefs carry it (0009) | The entry file and `docs/WORKFLOW.md` |
 
 ## Conditions For Independence
 
@@ -52,5 +52,9 @@ Evidence so far:
 - Slices 3 and 4 ran groups in small seeded projects without Harness.
 - Slice 6 ran a group in `repository-harness`. It recorded its result in
   that repository's plan location.
-- Not yet proved: that every SLP member loads a Harness entry file, and
+- The first real run (`my-plugin`, 2026-10-03) showed the gap: the Claude
+  Peers never read the entry file or the workflow, because `my-plugin`'s
+  `CLAUDE.md` did not import `AGENTS.md`. 0009 added the reading rule and
+  the brief's workflow; `my-plugin` now imports `@AGENTS.md`.
+- Not yet proved: that every SLP member follows the workflow it read, and
   stops on open policy as Harness requires.

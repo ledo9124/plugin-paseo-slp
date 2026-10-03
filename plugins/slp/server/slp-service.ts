@@ -36,6 +36,11 @@ const CLAUDE_DISALLOWED: Record<Role, readonly string[]> = {
   peer: [CLAUDE_QUESTION_TOOL],
 };
 
+/** The Supervisor's agent id: the parent of every other member (0009). */
+export function supervisorOf(group: GroupRecord): string | null {
+  return group.members.find((m) => m.role === "supervisor")?.agentId ?? null;
+}
+
 export function providerId(provider: string): string {
   return provider.split("/")[0];
 }
@@ -90,6 +95,21 @@ export function applySetup(member: MemberRecord, setup: MemberSetup): void {
   member.tools = setup.tools;
   member.instructionsHash = setup.instructionsHash;
   member.customInstructions = setup.customInstructions;
+}
+
+/**
+ * The effort id to create a member with (0009): Human's setting when the
+ * model lists it, or when the daemon cannot list efforts; otherwise none, so
+ * the provider default applies instead of a failed create.
+ */
+export async function resolveEffort(
+  host: PaseoHost,
+  providerModel: string,
+  wanted: string | undefined,
+): Promise<{ thinkingOptionId?: string; dropped?: string }> {
+  if (!wanted) return {};
+  const listed = await host.thinkingOptions(providerModel);
+  return listed === null || listed.includes(wanted) ? { thinkingOptionId: wanted } : { dropped: wanted };
 }
 
 export class SlpError extends Error {
@@ -246,7 +266,7 @@ export class SlpService {
     this.deps.store.put({ ...record, mode: "off", group: null });
   }
 
-  private createMember(
+  private async createMember(
     host: PaseoHost,
     workspaceId: string,
     group: GroupRecord,
@@ -255,10 +275,22 @@ export class SlpService {
     setup: MemberSetup,
   ): Promise<HostAgent> {
     const config = settings[member.role as "supervisor" | "lead"];
+    const effort = await resolveEffort(host, config.provider, config.thinkingOptionId);
+    if (effort.dropped) {
+      group.events.push({
+        at: this.deps.now(),
+        kind: "effort-dropped",
+        data: { role: member.role, provider: config.provider, thinkingOptionId: effort.dropped },
+      });
+    }
     return host.createAgent({
       workspaceId,
       provider: config.provider,
       modeId: config.modeId,
+      thinkingOptionId: effort.thinkingOptionId,
+      // Only the Supervisor notifies Human: Paseo skips the finish attention
+      // of an agent with a parent (Human, 2026-10-03; 0009).
+      parent: member.role === "supervisor" ? undefined : (supervisorOf(group) ?? undefined),
       title: ROLE_TITLES[member.role],
       systemPrompt: setup.systemPrompt,
       mcpServers: slpMcpServers(this.deps.mcpUrl(member.secret)),

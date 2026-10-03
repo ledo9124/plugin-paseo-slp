@@ -16,8 +16,18 @@ const DelegateInput = z.object({
   title: z.string().min(1),
   kind: AssignmentKindSchema,
   scope: z.string().min(1),
-  brief: BriefSchema,
-  model: z.string().optional(),
+  brief: BriefSchema.extend({
+    workflow: z
+      .string()
+      .min(1)
+      .describe(
+        'The project workflow this assignment follows, as file and section (for example "docs/WORKFLOW.md, Bounded Change"), or "none declared".',
+      ),
+  }),
+  model: z
+    .string()
+    .optional()
+    .describe("Omit: the default model. Name another only when Human or a template Human named asks for it."),
   peerAgentId: z.string().optional(),
   template: z.string().optional().describe("Name of the stored template this assignment follows."),
 });
@@ -76,7 +86,7 @@ export function memberTools(coordination: Coordination, host: () => PaseoHost): 
     {
       name: "slp_ledger",
       description:
-        "The coordination ledger: assignments with their briefs and status, findings, and decisions with their source. A Peer sees only its own work; the Lead also sees the allowed Peer models.",
+        "The coordination ledger: assignments with their briefs and status, findings, and decisions with their source. A Peer sees only its own work; the Lead also sees the default and allowed Peer models.",
       inputSchema: empty,
       call: (_args, secret) => coordination.ledger(secret),
     },
@@ -97,7 +107,7 @@ export function memberTools(coordination: Coordination, host: () => PaseoHost): 
     {
       name: "slp_delegate",
       description:
-        "Lead only. Create an assignment with a structured brief and give it to a new Peer (model from the allowed list) or to an existing Peer with no open assignment (peerAgentId). Constraints need a source (\"Human\" only for what Human said; inferences name who inferred them and from what); the current choice is not a constraint.",
+        "Lead only. Create an assignment with a structured brief and give it to a new Peer on the default model, or to an existing Peer with no open assignment (peerAgentId) when this is the next step of that Peer's own scope. Constraints need a source (\"Human\" only for what Human said; inferences name who inferred them and from what); the current choice is not a constraint.",
       inputSchema: schema(DelegateInput),
       call: (args, secret) => coordination.delegate(host(), secret, parse(DelegateInput, args)),
     },
@@ -111,7 +121,7 @@ export function memberTools(coordination: Coordination, host: () => PaseoHost): 
     {
       name: "slp_decide",
       description:
-        'Lead or Supervisor. Record a decision with its source. status "pending" sends it to Human through the Supervisor; "settled" resolves its finding. source "human" and settling a pending decision (settles) are for the Supervisor relaying Human\'s own answer or delegation, never an inference from it. An agent decision names what it rests on in its text (a delegation\'s decision id, or the project record). notify lists the members whose work it changes, by agent id or role ("lead", "supervisor").',
+        'Lead or Supervisor. Record a decision with its source. status "pending" sends it to Human through the Supervisor; "settled" resolves its finding. source "human" and settling a pending decision (settles) are for the Supervisor relaying Human\'s own answer or delegation, never an inference from it. An agent decision names what it rests on in its text (a delegation\'s decision id, or the project record). notify lists the members whose work it changes, by agent id or role ("lead", "supervisor"). A Supervisor decision never notifies the Lead: tell the Lead in your slp_send message and cite the id.',
       inputSchema: schema(DecideInput),
       call: (args, secret) => coordination.decide(host(), secret, parse(DecideInput, args)),
     },

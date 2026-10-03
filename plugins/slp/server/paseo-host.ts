@@ -37,6 +37,8 @@ export interface CreateAgentInput {
   provider: string;
   /** Provider mode id. Omitted, the provider's own default applies, not the app's. */
   modeId?: string;
+  /** Reasoning effort id the model lists; omitted, the provider default applies. */
+  thinkingOptionId?: string;
   /** Place the agent in this workspace; Paseo then uses the workspace's directory. */
   workspaceId?: string;
   /** Required when no workspaceId is given. */
@@ -62,6 +64,8 @@ export interface PaseoHost {
   getAgent(agentId: string): Promise<HostAgent | null>;
   sendPrompt(agentId: string, text: string, options?: { activeTurnBehavior?: ActiveTurnBehavior }): Promise<void>;
   archiveAgent(agentId: string): Promise<void>;
+  /** Effort ids a `provider/model` lists, or null when the daemon cannot say. */
+  thinkingOptions(providerModel: string): Promise<string[] | null>;
   /** Whether the daemon injects Paseo's own tools into agents. */
   injectsPaseoTools(): Promise<boolean>;
 }
@@ -103,6 +107,7 @@ export function createPaseoHost(paseo: PaseoApi): PaseoHost {
         config: {
           provider: input.provider,
           modeId: input.modeId,
+          ...(input.thinkingOptionId ? { thinkingOptionId: input.thinkingOptionId } : {}),
           systemPrompt: input.systemPrompt,
           mcpServers: input.mcpServers,
           ...(input.providerOptions ? { options: input.providerOptions } : {}),
@@ -156,6 +161,18 @@ export function createPaseoHost(paseo: PaseoApi): PaseoHost {
 
     async archiveAgent(agentId) {
       await paseo.agents.ref(agentId).archive();
+    },
+
+    async thinkingOptions(providerModel) {
+      const [provider, ...rest] = providerModel.split("/");
+      const modelId = rest.join("/");
+      try {
+        const { models } = await paseo.providers.listModels(provider);
+        const model = models?.find((m) => m.id === modelId || m.aliases?.includes(modelId));
+        return model ? (model.thinkingOptions ?? []).map((option) => option.id) : null;
+      } catch {
+        return null;
+      }
     },
 
     async injectsPaseoTools() {

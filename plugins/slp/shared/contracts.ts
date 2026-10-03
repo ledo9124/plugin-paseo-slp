@@ -66,6 +66,11 @@ export const ConstraintSchema = z.object({
 
 export const BriefSchema = z.object({
   goal: z.string().min(1),
+  /**
+   * The project workflow this work follows, as file and section, or "none
+   * declared" (0009). slp_delegate requires it; older briefs lack it.
+   */
+  workflow: z.string().min(1).optional(),
   constraints: z.array(ConstraintSchema),
   /** The design currently chosen; not a binding constraint unless a constraint says so. */
   currentChoice: z.string().min(1),

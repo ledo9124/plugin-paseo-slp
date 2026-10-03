@@ -1,11 +1,26 @@
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { Text } from "react-native";
 import type { PluginSurfaceProps } from "@getpaseo/plugin/client";
 import { useSettings } from "@getpaseo/plugin/client";
 import { ScrollView, TextInput } from "@getpaseo/plugin/client/react-native";
-import { SettingsAction, SettingsInput, SettingsSection, SettingsSwitch } from "@getpaseo/plugin/client/ui";
+import {
+  SettingsAction,
+  SettingsInput,
+  SettingsSection,
+  SettingsSelect,
+  SettingsSwitch,
+} from "@getpaseo/plugin/client/ui";
 import type { Role } from "../shared/contracts";
 import { TemplatesSection, useTemplates } from "./templates-section";
+import {
+  DEFAULT_EFFORT,
+  effortOptions,
+  findModel,
+  splitModel,
+  useProviderCatalog,
+  withCurrent,
+  type ProviderEntry,
+} from "./provider-catalog";
 import { roleInstructions } from "../shared/roles";
 import { DEFAULT_ROLE_TOOLS, SLP_TOOLS, slpSettings, type SlpSettings, type SlpTool } from "../shared/settings";
 
@@ -29,6 +44,211 @@ function parseModes(text: string): Record<string, string> {
       const [provider, mode = ""] = pair.split("=").map((part) => part.trim());
       return [provider, mode];
     }),
+  );
+}
+
+function parseEfforts(text: string): Record<string, string> | undefined {
+  const pairs = parseModes(text);
+  return Object.keys(pairs).length ? pairs : undefined;
+}
+
+const MODE_HINT = "Members must not depend on permission prompts (default bypassPermissions).";
+const PEER_LIMITS = Array.from({ length: 16 }, (_, i) => ({ label: String(i + 1), value: String(i + 1) }));
+
+type ModelChoice = { provider: string; modeId: string; thinkingOptionId?: string };
+
+// Provider, model, mode, and effort of the Supervisor or the Lead, as selects
+// from the daemon's lists (0009); text inputs when the daemon cannot list.
+function RoleModelFields({
+  catalog,
+  value,
+  onChange,
+}: {
+  catalog: ProviderEntry[] | null;
+  value: ModelChoice;
+  onChange(next: ModelChoice): void;
+}) {
+  if (!catalog) {
+    return (
+      <>
+        <SettingsInput
+          label="Provider/model"
+          hint="For example claude/claude-opus-5-5 or codex/gpt-6-luna."
+          initialValue={value.provider}
+          onChangeText={(provider) => onChange({ ...value, provider })}
+        />
+        <SettingsInput label="Mode" hint={MODE_HINT} initialValue={value.modeId} onChangeText={(modeId) => onChange({ ...value, modeId })} />
+        <SettingsInput
+          label="Effort"
+          hint="Empty for the provider default, for example high."
+          initialValue={value.thinkingOptionId ?? ""}
+          onChangeText={(text) => onChange({ ...value, thinkingOptionId: text.trim() || undefined })}
+        />
+      </>
+    );
+  }
+  const { provider } = splitModel(value.provider);
+  const entry = catalog.find((e) => e.provider === provider);
+  const pickProvider = (next: string) => {
+    const nextEntry = catalog.find((e) => e.provider === next);
+    const model = nextEntry?.models?.find((m) => m.isDefault) ?? nextEntry?.models?.[0];
+    onChange({
+      provider: `${next}/${model?.id ?? ""}`,
+      modeId: nextEntry?.defaultModeId ?? nextEntry?.modes?.[0]?.id ?? value.modeId,
+      thinkingOptionId: undefined,
+    });
+  };
+  return (
+    <>
+      <SettingsSelect
+        label="Provider"
+        value={provider}
+        options={withCurrent(catalog.map((e) => ({ label: e.label ?? e.provider, value: e.provider })), provider)}
+        onValueChange={pickProvider}
+      />
+      <SettingsSelect
+        label="Model"
+        value={value.provider}
+        options={withCurrent(
+          (entry?.models ?? []).map((m) => ({ label: m.label, value: `${provider}/${m.id}` })),
+          value.provider,
+        )}
+        onValueChange={(next) => onChange({ ...value, provider: next, thinkingOptionId: undefined })}
+      />
+      <SettingsSelect
+        label="Mode"
+        hint={MODE_HINT}
+        value={value.modeId}
+        options={withCurrent((entry?.modes ?? []).map((m) => ({ label: m.label, value: m.id })), value.modeId)}
+        onValueChange={(modeId) => onChange({ ...value, modeId })}
+      />
+      <SettingsSelect
+        label="Effort"
+        hint="Reasoning effort. An effort the model does not list falls back to the provider default."
+        value={value.thinkingOptionId ?? DEFAULT_EFFORT}
+        options={effortOptions([findModel(catalog, value.provider)], value.thinkingOptionId)}
+        onValueChange={(next) => onChange({ ...value, thinkingOptionId: next || undefined })}
+      />
+    </>
+  );
+}
+
+type PeerChoice = Pick<SlpSettings["peers"], "models" | "modes" | "efforts" | "maxActive">;
+
+// The Peer allowlist, default model, mode and effort per provider, and the cap.
+function PeerModelFields({
+  catalog,
+  value,
+  onChange,
+}: {
+  catalog: ProviderEntry[] | null;
+  value: PeerChoice;
+  onChange(next: Partial<PeerChoice>): void;
+}) {
+  const limit = (
+    <SettingsSelect
+      label="Most Peers with open work"
+      hint="Idle Peers do not count."
+      value={String(value.maxActive)}
+      options={PEER_LIMITS}
+      onValueChange={(next) => onChange({ maxActive: Number(next) })}
+    />
+  );
+  if (!catalog) {
+    return (
+      <>
+        <SettingsInput
+          label="Models"
+          hint="provider/model values, separated by commas; the first is the default."
+          initialValue={value.models.join(", ")}
+          onChangeText={(text) => onChange({ models: splitList(text) })}
+        />
+        <SettingsInput
+          label="Mode per provider"
+          hint="provider=mode pairs, separated by commas. Default claude=bypassPermissions, codex=full-access."
+          initialValue={Object.entries(value.modes)
+            .map(([provider, mode]) => `${provider}=${mode}`)
+            .join(", ")}
+          onChangeText={(text) => onChange({ modes: parseModes(text) })}
+        />
+        <SettingsInput
+          label="Effort per provider"
+          hint="provider=effort pairs, separated by commas; empty for the provider defaults."
+          initialValue={Object.entries(value.efforts ?? {})
+            .map(([provider, effort]) => `${provider}=${effort}`)
+            .join(", ")}
+          onChangeText={(text) => onChange({ efforts: parseEfforts(text) })}
+        />
+        {limit}
+      </>
+    );
+  }
+  const listed = catalog.flatMap((e) => (e.models ?? []).map((m) => ({ value: `${e.provider}/${m.id}`, label: `${e.label ?? e.provider}: ${m.label}` })));
+  const all = [...listed, ...value.models.filter((m) => !listed.some((l) => l.value === m)).map((m) => ({ value: m, label: `${m} (not listed)` }))];
+  const setAllowed = (model: string, on: boolean) => {
+    const models = on ? [...value.models, model] : value.models.filter((m) => m !== model);
+    if (!models.length) return;
+    const providers = new Set(models.map((m) => splitModel(m).provider));
+    const modes = { ...value.modes };
+    for (const provider of providers) {
+      const entry = catalog.find((e) => e.provider === provider);
+      modes[provider] ??= entry?.defaultModeId ?? entry?.modes?.[0]?.id ?? "bypassPermissions";
+    }
+    onChange({ models, modes });
+  };
+  const providers = [...new Set(value.models.map((m) => splitModel(m).provider))];
+  return (
+    <>
+      <SettingsSelect
+        label="Default model"
+        hint="Peers run on it unless Human names another."
+        value={value.models[0]}
+        options={value.models.map((m) => ({ label: all.find((o) => o.value === m)?.label ?? m, value: m }))}
+        onValueChange={(next) => onChange({ models: [next, ...value.models.filter((m) => m !== next)] })}
+      />
+      {all.map((option) => (
+        <SettingsSwitch
+          key={option.value}
+          label={option.label}
+          hint={option.value === value.models[0] ? "Default" : undefined}
+          value={value.models.includes(option.value)}
+          disabled={option.value === value.models[0]}
+          onValueChange={(on) => setAllowed(option.value, on)}
+        />
+      ))}
+      {providers.map((provider) => {
+        const entry = catalog.find((e) => e.provider === provider);
+        const effort = value.efforts?.[provider];
+        const setEffort = (next: string) => {
+          const efforts = { ...(value.efforts ?? {}) };
+          if (next) efforts[provider] = next;
+          else delete efforts[provider];
+          onChange({ efforts: Object.keys(efforts).length ? efforts : undefined });
+        };
+        return (
+          <Fragment key={provider}>
+            <SettingsSelect
+              label={`Mode on ${entry?.label ?? provider}`}
+              hint={MODE_HINT}
+              value={value.modes[provider] ?? ""}
+              options={withCurrent((entry?.modes ?? []).map((m) => ({ label: m.label, value: m.id })), value.modes[provider])}
+              onValueChange={(modeId) => onChange({ modes: { ...value.modes, [provider]: modeId } })}
+            />
+            <SettingsSelect
+              label={`Effort on ${entry?.label ?? provider}`}
+              hint="For every Peer on this provider; a model that does not list it uses the provider default."
+              value={effort ?? DEFAULT_EFFORT}
+              options={effortOptions(
+                value.models.filter((m) => splitModel(m).provider === provider).map((m) => findModel(catalog, m)),
+                effort,
+              )}
+              onValueChange={setEffort}
+            />
+          </Fragment>
+        );
+      })}
+      {limit}
+    </>
   );
 }
 
@@ -144,13 +364,14 @@ function RoleOverrides({
   );
 }
 
-// Provider, model, mode, instructions, and SLP tools per role, and the Peer
-// allowlist. Applies to members created after saving; running members keep
-// what they were created with.
+// Provider, model, mode, effort, instructions, and SLP tools per role, and the
+// Peer allowlist. Applies to members created after saving; running members
+// keep what they were created with.
 export function SlpSettingsScreen({ theme }: PluginSurfaceProps) {
   const settings = useSettings(slpSettings);
   const [draft, setDraft] = useState<SlpSettings | null>(null);
   const stored = useTemplates();
+  const catalog = useProviderCatalog();
 
   useEffect(() => {
     if (settings.status === "ready") setDraft(settings.values);
@@ -170,17 +391,10 @@ export function SlpSettingsScreen({ theme }: PluginSurfaceProps) {
       </Text>
       {ROLES.map(({ key, title }) => (
         <SettingsSection key={key} title={title}>
-          <SettingsInput
-            label="Provider/model"
-            hint="For example claude/claude-opus-5-5 or codex/gpt-6-luna."
-            initialValue={draft[key].provider}
-            onChangeText={(provider) => setDraft({ ...draft, [key]: { ...draft[key], provider } })}
-          />
-          <SettingsInput
-            label="Mode"
-            hint="Default bypassPermissions. Members must not depend on permission prompts."
-            initialValue={draft[key].modeId}
-            onChangeText={(modeId) => setDraft({ ...draft, [key]: { ...draft[key], modeId } })}
+          <RoleModelFields
+            catalog={catalog}
+            value={draft[key]}
+            onChange={(next) => setDraft({ ...draft, [key]: { ...draft[key], ...next } })}
           />
           <RoleOverrides
             role={key}
@@ -195,25 +409,10 @@ export function SlpSettingsScreen({ theme }: PluginSurfaceProps) {
       ))}
       <TemplatesSection templates={stored.templates} listError={stored.error} refresh={stored.refresh} theme={theme} />
       <SettingsSection title="Peers">
-        <SettingsInput
-          label="Models"
-          hint="provider/model values the Lead may pick, separated by commas; the first is the default."
-          initialValue={draft.peers.models.join(", ")}
-          onChangeText={(text) => setDraft({ ...draft, peers: { ...draft.peers, models: splitList(text) } })}
-        />
-        <SettingsInput
-          label="Mode per provider"
-          hint="provider=mode pairs, separated by commas. Default claude=bypassPermissions, codex=full-access."
-          initialValue={Object.entries(draft.peers.modes)
-            .map(([provider, mode]) => `${provider}=${mode}`)
-            .join(", ")}
-          onChangeText={(text) => setDraft({ ...draft, peers: { ...draft.peers, modes: parseModes(text) } })}
-        />
-        <SettingsInput
-          label="Most active Peers"
-          hint="From 1 to 16."
-          initialValue={String(draft.peers.maxActive)}
-          onChangeText={(text) => setDraft({ ...draft, peers: { ...draft.peers, maxActive: Number(text.trim()) } })}
+        <PeerModelFields
+          catalog={catalog}
+          value={draft.peers}
+          onChange={(next) => setDraft({ ...draft, peers: { ...draft.peers, ...next } })}
         />
         <RoleOverrides
           role="peer"

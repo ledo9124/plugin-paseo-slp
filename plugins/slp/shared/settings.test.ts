@@ -32,4 +32,14 @@ describe("SLP settings defaults", () => {
     expect(parsed.lead.templates).toEqual(["review"]);
     expect(slpSettings.schema.parse({}).lead.templates).toBeUndefined();
   });
+
+  it("takes an optional effort per role and per Peer provider (0009)", () => {
+    const parsed = slpSettings.schema.parse({
+      lead: { provider: "claude/x", modeId: "auto", thinkingOptionId: "high" },
+      peers: { models: ["claude/y"], maxActive: 2, modes: { claude: "auto" }, efforts: { claude: "medium" } },
+    });
+    expect(parsed.lead.thinkingOptionId).toBe("high");
+    expect(parsed.peers.efforts).toEqual({ claude: "medium" });
+    expect(slpSettings.schema.parse({}).supervisor.thinkingOptionId).toBeUndefined();
+  });
 });
