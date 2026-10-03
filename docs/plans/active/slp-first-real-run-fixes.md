@@ -122,8 +122,15 @@ Each group is implemented and tested before the next one starts.
 - [x] G4: `parent` = Supervisor
 - [x] G5: `my-plugin` `CLAUDE.md` imports `@AGENTS.md` (uncommitted in that repo)
 - [x] Records: `roles.md`, `ARCHITECTURE.md`, `slp-and-harness.md`, 0008 amendment, 0009
-- [ ] Live checks: waiting for Human. The main daemon runs release v0.3.1 from Git,
-  and the run-1 group (`wks_634898884670851a`) is still open there.
+- [x] Release v0.3.2 (Human chose to release and use it rather than test first):
+  a clean copy compiled with Paseo's own compiler; tag pushed; the main daemon
+  updated with `plugin update slp --ref v0.3.2`. The plugin restarted and is ready,
+  and its settings are unchanged.
+- [ ] Live checks during Human's next real run:
+  - `parent` silences the Lead's and Peers' notifications;
+  - effort reaches the member;
+  - the settings selects load;
+  - relay, wake, and push counts compared with run 1.
 
 ## Decisions
 
