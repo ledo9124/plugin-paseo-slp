@@ -33,7 +33,8 @@ Results are in the [completed v0.1 plan](plans/completed/slp-plugin-v0.1.md).
     experimental class support, where a class in the bundle came out
     undefined and stopped the plugin on the phone (0.3.4 and earlier). Client
     and shared code therefore declare no classes;
-    `client/no-classes.test.ts` enforces it.
+    `client/no-classes.test.ts` enforces it. Human confirmed on the phone
+    that 0.3.5 loads in the mobile app (2026-10-04).
   - `server/`, `client/`, `shared/`: Paseo's compiler rejects imports across
     these boundaries and code modules at the plugin root.
     - `server/`: `PaseoHost` and its fake, `SlpService` (mode and
