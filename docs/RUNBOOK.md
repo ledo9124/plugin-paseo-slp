@@ -32,9 +32,9 @@ Claude and Codex. The steps were adapted from the sibling repository
     touch the patched area.
 - **Daemons on this machine:**
   - **6767:** the installed Paseo app, home `~\.paseo`. Since 2026-10-03
-    it runs the release `v0.3.3` from Git (since 2026-10-04; installed
+    it runs the release `v0.3.4` from Git (since 2026-10-04; installed
     with backup, `plugin remove`, `plugin install <url>:plugins/slp --ref
-    v0.3.3`, and the settings copied back, because the live test had
+    v0.3.4`, and the settings copied back, because the live test had
     pointed it at a worktree), for Human's real projects (it
     ran `plugins/slp` as a directory source from 2026-10-02). Human asked
     that live tests run there: two daemons are too heavy for the machine.
@@ -158,6 +158,10 @@ npm run start:expo --workspace=@getpaseo/app -- --port 8081
 - Plugin client code is served by the daemon, so client changes need
   `plugin reload slp` and a page reload.
 - Slice 2 drove the app with `agent-browser`, in its own named session.
+- For the main daemon, open app.paseo.sh with the link from `<cli> daemon
+  pair`: a direct connection from the browser to `localhost:6767` fails
+  (code 1006). The pairing lives only in that browser; the daemon keeps no
+  record of it (v0.3.4 live check).
 
 ## Test Workspaces
 
