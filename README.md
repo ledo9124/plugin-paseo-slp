@@ -44,7 +44,7 @@ Requires Paseo `>=0.10.2`. In the host's `config.json` (default
 Restart the daemon after changing either setting, then install a release:
 
 ```bash
-paseo plugin install https://github.com/ledo9124/plugin-paseo-slp.git:plugins/slp --ref v0.3.2
+paseo plugin install https://github.com/ledo9124/plugin-paseo-slp.git:plugins/slp --ref v0.3.3
 paseo plugin ls          # slp should be running
 ```
 
