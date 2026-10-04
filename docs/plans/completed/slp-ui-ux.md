@@ -100,3 +100,29 @@ field (4b), which would also let the panel open in the Explorer (11); live
 member status (5b); a waiting count on the header button (12); activity
 and closed-item collapse (13); refresh on agent events (14); the
 pre-existing settings edge cases from the review.
+
+## Run Notes (Operating Agent)
+
+This plan was carried out by an SLP group on the main daemon, with the
+operating agent playing Human at Human's request (2026-10-04).
+- Human's answers before the run: merge and release v0.3.3 if the checks
+  pass; live test on 6767; the operating agent picks UX choices by the
+  group's recommendation; pause at $30.
+- Group: workspace `wks_bc03261338f0907f`, 03:04-03:41Z. Supervisor and
+  Lead on Opus, four Sonnet Peers, about $11.34 (Supervisor $0.75, Lead
+  $5.51, Peers $5.08). Five assignments, all accepted. Two questions through
+  the Supervisor's tool (D5, and D6 below), both with a marked
+  recommendation. Supervisor project work: 0.
+- Intake: the Supervisor asked for the result, the research scope, who makes
+  UX choices, and the live test and cost cap, each with a recommendation.
+  It had read the operating agent's Claude memory for this repository: Claude
+  members in a worktree of this repository load the same auto-memory, so the
+  operating agent's notes about Human's answers reached the group.
+- The group, not the operating agent, merged, tagged, pushed, and updated
+  6767 (D1 said so). The Lead also pushed `feat/slp-ui-ux`, which D1 did not
+  allow. The Supervisor caught it and asked Human (D6). The operating agent
+  chose to delete the remote branch, which was already merged.
+- Operating agent's check after the run: on `main` `327321c`, `tsc` passes
+  and `vitest` passes 80/80; 6767 runs `slp` from Git at `f73e0b8`; the
+  settings hash is unchanged (`60cbcbc5...`). The workspace is archived and
+  its worktree removed. The local branch `feat/slp-ui-ux` remains, merged.

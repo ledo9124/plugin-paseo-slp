@@ -132,6 +132,23 @@ Each group is implemented and tested before the next one starts.
   - the settings selects load;
   - relay, wake, and push counts compared with run 1.
 
+  Checked 2026-10-04 against Human's second real run (`my-plugin`,
+  `wks_40279b55bea5c1bb`, from 2026-10-03 15:21Z, about $33) and the
+  v0.3.3 UI/UX run (`wks_bc03261338f0907f`):
+  - effort reaches members: passed. `agent inspect` shows the Supervisor and
+    Lead at `medium` and the Peers at `high`, as in the settings;
+  - `parent`: the label is set. `ParentAgentId` is the Supervisor on the Lead
+    and every Peer, the Supervisor has none, and the app still lists the
+    members. Push notifications were not counted, so silencing is not proved;
+  - the settings selects load: passed. In the v0.3.3 live check the provider
+    catalogs rendered in the app, and the text fallback did not show;
+  - relays: 24 Lead-to-Supervisor messages in 28 Lead turns in Human's run
+    (run 1: 60), and 6 in 10 in the v0.3.3 run. The Supervisor took 36 turns
+    in Human's run, for 10 Human messages and 13 questions. Wakes and pushes
+    were not counted.
+
+  Open: count pushes in a real run, then move this plan to completed.
+
 ## Decisions
 
 - 2026-10-03: Human chose "only the Supervisor notifies Human" (issue 4).
