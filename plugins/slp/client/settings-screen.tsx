@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useState } from "react";
-import { Text } from "react-native";
+import { Text, View } from "react-native";
 import type { PluginSurfaceProps } from "@getpaseo/plugin/client";
 import { useSettings } from "@getpaseo/plugin/client";
 import { ScrollView, TextInput } from "@getpaseo/plugin/client/react-native";
@@ -11,6 +11,8 @@ import {
   SettingsSwitch,
 } from "@getpaseo/plugin/client/ui";
 import type { Role } from "../shared/contracts";
+import { Card } from "./card";
+import { TabBar, type Tab } from "./tab-bar";
 import { TemplatesSection, useTemplates } from "./templates-section";
 import {
   DEFAULT_EFFORT,
@@ -24,10 +26,22 @@ import {
 import { roleInstructions } from "../shared/roles";
 import { DEFAULT_ROLE_TOOLS, SLP_TOOLS, slpSettings, type SlpSettings, type SlpTool } from "../shared/settings";
 
-const ROLES = [
+type TabKey = "supervisor" | "lead" | "peer" | "templates";
+const TABS: readonly { key: TabKey; title: string }[] = [
   { key: "supervisor", title: "Supervisor" },
   { key: "lead", title: "Lead" },
-] as const;
+  { key: "peer", title: "Peers" },
+  { key: "templates", title: "Templates" },
+];
+
+// Key-order-independent text of a value, to tell whether the draft differs from what is stored.
+function stable(value: unknown): string {
+  return JSON.stringify(value, (_key, item: unknown) =>
+    item && typeof item === "object" && !Array.isArray(item)
+      ? Object.fromEntries(Object.entries(item).sort(([a], [b]) => a.localeCompare(b)))
+      : item,
+  );
+}
 
 type Overrides = { instructions?: string; tools?: SlpTool[]; templates?: string[] };
 
@@ -52,7 +66,7 @@ function parseEfforts(text: string): Record<string, string> | undefined {
   return Object.keys(pairs).length ? pairs : undefined;
 }
 
-const MODE_HINT = "Members must not depend on permission prompts (default bypassPermissions).";
+const MODE_HINT = "Members must not depend on permission prompts (default bypassPermissions)";
 const PEER_LIMITS = Array.from({ length: 16 }, (_, i) => ({ label: String(i + 1), value: String(i + 1) }));
 
 type ModelChoice = { provider: string; modeId: string; thinkingOptionId?: string };
@@ -70,21 +84,21 @@ function RoleModelFields({
 }) {
   if (!catalog) {
     return (
-      <>
+      <Card>
         <SettingsInput
           label="Provider/model"
-          hint="For example claude/claude-opus-5-5 or codex/gpt-6-luna."
+          hint="For example claude/claude-opus-5-5 or codex/gpt-6-luna"
           initialValue={value.provider}
           onChangeText={(provider) => onChange({ ...value, provider })}
         />
         <SettingsInput label="Mode" hint={MODE_HINT} initialValue={value.modeId} onChangeText={(modeId) => onChange({ ...value, modeId })} />
         <SettingsInput
           label="Effort"
-          hint="Empty for the provider default, for example high."
+          hint="Empty for the provider default, for example high"
           initialValue={value.thinkingOptionId ?? ""}
           onChangeText={(text) => onChange({ ...value, thinkingOptionId: text.trim() || undefined })}
         />
-      </>
+      </Card>
     );
   }
   const { provider } = splitModel(value.provider);
@@ -99,7 +113,7 @@ function RoleModelFields({
     });
   };
   return (
-    <>
+    <Card>
       <SettingsSelect
         label="Provider"
         value={provider}
@@ -129,7 +143,7 @@ function RoleModelFields({
         options={effortOptions([findModel(catalog, value.provider)], value.thinkingOptionId)}
         onValueChange={(next) => onChange({ ...value, thinkingOptionId: next || undefined })}
       />
-    </>
+    </Card>
   );
 }
 
@@ -148,7 +162,7 @@ function PeerModelFields({
   const limit = (
     <SettingsSelect
       label="Most Peers with open work"
-      hint="Idle Peers do not count."
+      hint="Idle Peers do not count"
       value={String(value.maxActive)}
       options={PEER_LIMITS}
       onValueChange={(next) => onChange({ maxActive: Number(next) })}
@@ -157,29 +171,39 @@ function PeerModelFields({
   if (!catalog) {
     return (
       <>
-        <SettingsInput
-          label="Models"
-          hint="provider/model values, separated by commas; the first is the default."
-          initialValue={value.models.join(", ")}
-          onChangeText={(text) => onChange({ models: splitList(text) })}
-        />
-        <SettingsInput
-          label="Mode per provider"
-          hint="provider=mode pairs, separated by commas. Default claude=bypassPermissions, codex=full-access."
-          initialValue={Object.entries(value.modes)
-            .map(([provider, mode]) => `${provider}=${mode}`)
-            .join(", ")}
-          onChangeText={(text) => onChange({ modes: parseModes(text) })}
-        />
-        <SettingsInput
-          label="Effort per provider"
-          hint="provider=effort pairs, separated by commas; empty for the provider defaults."
-          initialValue={Object.entries(value.efforts ?? {})
-            .map(([provider, effort]) => `${provider}=${effort}`)
-            .join(", ")}
-          onChangeText={(text) => onChange({ efforts: parseEfforts(text) })}
-        />
-        {limit}
+        <SettingsSection title="Models">
+          <Card>
+            <SettingsInput
+              label="Models"
+              hint="provider/model values, separated by commas; the first is the default"
+              initialValue={value.models.join(", ")}
+              onChangeText={(text) => onChange({ models: splitList(text) })}
+            />
+          </Card>
+        </SettingsSection>
+        <SettingsSection title="Mode and effort">
+          <Card>
+            <SettingsInput
+              label="Mode per provider"
+              hint="provider=mode pairs, separated by commas. Default claude=bypassPermissions, codex=full-access"
+              initialValue={Object.entries(value.modes)
+                .map(([provider, mode]) => `${provider}=${mode}`)
+                .join(", ")}
+              onChangeText={(text) => onChange({ modes: parseModes(text) })}
+            />
+            <SettingsInput
+              label="Effort per provider"
+              hint="provider=effort pairs, separated by commas; empty for the provider defaults"
+              initialValue={Object.entries(value.efforts ?? {})
+                .map(([provider, effort]) => `${provider}=${effort}`)
+                .join(", ")}
+              onChangeText={(text) => onChange({ efforts: parseEfforts(text) })}
+            />
+          </Card>
+        </SettingsSection>
+        <SettingsSection title="Limit">
+          <Card>{limit}</Card>
+        </SettingsSection>
       </>
     );
   }
@@ -199,23 +223,29 @@ function PeerModelFields({
   const providers = [...new Set(value.models.map((m) => splitModel(m).provider))];
   return (
     <>
-      <SettingsSelect
-        label="Default model"
-        hint="Peers run on it unless Human names another."
-        value={value.models[0]}
-        options={value.models.map((m) => ({ label: all.find((o) => o.value === m)?.label ?? m, value: m }))}
-        onValueChange={(next) => onChange({ models: [next, ...value.models.filter((m) => m !== next)] })}
-      />
-      {all.map((option) => (
-        <SettingsSwitch
-          key={option.value}
-          label={option.label}
-          hint={option.value === value.models[0] ? "Default" : undefined}
-          value={value.models.includes(option.value)}
-          disabled={option.value === value.models[0]}
-          onValueChange={(on) => setAllowed(option.value, on)}
-        />
-      ))}
+      <SettingsSection title="Models">
+        <Card>
+          <SettingsSelect
+            label="Default model"
+            hint="Peers run on it unless Human names another"
+            value={value.models[0]}
+            options={value.models.map((m) => ({ label: all.find((o) => o.value === m)?.label ?? m, value: m }))}
+            onValueChange={(next) => onChange({ models: [next, ...value.models.filter((m) => m !== next)] })}
+          />
+          {all.map((option) => (
+            <SettingsSwitch
+              key={option.value}
+              label={option.label}
+              hint={option.value === value.models[0] ? "Default" : undefined}
+              value={value.models.includes(option.value)}
+              disabled={option.value === value.models[0]}
+              onValueChange={(on) => setAllowed(option.value, on)}
+            />
+          ))}
+        </Card>
+      </SettingsSection>
+      <SettingsSection title="Mode and effort">
+      <Card>
       {providers.map((provider) => {
         const entry = catalog.find((e) => e.provider === provider);
         const effort = value.efforts?.[provider];
@@ -236,7 +266,7 @@ function PeerModelFields({
             />
             <SettingsSelect
               label={`Effort on ${entry?.label ?? provider}`}
-              hint="For every Peer on this provider; a model that does not list it uses the provider default."
+              hint="For every Peer on this provider; a model that does not list it uses the provider default"
               value={effort ?? DEFAULT_EFFORT}
               options={effortOptions(
                 value.models.filter((m) => splitModel(m).provider === provider).map((m) => findModel(catalog, m)),
@@ -247,7 +277,11 @@ function PeerModelFields({
           </Fragment>
         );
       })}
-      {limit}
+      </Card>
+      </SettingsSection>
+      <SettingsSection title="Limit">
+        <Card>{limit}</Card>
+      </SettingsSection>
     </>
   );
 }
@@ -285,6 +319,8 @@ function RoleOverrides({
   const custom = value.instructions !== undefined;
   const setTools = (next: SlpTool[]) =>
     onChange({ ...value, tools: sameTools(next, DEFAULT_ROLE_TOOLS[role]) ? undefined : next });
+  const [editingText, setEditingText] = useState(false);
+  const [listingTools, setListingTools] = useState(false);
 
   // Absent means every stored template; choosing them all again removes the override.
   const shown = catalog ? catalog.filter((name) => !value.templates || value.templates.includes(name)) : [];
@@ -295,57 +331,83 @@ function RoleOverrides({
 
   return (
     <>
-      <SettingsAction
-        label="Instructions"
-        hint={
-          custom
-            ? "Custom text: it replaces the whole default, including the tool list and limits."
-            : "Default text, filled in with this role's provider, tools, and Peer limit."
-        }
-        actionLabel="Reset to default"
-        disabled={!custom}
-        onPress={() => onChange({ ...value, instructions: undefined })}
-      />
-      <TextInput
-        multiline
-        value={value.instructions ?? defaultText}
-        onChangeText={(text) =>
-          onChange({ ...value, instructions: [defaultText.trim(), ""].includes(text.trim()) ? undefined : text })
-        }
-        style={{
-          minHeight: 240,
-          padding: 8,
-          borderWidth: 1,
-          borderRadius: 6,
-          borderColor: theme.colors.border,
-          color: theme.colors.foreground,
-          backgroundColor: theme.colors.surface1,
-          fontFamily: "monospace",
-          fontSize: 12,
-          textAlignVertical: "top",
-        }}
-        testID={`slp-settings-${role}-instructions`}
-      />
-      <SettingsAction
-        label="SLP tools"
-        hint={value.tools ? "Custom list." : "Default list for this role."}
-        actionLabel="Reset to default"
-        disabled={!value.tools}
-        onPress={() => onChange({ ...value, tools: undefined })}
-      />
-      {SLP_TOOLS.map((tool) => (
-        <SettingsSwitch
-          key={tool}
-          label={tool}
-          value={tools.includes(tool)}
-          onValueChange={(on) => setTools(on ? [...tools, tool] : tools.filter((t) => t !== tool))}
+      <SettingsSection title="Instructions">
+        <Card>
+        <SettingsAction
+          label={custom ? "Custom instructions" : "Default instructions"}
+          hint={
+            custom
+              ? "Custom text: it replaces the whole default, including the tool list and limits"
+              : "Default text, filled in with this role's provider, tools, and Peer limit"
+          }
+          actionLabel={editingText ? "Hide text" : "Edit text"}
+          onPress={() => setEditingText(!editingText)}
+          testID={`slp-settings-${role}-instructions-toggle`}
         />
-      ))}
+        {editingText ? (
+          <View style={{ padding: 12 }}>
+          <TextInput
+            multiline
+            value={value.instructions ?? defaultText}
+            onChangeText={(text) =>
+              onChange({ ...value, instructions: [defaultText.trim(), ""].includes(text.trim()) ? undefined : text })
+            }
+            style={{
+              minHeight: 240,
+              padding: 8,
+              borderWidth: 1,
+              borderRadius: 6,
+              borderColor: theme.colors.border,
+              color: theme.colors.foreground,
+              backgroundColor: theme.colors.surface1,
+              fontFamily: "monospace",
+              fontSize: 12,
+              textAlignVertical: "top",
+            }}
+            testID={`slp-settings-${role}-instructions`}
+          />
+          </View>
+        ) : null}
+        <SettingsAction
+          label="Reset instructions"
+          actionLabel="Reset to default"
+          disabled={!custom}
+          onPress={() => onChange({ ...value, instructions: undefined })}
+        />
+        </Card>
+      </SettingsSection>
+      <SettingsSection title="SLP tools">
+        <Card>
+        <SettingsAction
+          label={`${tools.length} of ${SLP_TOOLS.length} tools on`}
+          hint={value.tools ? "Custom list" : "Default list for this role"}
+          actionLabel={listingTools ? "Hide list" : "Show list"}
+          onPress={() => setListingTools(!listingTools)}
+        />
+        {listingTools
+          ? SLP_TOOLS.map((tool) => (
+              <SettingsSwitch
+                key={tool}
+                label={tool}
+                value={tools.includes(tool)}
+                onValueChange={(on) => setTools(on ? [...tools, tool] : tools.filter((t) => t !== tool))}
+              />
+            ))
+          : null}
+        <SettingsAction
+          label="Reset tools"
+          actionLabel="Reset to default"
+          disabled={!value.tools}
+          onPress={() => onChange({ ...value, tools: undefined })}
+        />
+        </Card>
+      </SettingsSection>
       {catalog?.length ? (
-        <>
+        <SettingsSection title="Template catalog">
+          <Card>
           <SettingsAction
-            label="Template catalog"
-            hint={value.templates ? "Only the templates switched on are listed for this role." : "Every stored template."}
+            label="Templates this role can load"
+            hint={value.templates ? "Only the templates switched on are listed for this role" : "Every stored template"}
             actionLabel="Show all"
             disabled={!value.templates}
             onPress={() => onChange({ ...value, templates: undefined })}
@@ -358,18 +420,21 @@ function RoleOverrides({
               onValueChange={(on) => setCatalog(name, on)}
             />
           ))}
-        </>
+          </Card>
+        </SettingsSection>
       ) : null}
     </>
   );
 }
 
+// One tab each for the Supervisor, the Lead, the Peers, and the templates.
 // Provider, model, mode, effort, instructions, and SLP tools per role, and the
 // Peer allowlist. Applies to members created after saving; running members
 // keep what they were created with.
 export function SlpSettingsScreen({ theme }: PluginSurfaceProps) {
   const settings = useSettings(slpSettings);
   const [draft, setDraft] = useState<SlpSettings | null>(null);
+  const [tab, setTab] = useState<TabKey>("supervisor");
   const stored = useTemplates();
   const catalog = useProviderCatalog();
 
@@ -377,59 +442,93 @@ export function SlpSettingsScreen({ theme }: PluginSurfaceProps) {
     if (settings.status === "ready") setDraft(settings.values);
   }, [settings.status, settings.status === "ready" ? settings.revision : null]);
 
-  if (settings.status === "loading" || !draft) return <Text>Loading settings…</Text>;
+  if (settings.status === "loading" || !draft) return <Text>Loading settings...</Text>;
   if (settings.status === "error") return <Text>Settings unavailable: {settings.error}</Text>;
+
+  // One draft and one Save for the Supervisor, Lead, and Peers tabs. A dot on a
+  // tab marks changes on it that are not saved yet.
+  const saved = settings.status === "ready" ? settings.values : null;
+  const changed = (key: "supervisor" | "lead" | "peers") => saved !== null && stable(draft[key]) !== stable(saved[key]);
+  const marks: Record<TabKey, boolean> = {
+    supervisor: changed("supervisor"),
+    lead: changed("lead"),
+    peer: changed("peers"),
+    templates: false,
+  };
+  const dirty = marks.supervisor || marks.lead || marks.peer;
+  const tabs: Tab<TabKey>[] = TABS.map((item) => ({ ...item, marked: marks[item.key] }));
 
   const save = () => {
     if (settings.status === "ready" || settings.status === "invalid") void settings.save(draft, settings.revision);
   };
 
-  return (
-    <ScrollView contentContainerStyle={{ padding: 16, gap: 16 }}>
-      <Text style={{ color: theme.colors.foregroundMuted }}>
-        Used when SLP creates a member. Members already running keep what they were created with.
-      </Text>
-      {ROLES.map(({ key, title }) => (
-        <SettingsSection key={key} title={title}>
-          <RoleModelFields
-            catalog={catalog}
-            value={draft[key]}
-            onChange={(next) => setDraft({ ...draft, [key]: { ...draft[key], ...next } })}
-          />
-          <RoleOverrides
-            role={key}
-            provider={draft[key].provider}
-            draft={draft}
-            value={draft[key]}
-            onChange={(next) => setDraft({ ...draft, [key]: { ...draft[key], ...next } })}
-            theme={theme}
-            catalog={stored.templates?.map((template) => template.name)}
-          />
-        </SettingsSection>
-      ))}
-      <TemplatesSection templates={stored.templates} listError={stored.error} refresh={stored.refresh} theme={theme} />
-      <SettingsSection title="Peers">
-        <PeerModelFields
+  // Keyed by role: the Supervisor and Lead tabs share one tree shape, and the
+  // uncontrolled inputs and collapse state must not carry over between them.
+  const roleTab = (key: "supervisor" | "lead") => (
+    <Fragment key={key}>
+      <SettingsSection title="Model">
+        <RoleModelFields
           catalog={catalog}
-          value={draft.peers}
-          onChange={(next) => setDraft({ ...draft, peers: { ...draft.peers, ...next } })}
-        />
-        <RoleOverrides
-          role="peer"
-          provider={draft.peers.models[0] ?? "claude/default"}
-          draft={draft}
-          value={draft.peers}
-          onChange={(next) => setDraft({ ...draft, peers: { ...draft.peers, ...next } })}
-          theme={theme}
+          value={draft[key]}
+          onChange={(next) => setDraft({ ...draft, [key]: { ...draft[key], ...next } })}
         />
       </SettingsSection>
-      <SettingsAction
-        label="Save"
-        error={settings.saveError ?? (settings.status === "invalid" ? settings.error : null)}
-        actionLabel={settings.saving ? "Saving…" : "Save"}
-        disabled={settings.saving}
-        onPress={save}
+      <RoleOverrides
+        role={key}
+        provider={draft[key].provider}
+        draft={draft}
+        value={draft[key]}
+        onChange={(next) => setDraft({ ...draft, [key]: { ...draft[key], ...next } })}
+        theme={theme}
+        catalog={stored.templates?.map((template) => template.name)}
       />
+    </Fragment>
+  );
+
+  return (
+    <ScrollView contentContainerStyle={{ padding: 16 }} stickyHeaderIndices={[0]}>
+      <TabBar<TabKey> tabs={tabs} active={tab} onSelect={setTab} theme={theme} />
+      {tab === "supervisor" || tab === "lead" ? roleTab(tab) : null}
+      {tab === "peer" ? (
+        <>
+          <PeerModelFields
+            catalog={catalog}
+            value={draft.peers}
+            onChange={(next) => setDraft({ ...draft, peers: { ...draft.peers, ...next } })}
+          />
+          <RoleOverrides
+            role="peer"
+            provider={draft.peers.models[0] ?? "claude/default"}
+            draft={draft}
+            value={draft.peers}
+            onChange={(next) => setDraft({ ...draft, peers: { ...draft.peers, ...next } })}
+            theme={theme}
+          />
+        </>
+      ) : null}
+      {/* Kept mounted so a template being written survives a tab switch. */}
+      <View style={tab === "templates" ? undefined : { display: "none" }}>
+        <TemplatesSection templates={stored.templates} listError={stored.error} refresh={stored.refresh} theme={theme} />
+      </View>
+      {tab === "templates" ? null : (
+        <>
+          <Card>
+            <SettingsAction
+              label="Save"
+              hint={[
+                dirty ? "Unsaved changes on the tabs marked with a dot; Save covers all of them" : null,
+                "Used when SLP creates a member. Members already running keep what they were created with.",
+              ]
+                .filter(Boolean)
+                .join("\n")}
+              error={settings.saveError ?? (settings.status === "invalid" ? settings.error : null)}
+              actionLabel={settings.saving ? "Saving..." : "Save"}
+              disabled={settings.saving}
+              onPress={save}
+            />
+          </Card>
+        </>
+      )}
     </ScrollView>
   );
 }

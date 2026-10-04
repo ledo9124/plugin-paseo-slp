@@ -44,7 +44,9 @@ export class HeaderButtons {
     const lock = state.locked ? " (locked)" : "";
     return {
       title: `SLP ${state.mode}${lock}: open the SLP panel`,
-      icon: "Users",
+      // Compact headers show no label, so the icon carries the mode: two people
+      // while off, a group network while on.
+      icon: state.mode === "on" ? "Network" : "Users",
       label: state.mode === "on" ? "SLP on" : "SLP off",
       behavior: { kind: "action", onPress: () => this.client.openPanel(this.panelId, { workspaceId }) },
     };

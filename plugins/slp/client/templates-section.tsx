@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
-import { Text } from "react-native";
+import { View } from "react-native";
 import type { PluginSurfaceProps } from "@getpaseo/plugin/client";
 import { useRpc } from "@getpaseo/plugin/client";
 import { TextInput } from "@getpaseo/plugin/client/react-native";
+import { Card } from "./card";
 import { SettingsAction, SettingsInput, SettingsRow, SettingsSection } from "@getpaseo/plugin/client/ui";
 import { importTemplates, listTemplates, removeTemplate, saveTemplate, type TemplateView } from "../shared/contracts";
 
@@ -100,10 +101,11 @@ export function TemplatesSection({
 
   return (
     <SettingsSection title="Templates">
-      <Text style={{ color: theme.colors.foregroundMuted }}>
-        SKILL.md texts the Supervisor and the Lead can load into an assignment. Changes apply at once; Save below is
-        not needed.
-      </Text>
+      <Card>
+      <SettingsRow
+        label="Applied at once"
+        hint="SKILL.md texts the Supervisor and the Lead can load into an assignment. Changes apply at once; Save is not needed."
+      />
       {listError ? <SettingsRow label="Templates unavailable" error={listError} /> : null}
       {templates?.length === 0 ? <SettingsRow label="No templates stored" /> : null}
       {templates?.map((template) => (
@@ -128,6 +130,7 @@ export function TemplatesSection({
       ))}
       {editing ? (
         <>
+          <View style={{ padding: 12 }}>
           <TextInput
             multiline
             value={editing.text}
@@ -146,11 +149,12 @@ export function TemplatesSection({
             }}
             testID="slp-settings-template-text"
           />
+          </View>
           <SettingsAction
             label={editing.previousName ? `Editing ${editing.previousName}` : "New template"}
             hint="The name comes from the front matter. Changing it renames the template."
             error={error}
-            actionLabel={busy ? "Saving…" : "Save template"}
+            actionLabel={busy ? "Saving..." : "Save template"}
             disabled={busy || !editing.text.trim()}
             onPress={() => void onSave()}
           />
@@ -167,7 +171,7 @@ export function TemplatesSection({
       ) : (
         <SettingsAction
           label="Add a template"
-          hint="Paste a SKILL.md."
+          hint="Paste a SKILL.md"
           error={error}
           actionLabel="New template"
           onPress={() => {
@@ -186,10 +190,11 @@ export function TemplatesSection({
       <SettingsAction
         label="Import"
         hint={importResult ?? undefined}
-        actionLabel={busy ? "Working…" : "Import"}
+        actionLabel={busy ? "Working..." : "Import"}
         disabled={busy || !folder.trim()}
         onPress={() => void onImport()}
       />
+      </Card>
     </SettingsSection>
   );
 }
