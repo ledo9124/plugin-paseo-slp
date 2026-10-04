@@ -90,6 +90,12 @@ v0.3.3 shipped on 2026-10-04 (Human's D1).
 - Item 1: a workspace created after the app loads now gets its SLP header
   button (the plugin never subscribed to workspace updates), and the
   command center opens the SLP panel. Proved live.
+  Correction (2026-10-04, after Human's report): this covers a workspace
+  that already exists, not Paseo's New workspace screen. That screen runs
+  before any workspace exists and has no plugin contribution point, so the
+  Outcome's "from a new ... workspace" was only met for a workspace once
+  created (an empty submit there creates one). The one-step entry is
+  `docs/plans/active/slp-v0.3.4.md`.
 - Item 2: settings in four tabs with one shared Save. Proved live.
 - Item 3: the small fixes from the audit. Proved live, except the
   starting hint and the no-catalog fallback, which were not seen.
