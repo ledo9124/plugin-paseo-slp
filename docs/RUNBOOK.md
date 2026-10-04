@@ -32,9 +32,9 @@ Claude and Codex. The steps were adapted from the sibling repository
     touch the patched area.
 - **Daemons on this machine:**
   - **6767:** the installed Paseo app, home `~\.paseo`. Since 2026-10-03
-    it runs the release `v0.3.4` from Git (since 2026-10-04; installed
+    it runs the release `v0.3.5` from Git (since 2026-10-04; installed
     with backup, `plugin remove`, `plugin install <url>:plugins/slp --ref
-    v0.3.4`, and the settings copied back, because the live test had
+    v0.3.5`, and the settings copied back, because the live test had
     pointed it at a worktree), for Human's real projects (it
     ran `plugins/slp` as a directory source from 2026-10-02). Human asked
     that live tests run there: two daemons are too heavy for the machine.
