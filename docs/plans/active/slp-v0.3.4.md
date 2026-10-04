@@ -82,7 +82,11 @@ need. Out of scope: role texts, ledger data model (D5-B), auto-on policy.
 - [x] B4 panel data (A4, accepted): live member status via `useAgent`;
   waiting count on the header ("SLP on · 2"); refresh on workspace/agent
   events, polls 10 s panel / 30 s header; "No report yet"
-- [ ] Entry implementation
+- [x] Entry implementation (A5, accepted after one rework): surface "New
+  SLP workspace" from a sidebar item and a global command-center item;
+  project preselected by latest `activityAt`; Local default, Worktree for git
+  projects; create, turn on, open the panel (3 s retry, then open the
+  workspace); mode or open failures shown as a toast
 - [ ] Review
 - [ ] Checks and live test
 - [ ] Merge, tag, push, 6767 update

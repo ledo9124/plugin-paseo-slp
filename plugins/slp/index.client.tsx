@@ -2,10 +2,12 @@ import type { PluginClientContext } from "@getpaseo/plugin/client";
 import { GROUP_LABEL, listWorkspaceModes } from "./shared/contracts";
 import { HeaderButtons, headerModeSink } from "./client/header-buttons";
 import { announceSlpActivity, onSlpActivity, stopSlpActivity } from "./client/live-updates";
+import { createNewWorkspaceSurface } from "./client/new-workspace-surface";
 import { SlpSettingsScreen } from "./client/settings-screen";
 import { SlpPanel } from "./client/slp-panel";
 
 const PANEL_ID = "slp";
+const NEW_WORKSPACE_SURFACE_ID = "new-workspace";
 // Slow fallback for header counts; agent and workspace updates refresh them sooner.
 const MODES_REFRESH_MS = 30_000;
 
@@ -45,6 +47,23 @@ export default function contribute(client: PluginClientContext) {
       keywords: ["slp", "supervisor", "lead", "peer", "mode", "on"],
       context: "workspace",
       onSelect: ({ openPanel }) => openPanel(PANEL_ID),
+    }),
+    // One step from anywhere, with no workspace open: the screen creates a
+    // workspace, turns SLP on, and opens the panel there.
+    client.addSurface(NEW_WORKSPACE_SURFACE_ID, createNewWorkspaceSurface(client, PANEL_ID)),
+    client.addSidebarItem({
+      id: "slp-new-workspace",
+      title: "New SLP workspace",
+      icon: "Users",
+      surface: NEW_WORKSPACE_SURFACE_ID,
+    }),
+    client.addCommandCenterItem({
+      id: "slp-new-workspace",
+      title: "SLP: new SLP workspace",
+      icon: "Users",
+      keywords: ["slp", "new", "workspace", "create", "supervisor", "lead", "peer"],
+      context: "global",
+      onSelect: ({ openSurface }) => openSurface(NEW_WORKSPACE_SURFACE_ID),
     }),
     client.paseo.workspaces.subscribe((update) => {
       if (update.kind === "upsert") {
