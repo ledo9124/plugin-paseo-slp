@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useEffect, useState, type ReactNode } from "react";
 import { Text, View } from "react-native";
 import type { PluginSurfaceProps } from "@getpaseo/plugin/client";
 import { useSettings } from "@getpaseo/plugin/client";
@@ -13,6 +13,8 @@ import {
 import type { Role } from "../shared/contracts";
 import { Card } from "./card";
 import { TabBar, type Tab } from "./tab-bar";
+import { groupPeerModels } from "./settings-peer-models";
+import { SECTIONS, stable, syncDraft, type Section } from "./settings-sync";
 import { TemplatesSection, useTemplates } from "./templates-section";
 import {
   DEFAULT_EFFORT,
@@ -33,15 +35,6 @@ const TABS: readonly { key: TabKey; title: string }[] = [
   { key: "peer", title: "Peers" },
   { key: "templates", title: "Templates" },
 ];
-
-// Key-order-independent text of a value, to tell whether the draft differs from what is stored.
-function stable(value: unknown): string {
-  return JSON.stringify(value, (_key, item: unknown) =>
-    item && typeof item === "object" && !Array.isArray(item)
-      ? Object.fromEntries(Object.entries(item).sort(([a], [b]) => a.localeCompare(b)))
-      : item,
-  );
-}
 
 type Overrides = { instructions?: string; tools?: SlpTool[]; templates?: string[] };
 
@@ -159,6 +152,8 @@ function PeerModelFields({
   value: PeerChoice;
   onChange(next: Partial<PeerChoice>): void;
 }) {
+  // Provider groups whose switches are shown; all start collapsed.
+  const [open, setOpen] = useState<ReadonlySet<string>>(new Set());
   const limit = (
     <SettingsSelect
       label="Most Peers with open work"
@@ -207,8 +202,14 @@ function PeerModelFields({
       </>
     );
   }
-  const listed = catalog.flatMap((e) => (e.models ?? []).map((m) => ({ value: `${e.provider}/${m.id}`, label: `${e.label ?? e.provider}: ${m.label}` })));
-  const all = [...listed, ...value.models.filter((m) => !listed.some((l) => l.value === m)).map((m) => ({ value: m, label: `${m} (not listed)` }))];
+  const groups = groupPeerModels(catalog, value.models);
+  const labelOf = (model: string) => {
+    for (const group of groups) {
+      const row = group.models.find((m) => m.value === model);
+      if (row) return `${group.label}: ${row.label}`;
+    }
+    return model;
+  };
   const setAllowed = (model: string, on: boolean) => {
     const models = on ? [...value.models, model] : value.models.filter((m) => m !== model);
     if (!models.length) return;
@@ -229,19 +230,40 @@ function PeerModelFields({
             label="Default model"
             hint="Peers run on it unless Human names another"
             value={value.models[0]}
-            options={value.models.map((m) => ({ label: all.find((o) => o.value === m)?.label ?? m, value: m }))}
+            options={value.models.map((m) => ({ label: labelOf(m), value: m }))}
             onValueChange={(next) => onChange({ models: [next, ...value.models.filter((m) => m !== next)] })}
           />
-          {all.map((option) => (
-            <SettingsSwitch
-              key={option.value}
-              label={option.label}
-              hint={option.value === value.models[0] ? "Default" : undefined}
-              value={value.models.includes(option.value)}
-              disabled={option.value === value.models[0]}
-              onValueChange={(on) => setAllowed(option.value, on)}
-            />
-          ))}
+          {groups.map((group) => {
+            const shown = open.has(group.provider);
+            return (
+              <Fragment key={group.provider}>
+                <SettingsAction
+                  label={group.label}
+                  hint={group.summary}
+                  actionLabel={shown ? "Hide models" : "Show models"}
+                  onPress={() => {
+                    const next = new Set(open);
+                    if (shown) next.delete(group.provider);
+                    else next.add(group.provider);
+                    setOpen(next);
+                  }}
+                  testID={`slp-settings-peer-group-${group.provider}`}
+                />
+                {shown
+                  ? group.models.map((row) => (
+                      <SettingsSwitch
+                        key={row.value}
+                        label={row.label}
+                        hint={row.value === value.models[0] ? "Default" : undefined}
+                        value={row.on}
+                        disabled={row.value === value.models[0]}
+                        onValueChange={(on) => setAllowed(row.value, on)}
+                      />
+                    ))
+                  : null}
+              </Fragment>
+            );
+          })}
         </Card>
       </SettingsSection>
       <SettingsSection title="Mode and effort">
@@ -431,24 +453,110 @@ function RoleOverrides({
 // Provider, model, mode, effort, instructions, and SLP tools per role, and the
 // Peer allowlist. Applies to members created after saving; running members
 // keep what they were created with.
+// What the draft is built on: `base` is the stored settings it last followed,
+// `conflicts` the sections edited here and changed in storage meanwhile, and
+// `version` changes when the draft is replaced from outside, so uncontrolled
+// inputs start again from it.
+interface DraftView {
+  draft: SlpSettings;
+  base: SlpSettings;
+  conflicts: Section[];
+  version: number;
+}
+
+const SECTION_TITLES: Record<Section, string> = { supervisor: "Supervisor", lead: "Lead", peers: "Peers" };
+
+function normalize(values: SlpSettings): SlpSettings {
+  const parsed = slpSettings.schema.safeParse(values);
+  return parsed.success ? parsed.data : values;
+}
+
+function Problem({ children }: { children: ReactNode }) {
+  return <ScrollView contentContainerStyle={{ padding: 16 }}>{children}</ScrollView>;
+}
+
+// One tab each for the Supervisor, the Lead, the Peers, and the templates.
+// Provider, model, mode, effort, instructions, and SLP tools per role, and the
+// Peer allowlist. Applies to members created after saving; running members
+// keep what they were created with.
 export function SlpSettingsScreen({ theme }: PluginSurfaceProps) {
   const settings = useSettings(slpSettings);
-  const [draft, setDraft] = useState<SlpSettings | null>(null);
+  const [view, setView] = useState<DraftView | null>(null);
   const [tab, setTab] = useState<TabKey>("supervisor");
+  const [confirmReset, setConfirmReset] = useState(false);
   const stored = useTemplates();
   const catalog = useProviderCatalog();
 
+  // Follow the stored settings: the first load fills the draft; a later change
+  // (a Save here, or elsewhere) merges per section and keeps unsaved edits.
   useEffect(() => {
-    if (settings.status === "ready") setDraft(settings.values);
+    if (settings.status !== "ready") return;
+    const incoming = settings.values;
+    setView((current) => {
+      if (!current) return { draft: incoming, base: incoming, conflicts: [], version: 0 };
+      const sync = syncDraft(current.base, current.draft, incoming, normalize);
+      return {
+        draft: sync.draft,
+        base: incoming,
+        conflicts: [...new Set([...current.conflicts, ...sync.conflicts])],
+        version: current.version + (sync.replaced.length ? 1 : 0),
+      };
+    });
   }, [settings.status, settings.status === "ready" ? settings.revision : null]);
 
-  if (settings.status === "loading" || !draft) return <Text>Loading settings...</Text>;
-  if (settings.status === "error") return <Text>Settings unavailable: {settings.error}</Text>;
+  // Nothing was ever loaded: there is no editor to keep.
+  if (settings.status === "error" && !view) {
+    return (
+      <Problem>
+        <Card>
+          <SettingsAction
+            label="Settings unavailable"
+            error={settings.error}
+            actionLabel="Try again"
+            onPress={() => void settings.reload()}
+          />
+        </Card>
+      </Problem>
+    );
+  }
+  if (!view) {
+    if (settings.status !== "invalid") return <Text>Loading settings...</Text>;
+    // The stored file does not match the schema: Save cannot fix it, so offer a
+    // reset to the defaults, behind a second press.
+    return (
+      <Problem>
+        <SettingsSection title="Stored settings are invalid">
+          <Card>
+            <SettingsAction
+              label="The stored SLP settings cannot be read"
+              hint="Nothing was changed. Check again if they were just fixed elsewhere."
+              error={settings.error}
+              actionLabel="Check again"
+              onPress={() => void settings.reload()}
+            />
+            <SettingsAction
+              label="Start over"
+              hint="Replaces the stored settings with the defaults: models, modes, instructions, and tools. The stored text is not kept."
+              error={settings.saveError}
+              actionLabel={settings.saving ? "Resetting..." : confirmReset ? "Press again to replace them" : "Reset to defaults"}
+              disabled={settings.saving}
+              onPress={() => {
+                if (confirmReset) void settings.reset();
+                else setConfirmReset(true);
+              }}
+            />
+          </Card>
+        </SettingsSection>
+      </Problem>
+    );
+  }
+  const { draft } = view;
+  const setDraft = (next: SlpSettings) => setView((current) => current && { ...current, draft: next });
 
   // One draft and one Save for the Supervisor, Lead, and Peers tabs. A dot on a
   // tab marks changes on it that are not saved yet.
-  const saved = settings.status === "ready" ? settings.values : null;
-  const changed = (key: "supervisor" | "lead" | "peers") => saved !== null && stable(draft[key]) !== stable(saved[key]);
+  const saved = settings.status === "ready" ? settings.values : view.base;
+  const changed = (key: Section) => stable(draft[key]) !== stable(saved[key]);
   const marks: Record<TabKey, boolean> = {
     supervisor: changed("supervisor"),
     lead: changed("lead"),
@@ -458,6 +566,13 @@ export function SlpSettingsScreen({ theme }: PluginSurfaceProps) {
   const dirty = marks.supervisor || marks.lead || marks.peer;
   const tabs: Tab<TabKey>[] = TABS.map((item) => ({ ...item, marked: marks[item.key] }));
 
+  // Sections edited here that were also changed in storage and still differ.
+  const clashes = SECTIONS.filter((key) => view.conflicts.includes(key) && changed(key));
+  const loadSaved = () => setView((current) => current && { draft: saved, base: saved, conflicts: [], version: current.version + 1 });
+
+  // A failed read leaves the editor in place, but there is no revision to save
+  // against until a read succeeds again.
+  const readFailed = settings.status === "error" ? settings.error : null;
   const save = () => {
     if (settings.status === "ready" || settings.status === "invalid") void settings.save(draft, settings.revision);
   };
@@ -465,7 +580,7 @@ export function SlpSettingsScreen({ theme }: PluginSurfaceProps) {
   // Keyed by role: the Supervisor and Lead tabs share one tree shape, and the
   // uncontrolled inputs and collapse state must not carry over between them.
   const roleTab = (key: "supervisor" | "lead") => (
-    <Fragment key={key}>
+    <Fragment key={`${key}-${view.version}`}>
       <SettingsSection title="Model">
         <RoleModelFields
           catalog={catalog}
@@ -488,9 +603,36 @@ export function SlpSettingsScreen({ theme }: PluginSurfaceProps) {
   return (
     <ScrollView contentContainerStyle={{ padding: 16 }} stickyHeaderIndices={[0]}>
       <TabBar<TabKey> tabs={tabs} active={tab} onSelect={setTab} theme={theme} />
+      {readFailed !== null ? (
+        <SettingsSection title="Settings unavailable">
+          <Card>
+            <SettingsAction
+              label="Reading the saved settings failed"
+              hint="Your edits are kept. Save is off until the saved settings can be read again."
+              error={readFailed}
+              actionLabel="Try again"
+              onPress={() => void settings.reload()}
+              testID="slp-settings-read-retry"
+            />
+          </Card>
+        </SettingsSection>
+      ) : null}
+      {clashes.length ? (
+        <SettingsSection title="Changed elsewhere">
+          <Card>
+            <SettingsAction
+              label="The saved settings changed while you were editing"
+              hint={`Your unsaved edits on ${clashes.map((key) => SECTION_TITLES[key]).join(", ")} are kept, and Save would overwrite the other change. Load the saved settings to drop your edits instead.`}
+              actionLabel="Load saved settings"
+              onPress={loadSaved}
+              testID="slp-settings-load-saved"
+            />
+          </Card>
+        </SettingsSection>
+      ) : null}
       {tab === "supervisor" || tab === "lead" ? roleTab(tab) : null}
       {tab === "peer" ? (
-        <>
+        <Fragment key={view.version}>
           <PeerModelFields
             catalog={catalog}
             value={draft.peers}
@@ -504,7 +646,7 @@ export function SlpSettingsScreen({ theme }: PluginSurfaceProps) {
             onChange={(next) => setDraft({ ...draft, peers: { ...draft.peers, ...next } })}
             theme={theme}
           />
-        </>
+        </Fragment>
       ) : null}
       {/* Kept mounted so a template being written survives a tab switch. */}
       <View style={tab === "templates" ? undefined : { display: "none" }}>
@@ -523,7 +665,7 @@ export function SlpSettingsScreen({ theme }: PluginSurfaceProps) {
                 .join("\n")}
               error={settings.saveError ?? (settings.status === "invalid" ? settings.error : null)}
               actionLabel={settings.saving ? "Saving..." : "Save"}
-              disabled={settings.saving}
+              disabled={settings.saving || readFailed !== null}
               onPress={save}
             />
           </Card>

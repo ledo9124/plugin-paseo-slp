@@ -108,7 +108,9 @@ export default function contribute(server: PluginServerContext) {
   server.handle(setWorkspaceMode, ({ workspaceId, mode }, { paseo }) =>
     userFacing(() => service.setMode(bind(paseo), workspaceId, mode)),
   );
-  server.handle(listWorkspaceModes, () => ({ workspaces: service.listModes() }));
+  server.handle(listWorkspaceModes, () => ({
+    workspaces: service.listModes().map((entry) => ({ ...entry, waiting: coordination.waitingForHuman(entry.workspaceId) })),
+  }));
   server.handle(getLedger, ({ workspaceId }) => coordination.ledgerView(workspaceId));
   server.handle(getReport, ({ workspaceId }) => {
     const group = deps.store.get(workspaceId)?.group;

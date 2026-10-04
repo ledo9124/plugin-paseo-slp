@@ -4,6 +4,8 @@ import type { Mode } from "../shared/contracts";
 interface ModeState {
   mode: Mode;
   locked: boolean;
+  /** Items waiting for Human in the running group. */
+  waiting: number;
 }
 
 // One header button per workspace, showing its SLP mode (decision 0005) and
@@ -26,6 +28,8 @@ export class HeaderButtons {
   }
 
   setMode(workspaceId: string, state: ModeState): void {
+    const known = this.modes.get(workspaceId);
+    if (known && known.mode === state.mode && known.locked === state.locked && known.waiting === state.waiting) return;
     this.modes.set(workspaceId, state);
     this.registrations.get(workspaceId)?.update(this.button(workspaceId));
   }
@@ -40,14 +44,16 @@ export class HeaderButtons {
   }
 
   private button(workspaceId: string): PluginButton {
-    const state = this.modes.get(workspaceId) ?? { mode: "off", locked: false };
+    const state = this.modes.get(workspaceId) ?? { mode: "off", locked: false, waiting: 0 };
     const lock = state.locked ? " (locked)" : "";
+    const waiting = state.waiting > 0 ? ` · ${state.waiting}` : "";
+    const waitingTitle = state.waiting > 0 ? `, ${state.waiting} waiting for you` : "";
     return {
-      title: `SLP ${state.mode}${lock}: open the SLP panel`,
+      title: `SLP ${state.mode}${lock}${waitingTitle}: open the SLP panel`,
       // Compact headers show no label, so the icon carries the mode: two people
       // while off, a group network while on.
       icon: state.mode === "on" ? "Network" : "Users",
-      label: state.mode === "on" ? "SLP on" : "SLP off",
+      label: `${state.mode === "on" ? "SLP on" : "SLP off"}${waiting}`,
       behavior: { kind: "action", onPress: () => this.client.openPanel(this.panelId, { workspaceId }) },
     };
   }

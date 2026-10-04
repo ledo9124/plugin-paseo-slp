@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import type { Mode, Role, TemplateView, WorkspaceView } from "../shared/contracts";
+import { GROUP_LABEL, type Mode, type Role, type TemplateView, type WorkspaceView } from "../shared/contracts";
 import { ROLE_TITLES, catalogSection, roleInstructions } from "../shared/roles";
 import { DEFAULT_ROLE_TOOLS, SLP_TOOLS, type SlpSettings } from "../shared/settings";
 import type { HostAgent, PaseoHost } from "./paseo-host";
@@ -7,7 +7,7 @@ import type { WorkspaceQueue } from "./queue";
 import type { TemplateStore } from "./template-store";
 import { emptyLedger, type GroupRecord, type MemberRecord, type SlpStore, type WorkspaceRecord } from "./store";
 
-export const GROUP_LABEL = "slp.group";
+export { GROUP_LABEL };
 export const ROLE_LABEL = "slp.role";
 export const MCP_SERVER_NAME = "slp";
 /** Plugin MCP tools; each member is offered only its own list (decision 0008). */

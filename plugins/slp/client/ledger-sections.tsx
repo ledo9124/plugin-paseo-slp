@@ -1,14 +1,8 @@
-import { useRef, useState, type ReactNode } from "react";
-import { useRpc } from "@getpaseo/plugin/client";
-import { useToast } from "@getpaseo/plugin/client/react-native";
-import {
-  SettingsAction,
-  SettingsInput,
-  SettingsRow,
-  SettingsSection,
-  SettingsSelect,
-  type SettingsInputHandle,
-} from "@getpaseo/plugin/client/ui";
+import { useState, type ReactNode } from "react";
+import { View } from "react-native";
+import { useRpc, type PluginWorkspacePanelProps } from "@getpaseo/plugin/client";
+import { TextInput, useToast } from "@getpaseo/plugin/client/react-native";
+import { SettingsAction, SettingsRow, SettingsSection, SettingsSelect } from "@getpaseo/plugin/client/ui";
 import {
   humanDecide,
   type Assignment,
@@ -18,6 +12,14 @@ import {
   type NativeQuestion,
 } from "../shared/contracts";
 import { Card } from "./card";
+import {
+  ANSWER_DEFAULT_WIDTH,
+  ANSWER_FONT_SIZE,
+  ANSWER_LINE_HEIGHT,
+  answerHeight,
+  closedToggleLabel,
+  splitAssignments,
+} from "./ledger-closed";
 import { assignmentStatusLabel, findingKindLabel, memberName, roleLabel } from "./labels";
 
 // Human's view of the coordination ledger (required behavior 7, slice 4):
@@ -25,8 +27,11 @@ import { assignmentStatusLabel, findingKindLabel, memberName, roleLabel } from "
 // ownership, readable without transcripts. A Human decision goes only to the
 // Supervisor, which decides who else needs it.
 
+type Theme = PluginWorkspacePanelProps["theme"];
+
 interface Props {
   workspaceId: string;
+  theme: Theme;
   ledger: Ledger;
   members: MemberView[];
   /** False once the group ended with its workspace. */
@@ -49,6 +54,7 @@ function decisionSource(decision: Decision): string {
 
 function DecisionForm(props: {
   workspaceId: string;
+  theme: Theme;
   label: string;
   hint: string;
   settles?: string;
@@ -59,8 +65,8 @@ function DecisionForm(props: {
 }) {
   const decide = useRpc(humanDecide);
   const toast = useToast();
-  const input = useRef<SettingsInputHandle>(null);
   const [text, setText] = useState("");
+  const [width, setWidth] = useState(ANSWER_DEFAULT_WIDTH);
   const [findingId, setFindingId] = useState(NO_FINDING);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -75,7 +81,6 @@ function DecisionForm(props: {
         ...(props.settles ? { settles: props.settles } : {}),
         ...(findingId !== NO_FINDING ? { findingId } : {}),
       });
-      input.current?.replaceText("");
       setText("");
       setFindingId(NO_FINDING);
       toast.show(
@@ -94,15 +99,30 @@ function DecisionForm(props: {
 
   return (
     <Card>
-      <SettingsInput
-        ref={input}
-        label={props.label}
-        hint={props.hint}
-        placeholder="Your decision"
-        onChangeText={setText}
-        disabled={props.disabled || busy}
-        testID={`${props.testID}-text`}
-      />
+      <SettingsRow label={props.label} hint={props.hint} />
+      <View style={{ padding: 12 }} onLayout={(event) => setWidth(event.nativeEvent.layout.width - 24)}>
+        <TextInput
+          multiline
+          value={text}
+          onChangeText={setText}
+          editable={!(props.disabled || busy)}
+          placeholder="Your decision"
+          placeholderTextColor={props.theme.colors.foregroundMuted}
+          style={{
+            height: answerHeight(text, width),
+            padding: 8,
+            borderWidth: 1,
+            borderRadius: 6,
+            borderColor: props.theme.colors.border,
+            color: props.theme.colors.foreground,
+            backgroundColor: props.theme.colors.surface1,
+            fontSize: ANSWER_FONT_SIZE,
+            lineHeight: ANSWER_LINE_HEIGHT,
+            textAlignVertical: "top",
+          }}
+          testID={`${props.testID}-text`}
+        />
+      </View>
       {props.findings && props.findings.length > 0 ? (
         <SettingsSelect
           label="On finding"
@@ -133,6 +153,7 @@ function DecisionForm(props: {
  */
 export function NeedsYouSection(props: {
   workspaceId: string;
+  theme: Theme;
   decisions: Decision[];
   nativeQuestions: NativeQuestion[];
   /** False once the group ended with its workspace. */
@@ -149,6 +170,7 @@ export function NeedsYouSection(props: {
         <DecisionForm
           key={decision.id}
           workspaceId={props.workspaceId}
+          theme={props.theme}
           label={decision.text}
           hint={[
             `From the ${actorLabel(decision.by)}${decision.revisedAt ? " (revised)" : ""} · ${decision.id}`,
@@ -200,8 +222,10 @@ function briefRows(assignment: Assignment): ReactNode[] {
   ];
 }
 
-export function LedgerSections({ workspaceId, ledger, members, running, onChanged }: Props) {
+export function LedgerSections({ workspaceId, theme, ledger, members, running, onChanged }: Props) {
   const [openBrief, setOpenBrief] = useState<string | null>(null);
+  const [showFinished, setShowFinished] = useState(false);
+  const [showSettled, setShowSettled] = useState(false);
   const ownerName = (agentId: string | null) => {
     if (!agentId) return "no Peer yet";
     const member = members.find((m) => m.agentId === agentId);
@@ -210,6 +234,19 @@ export function LedgerSections({ workspaceId, ledger, members, running, onChange
 
   const closed = ledger.decisions.filter((d) => d.status !== "pending");
   const openFindings = ledger.findings.filter((f) => f.status === "open");
+  const { open: openAssignments, finished } = splitAssignments(ledger.assignments);
+  const assignmentCard = (assignment: Assignment) => (
+    <Card key={assignment.id}>
+      <SettingsAction
+        label={`${assignment.title} · ${assignment.id}`}
+        hint={`${assignment.kind} · ${assignmentStatusLabel(assignment.status)} · owner ${ownerName(assignment.peerAgentId)}\nScope: ${assignment.scope}`}
+        actionLabel={openBrief === assignment.id ? "Hide brief" : "Brief"}
+        onPress={() => setOpenBrief(openBrief === assignment.id ? null : assignment.id)}
+        testID={`slp-assignment-${assignment.id}`}
+      />
+      {openBrief === assignment.id ? briefRows(assignment) : null}
+    </Card>
+  );
 
   return (
     <>
@@ -233,24 +270,34 @@ export function LedgerSections({ workspaceId, ledger, members, running, onChange
             <SettingsRow label="Nothing delegated yet" />
           </Card>
         ) : null}
-        {ledger.assignments.map((assignment) => (
-          <Card key={assignment.id}>
+        {openAssignments.map(assignmentCard)}
+        {finished.length > 0 ? (
+          <Card>
             <SettingsAction
-              label={`${assignment.title} · ${assignment.id}`}
-              hint={`${assignment.kind} · ${assignmentStatusLabel(assignment.status)} · owner ${ownerName(assignment.peerAgentId)}\nScope: ${assignment.scope}`}
-              actionLabel={openBrief === assignment.id ? "Hide brief" : "Brief"}
-              onPress={() => setOpenBrief(openBrief === assignment.id ? null : assignment.id)}
-              testID={`slp-assignment-${assignment.id}`}
+              label={closedToggleLabel(finished.length, finished.length === 1 ? "assignment" : "assignments", showFinished)}
+              hint="Accepted or dropped"
+              actionLabel={showFinished ? "Hide" : "Show"}
+              onPress={() => setShowFinished(!showFinished)}
+              testID="slp-assignments-closed-toggle"
             />
-            {openBrief === assignment.id ? briefRows(assignment) : null}
           </Card>
-        ))}
+        ) : null}
+        {showFinished ? finished.map(assignmentCard) : null}
       </SettingsSection>
 
       <SettingsSection title={`Decisions (${closed.length})`} testID="slp-decisions">
         <Card>
           {closed.length === 0 ? <SettingsRow label="No settled decisions" /> : null}
-          {closed.map((decision) => (
+          {closed.length > 0 ? (
+            <SettingsAction
+              label={closedToggleLabel(closed.length, closed.length === 1 ? "decision" : "decisions", showSettled)}
+              hint="Answered, withdrawn, or recorded by Human"
+              actionLabel={showSettled ? "Hide" : "Show"}
+              onPress={() => setShowSettled(!showSettled)}
+              testID="slp-decisions-closed-toggle"
+            />
+          ) : null}
+          {(showSettled ? closed : []).map((decision) => (
             <SettingsRow
               key={decision.id}
               label={decisionSource(decision)}
@@ -273,6 +320,7 @@ export function LedgerSections({ workspaceId, ledger, members, running, onChange
         <SettingsSection title="Record a decision" testID="slp-record">
           <DecisionForm
             workspaceId={workspaceId}
+            theme={theme}
             label="Decision"
             hint="Recorded as yours (source Human) and sent only to the Supervisor, which decides who else needs it"
             findings={openFindings.map((f) => ({ id: f.id, label: `${f.id}: ${f.text.slice(0, 60)}` }))}
