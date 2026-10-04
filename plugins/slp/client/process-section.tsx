@@ -1,25 +1,31 @@
+import { useCallback, useEffect, useState } from "react";
+import { useRpc } from "@getpaseo/plugin/client";
 import { copyText, useToast } from "@getpaseo/plugin/client/react-native";
 import { SettingsAction, SettingsRow, SettingsSection } from "@getpaseo/plugin/client/ui";
-import type { Report } from "../shared/contracts";
+import { getReport, type Report } from "../shared/contracts";
 import { counts, nativeQuestionBreaks, total } from "../shared/format";
+import { Card } from "./card";
 
 // The group's process report (slice 5, required behavior 10): which
-// coordination mechanisms ran and what they cost. Tokens are estimates.
+// coordination mechanisms ran and what they cost. Tokens are estimates. It is
+// collapsed, and fetched only while it is open.
 
-export function ProcessSection({ report, markdown }: { report: Report; markdown: string }) {
+const REFRESH_MS = 5000;
+
+function ReportRows({ report, markdown }: { report: Report; markdown: string }) {
   const toast = useToast();
   const e = report.escalations;
   const copy = async () => {
     try {
       await copyText(markdown);
-      toast.show("Process report copied as Markdown.", { variant: "success" });
+      toast.show("Process report copied as Markdown", { variant: "success" });
     } catch (cause) {
       toast.error(`Could not copy: ${String(cause instanceof Error ? cause.message : cause)}`);
     }
   };
 
   return (
-    <SettingsSection title="Process" testID="slp-process">
+    <Card>
       <SettingsRow
         label={`Human messages to the Lead or a Peer: ${total(report.humanInterventions)}`}
         hint={`Human's own choice, not a break (${counts(report.humanInterventions)}). Messages to the Supervisor: ${report.humanMessagesToSupervisor}. Decisions: ${report.humanDecisions.fromPanel} from this panel, ${report.humanDecisions.relayedBySupervisor} relayed by the Supervisor.`}
@@ -72,12 +78,57 @@ export function ProcessSection({ report, markdown }: { report: Report; markdown:
         />
       ))}
       <SettingsAction
-        label="Report"
-        hint="Markdown version of this section, for comparing groups."
+        label="Copy as Markdown"
+        hint="For comparing groups"
         actionLabel="Copy"
         onPress={() => void copy()}
         testID="slp-process-copy"
       />
+    </Card>
+  );
+}
+
+export function ProcessSection({ workspaceId }: { workspaceId: string }) {
+  const fetchReport = useRpc(getReport);
+  const [open, setOpen] = useState(false);
+  const [data, setData] = useState<{ report: Report; markdown: string } | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    try {
+      const next = await fetchReport({ workspaceId });
+      setData(next.report && next.markdown ? { report: next.report, markdown: next.markdown } : null);
+      setError(null);
+    } catch (cause) {
+      setError(String(cause instanceof Error ? cause.message : cause));
+    }
+  }, [fetchReport, workspaceId]);
+
+  useEffect(() => {
+    if (!open) return;
+    void load();
+    const timer = setInterval(() => void load(), REFRESH_MS);
+    return () => clearInterval(timer);
+  }, [open, load]);
+
+  return (
+    <SettingsSection title="Process" testID="slp-process">
+      <Card>
+        <SettingsAction
+          label="Process report"
+          hint="Which coordination steps ran and what they cost, for comparing groups"
+          error={open ? error : null}
+          actionLabel={open ? "Hide" : "Show"}
+          onPress={() => setOpen(!open)}
+          testID="slp-process-toggle"
+        />
+      </Card>
+      {open && data ? <ReportRows report={data.report} markdown={data.markdown} /> : null}
+      {open && !data && !error ? (
+        <Card>
+          <SettingsRow label="Loading the report..." />
+        </Card>
+      ) : null}
     </SettingsSection>
   );
 }

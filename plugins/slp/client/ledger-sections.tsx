@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import { useRpc } from "@getpaseo/plugin/client";
 import { useToast } from "@getpaseo/plugin/client/react-native";
 import {
@@ -9,7 +9,16 @@ import {
   SettingsSelect,
   type SettingsInputHandle,
 } from "@getpaseo/plugin/client/ui";
-import { humanDecide, type Assignment, type Decision, type Ledger, type MemberView } from "../shared/contracts";
+import {
+  humanDecide,
+  type Assignment,
+  type Decision,
+  type Ledger,
+  type MemberView,
+  type NativeQuestion,
+} from "../shared/contracts";
+import { Card } from "./card";
+import { assignmentStatusLabel, findingKindLabel, memberName, roleLabel } from "./labels";
 
 // Human's view of the coordination ledger (required behavior 7, slice 4):
 // briefs with constraint sources, open findings, pending decisions, and
@@ -28,13 +37,13 @@ interface Props {
 const NO_FINDING = "none";
 
 function actorLabel(by: Decision["by"]): string {
-  return by.role === "human" ? "Human" : by.role.charAt(0).toUpperCase() + by.role.slice(1);
+  return by.role === "human" ? "Human" : roleLabel(by.role);
 }
 
 function decisionSource(decision: Decision): string {
   const who = actorLabel(decision.by);
-  if (decision.status === "withdrawn") return `withdrawn by the ${who}, no answer needed`;
-  if (decision.source === "agent") return `agent choice (${who})`;
+  if (decision.status === "withdrawn") return `Withdrawn by the ${who}, no answer needed`;
+  if (decision.source === "agent") return `Agent choice (${who})`;
   return decision.by.role === "human" ? "Human, from the panel" : `Human, relayed by the ${who}`;
 }
 
@@ -42,7 +51,6 @@ function DecisionForm(props: {
   workspaceId: string;
   label: string;
   hint: string;
-  actionLabel: string;
   settles?: string;
   findings?: { id: string; label: string }[];
   disabled: boolean;
@@ -72,8 +80,8 @@ function DecisionForm(props: {
       setFindingId(NO_FINDING);
       toast.show(
         result.notified.length
-          ? `${result.decisionId} recorded and sent to the Supervisor.`
-          : `${result.decisionId} recorded; no Supervisor to tell.`,
+          ? `Decision ${result.decisionId} recorded and sent to the Supervisor`
+          : `Decision ${result.decisionId} recorded; no Supervisor to tell`,
         { variant: "success" },
       );
       props.onChanged();
@@ -85,7 +93,7 @@ function DecisionForm(props: {
   };
 
   return (
-    <>
+    <Card>
       <SettingsInput
         ref={input}
         label={props.label}
@@ -98,7 +106,7 @@ function DecisionForm(props: {
       {props.findings && props.findings.length > 0 ? (
         <SettingsSelect
           label="On finding"
-          hint="A decision on a finding resolves it."
+          hint="A decision on a finding resolves it"
           value={findingId}
           options={[{ label: "No finding", value: NO_FINDING }, ...props.findings.map((f) => ({ label: f.label, value: f.id }))]}
           onValueChange={setFindingId}
@@ -107,108 +115,158 @@ function DecisionForm(props: {
         />
       ) : null}
       <SettingsAction
-        label=""
+        label="Send to the Supervisor"
         error={error}
-        actionLabel={busy ? "Recording…" : props.actionLabel}
+        actionLabel={busy ? "Sending..." : "Send"}
         disabled={props.disabled || busy || text.trim().length === 0}
         onPress={() => void submit()}
         testID={`${props.testID}-submit`}
       />
-    </>
+    </Card>
   );
 }
 
-function BriefRows({ assignment }: { assignment: Assignment }) {
-  const { brief } = assignment;
-  const list = (items: string[]) => (items.length ? items.map((item) => `• ${item}`).join("\n") : "None recorded.");
+/**
+ * What waits for Human: decisions the agents raised, and questions a member
+ * asked through its provider's own tool (slice 7, I2). Those block the
+ * member's turn and are answered in its chat, so the panel only points there.
+ */
+export function NeedsYouSection(props: {
+  workspaceId: string;
+  decisions: Decision[];
+  nativeQuestions: NativeQuestion[];
+  /** False once the group ended with its workspace. */
+  running: boolean;
+  onOpenAgent?: (agentId: string) => void;
+  onChanged(): void;
+}) {
+  const pending = props.decisions.filter((d) => d.status === "pending");
+  const count = pending.length + props.nativeQuestions.length;
+  if (count === 0) return null;
   return (
-    <>
-      <SettingsRow label="Goal" hint={brief.goal} />
-      <SettingsRow
-        label="Binding constraints"
-        hint={list(brief.constraints.map((c) => `${c.text} (source: ${c.source})`))}
-      />
-      <SettingsRow label="Current choice (the Lead's, not binding)" hint={brief.currentChoice} />
-      <SettingsRow label="Open uncertainties" hint={list(brief.uncertainties)} />
-      <SettingsRow label="Evidence that would reopen it" hint={list(brief.reopenEvidence)} />
-      {assignment.acceptance ? (
-        <SettingsRow label={`Lead: ${assignment.acceptance.outcome}`} hint={assignment.acceptance.reason} />
+    <SettingsSection title={`Needs you (${count})`} testID="slp-needs-you">
+      {pending.map((decision) => (
+        <DecisionForm
+          key={decision.id}
+          workspaceId={props.workspaceId}
+          label={decision.text}
+          hint={[
+            `From the ${actorLabel(decision.by)}${decision.revisedAt ? " (revised)" : ""} · ${decision.id}`,
+            decision.findingId ? `On finding ${decision.findingId}` : null,
+          ]
+            .filter(Boolean)
+            .join("\n")}
+          settles={decision.id}
+          disabled={!props.running}
+          onChanged={props.onChanged}
+          testID={`slp-settle-${decision.id}`}
+        />
+      ))}
+      {props.nativeQuestions.length > 0 ? (
+        <Card testID="slp-native-questions">
+          {props.nativeQuestions.map((question) => (
+            <SettingsAction
+              key={question.requestId}
+              label={question.text}
+              hint={`The ${question.role} is waiting in its own chat. It asked through its provider's question tool, which blocks its turn.`}
+              actionLabel="Open chat"
+              disabled={!props.onOpenAgent}
+              onPress={() => props.onOpenAgent?.(question.agentId)}
+              testID={`slp-native-question-${question.requestId}`}
+            />
+          ))}
+        </Card>
       ) : null}
-    </>
+    </SettingsSection>
   );
+}
+
+function briefRows(assignment: Assignment): ReactNode[] {
+  const { brief } = assignment;
+  const list = (items: string[]) => (items.length ? items.map((item) => `• ${item}`).join("\n") : "None recorded");
+  return [
+    <SettingsRow key="goal" label="Goal" hint={brief.goal} />,
+    <SettingsRow
+      key="constraints"
+      label="Binding constraints"
+      hint={list(brief.constraints.map((c) => `${c.text} (source: ${c.source})`))}
+    />,
+    <SettingsRow key="choice" label="Current choice (the Lead's, not binding)" hint={brief.currentChoice} />,
+    <SettingsRow key="uncertainties" label="Open uncertainties" hint={list(brief.uncertainties)} />,
+    <SettingsRow key="reopen" label="Evidence that would reopen it" hint={list(brief.reopenEvidence)} />,
+    assignment.acceptance ? (
+      <SettingsRow key="acceptance" label={`Lead: ${assignment.acceptance.outcome}`} hint={assignment.acceptance.reason} />
+    ) : null,
+  ];
 }
 
 export function LedgerSections({ workspaceId, ledger, members, running, onChanged }: Props) {
   const [openBrief, setOpenBrief] = useState<string | null>(null);
-  const memberName = (agentId: string | null) =>
-    members.find((m) => m.agentId === agentId)?.title ?? agentId ?? "nobody";
+  const ownerName = (agentId: string | null) => {
+    if (!agentId) return "no Peer yet";
+    const member = members.find((m) => m.agentId === agentId);
+    return member ? memberName(member) : "a former member";
+  };
 
-  const pending = ledger.decisions.filter((d) => d.status === "pending");
   const closed = ledger.decisions.filter((d) => d.status !== "pending");
   const openFindings = ledger.findings.filter((f) => f.status === "open");
 
   return (
     <>
-      {pending.length > 0 ? (
-        <SettingsSection title={`Waiting for you (${pending.length})`} testID="slp-pending">
-          {pending.map((decision) => (
-            <DecisionForm
-              key={decision.id}
-              workspaceId={workspaceId}
-              label={`${decision.id}, raised by the ${actorLabel(decision.by)}${decision.revisedAt ? " (revised)" : ""}`}
-              hint={decision.text + (decision.findingId ? `\nOn finding ${decision.findingId}.` : "")}
-              actionLabel={`Settle ${decision.id}`}
-              settles={decision.id}
-              disabled={!running}
-              onChanged={onChanged}
-              testID={`slp-settle-${decision.id}`}
+      <SettingsSection title={`Open findings (${openFindings.length})`} testID="slp-findings">
+        <Card>
+          {openFindings.length === 0 ? <SettingsRow label="No open findings" /> : null}
+          {openFindings.map((finding) => (
+            <SettingsRow
+              key={finding.id}
+              label={`${findingKindLabel(finding.kind)}${finding.assignmentId ? ` on ${finding.assignmentId}` : ""}, from the ${actorLabel(finding.by)}`}
+              hint={`${finding.text}\nEvidence: ${finding.evidence}\n${finding.id}`}
+              testID={`slp-finding-${finding.id}`}
             />
           ))}
-        </SettingsSection>
-      ) : null}
-
-      <SettingsSection title={`Open findings (${openFindings.length})`} testID="slp-findings">
-        {openFindings.length === 0 ? <SettingsRow label="No open findings." /> : null}
-        {openFindings.map((finding) => (
-          <SettingsRow
-            key={finding.id}
-            label={`${finding.id} ${finding.kind}${finding.assignmentId ? ` on ${finding.assignmentId}` : ""}, from the ${actorLabel(finding.by)}`}
-            hint={`${finding.text}\nEvidence: ${finding.evidence}`}
-            testID={`slp-finding-${finding.id}`}
-          />
-        ))}
+        </Card>
       </SettingsSection>
 
       <SettingsSection title={`Assignments (${ledger.assignments.length})`} testID="slp-assignments">
-        {ledger.assignments.length === 0 ? <SettingsRow label="The Lead has not delegated anything yet." /> : null}
+        {ledger.assignments.length === 0 ? (
+          <Card>
+            <SettingsRow label="Nothing delegated yet" />
+          </Card>
+        ) : null}
         {ledger.assignments.map((assignment) => (
-          <AssignmentEntry
-            key={assignment.id}
-            assignment={assignment}
-            owner={memberName(assignment.peerAgentId)}
-            open={openBrief === assignment.id}
-            onToggle={() => setOpenBrief(openBrief === assignment.id ? null : assignment.id)}
-          />
+          <Card key={assignment.id}>
+            <SettingsAction
+              label={`${assignment.title} · ${assignment.id}`}
+              hint={`${assignment.kind} · ${assignmentStatusLabel(assignment.status)} · owner ${ownerName(assignment.peerAgentId)}\nScope: ${assignment.scope}`}
+              actionLabel={openBrief === assignment.id ? "Hide brief" : "Brief"}
+              onPress={() => setOpenBrief(openBrief === assignment.id ? null : assignment.id)}
+              testID={`slp-assignment-${assignment.id}`}
+            />
+            {openBrief === assignment.id ? briefRows(assignment) : null}
+          </Card>
         ))}
       </SettingsSection>
 
       <SettingsSection title={`Decisions (${closed.length})`} testID="slp-decisions">
-        {closed.length === 0 ? <SettingsRow label="No settled decisions." /> : null}
-        {closed.map((decision) => (
-          <SettingsRow
-            key={decision.id}
-            label={`${decision.id}: ${decisionSource(decision)}`}
-            hint={[
-              decision.text,
-              decision.withdrawnReason ? `Reason: ${decision.withdrawnReason}` : null,
-              decision.findingId ? `Resolves ${decision.findingId}.` : null,
-              decision.projectRecord ? `Project record: ${decision.projectRecord}` : null,
-            ]
-              .filter(Boolean)
-              .join("\n")}
-            testID={`slp-decision-${decision.id}`}
-          />
-        ))}
+        <Card>
+          {closed.length === 0 ? <SettingsRow label="No settled decisions" /> : null}
+          {closed.map((decision) => (
+            <SettingsRow
+              key={decision.id}
+              label={decisionSource(decision)}
+              hint={[
+                decision.text,
+                decision.withdrawnReason ? `Reason: ${decision.withdrawnReason}` : null,
+                decision.findingId ? `Resolves ${decision.findingId}` : null,
+                decision.projectRecord ? `Project record: ${decision.projectRecord}` : null,
+                decision.id,
+              ]
+                .filter(Boolean)
+                .join("\n")}
+              testID={`slp-decision-${decision.id}`}
+            />
+          ))}
+        </Card>
       </SettingsSection>
 
       {running ? (
@@ -216,8 +274,7 @@ export function LedgerSections({ workspaceId, ledger, members, running, onChange
           <DecisionForm
             workspaceId={workspaceId}
             label="Decision"
-            hint="Recorded as yours (source Human) and sent only to the Supervisor, which decides who else needs it."
-            actionLabel="Record"
+            hint="Recorded as yours (source Human) and sent only to the Supervisor, which decides who else needs it"
             findings={openFindings.map((f) => ({ id: f.id, label: `${f.id}: ${f.text.slice(0, 60)}` }))}
             disabled={false}
             onChanged={onChanged}
@@ -225,22 +282,6 @@ export function LedgerSections({ workspaceId, ledger, members, running, onChange
           />
         </SettingsSection>
       ) : null}
-    </>
-  );
-}
-
-function AssignmentEntry(props: { assignment: Assignment; owner: string; open: boolean; onToggle(): void }) {
-  const { assignment } = props;
-  return (
-    <>
-      <SettingsAction
-        label={`${assignment.id} ${assignment.title}`}
-        hint={`${assignment.kind} · ${assignment.status} · owner ${props.owner}\nScope: ${assignment.scope}`}
-        actionLabel={props.open ? "Hide brief" : "Brief"}
-        onPress={props.onToggle}
-        testID={`slp-assignment-${assignment.id}`}
-      />
-      {props.open ? <BriefRows assignment={assignment} /> : null}
     </>
   );
 }
