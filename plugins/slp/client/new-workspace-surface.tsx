@@ -9,6 +9,7 @@ import {
   canUseWorktree,
   createSlpWorkspace,
   flowNotice,
+  listAllWorkspaces,
   effectiveIsolation,
   buildCreateRequest,
   messageOf,
@@ -55,10 +56,10 @@ export function createNewWorkspaceSurface(client: PluginClientContext, panelId: 
       let live = true;
       Promise.all([
         paseo.projects.list(),
-        // The newest 200 is plenty to find the project in use right now.
-        paseo.workspaces.list({ sort: [{ key: "activity_at", direction: "desc" }], page: { limit: 200 } }),
+        // Unsorted on purpose: activityAt can be null on every workspace, so recency is taken client-side.
+        listAllWorkspaces((page) => paseo.workspaces.list({ page })),
       ])
-        .then(([{ projects: listed }, { entries }]) => {
+        .then(([{ projects: listed }, entries]) => {
           if (!live) return;
           setProjects(listed);
           setProjectId((current) => current || (preselectProject(listed, entries) ?? ""));

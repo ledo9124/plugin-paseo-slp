@@ -94,6 +94,38 @@ need. Out of scope: role texts, ledger data model (D5-B), auto-on policy.
   unchanged buttons, count 0 after a mode change), A9 (notice, Save off
   while the read fails). Typecheck clean, `npm test` 125/125
 - [ ] Checks and live test
+  - Live check 1, 2026-10-04, 6767 running this checkout (directory
+    install; settings backed up to `%TEMP%/slp-settings-backup-v034`, hash
+    `60cbcbc5...`), web app at app.paseo.sh paired to 6767 with
+    `daemon pair` (direct connection from the browser failed with code 1006),
+    driven by agent-browser; scratch git project `%TEMP%/slp-v034-scratch`:
+    - sidebar "New SLP workspace" opens the screen; Local create with a
+      double-click lands in the new workspace in about 4 s with SLP on, the
+      panel open, Supervisor and Lead started; only one workspace created
+      (`wks_7ad6f97cb3cfd2cf`);
+    - Worktree create lands in about 3 s with SLP on (`wks_4f11cfd18f1535cf`);
+    - the global command item "SLP: new SLP workspace" shows on host routes
+      and opens the screen; on `/open-project` (no host in the route) Paseo
+      shows no plugin commands at all (upstream `registration.tsx`);
+    - first pass FAILED: no project preselected; `activityAt` is null on
+      every workspace of 6767 (finding F2, decision D7, fix A10). After A10
+      and a reload, the screen preselects plugin-paseo-slp, the project of
+      the workspace with the latest `statusEnteredAt` (12:55:07Z);
+    - a pending decision raised by the scratch Supervisor shows "Needs you
+      (1)" and the header "SLP on · 1"; answering with two lines from the
+      panel stores "Blue.
+Second line of the answer." and the count clears
+      within 3 s;
+    - answer field 72 px empty, 138 px at six lines, back to 72 px;
+    - "Show/Hide 1 closed decision" toggles;
+    - the SLP tab dragged into the Explorer renders at about 320 px;
+    - member status reads "working" during a turn and "idle" after;
+    - settings: Peers tab shows "3 of 17 on: Opus 5.5, Fable 5.1, Sonnet
+      5.5" and "1 of 7 on: GPT-6-Luna"; Show models lists 17 switches;
+      nothing saved (hash unchanged);
+    - not seen live: "No report yet" (the Process section shows only with a
+      group), the toast for a mode or open failure (not forced), the
+      settings read-error notice and "Changed elsewhere" (not forced)
 - [ ] Merge, tag, push, 6767 update
 
 ## Decisions
@@ -103,6 +135,9 @@ need. Out of scope: role texts, ledger data model (D5-B), auto-on policy.
   screen from a sidebar item and a command-center item; the most recently
   active workspace's project preselected; default Local, Worktree offered
   for git projects; no extra fields.
+- 2026-10-04 (Lead, finding F2, D7): "most recently active" uses
+  `activityAt`, else `statusEnteredAt`; Paseo 0.10.3 leaves `activityAt`
+  null on every workspace of 6767.
 - 2026-10-04 (Lead, finding F1): `npm test` also runs `client/**/*.test.ts`;
   client tests stay pure (node environment).
 

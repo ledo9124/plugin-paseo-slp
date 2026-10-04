@@ -5,6 +5,7 @@ import {
   createSlpWorkspace,
   effectiveIsolation,
   flowNotice,
+  listAllWorkspaces,
   newIdempotencyKey,
   preselectProject,
   retry,
@@ -37,6 +38,19 @@ describe("preselectProject", () => {
       { projectId: "p-dir", activityAt: "2026-10-01T00:00:00Z" },
     ];
     expect(preselectProject([git, plain], workspaces)).toBe("p-dir");
+  });
+
+  it("uses statusEnteredAt when activityAt is missing, and prefers activityAt when both exist", () => {
+    const fallback = [
+      { projectId: "p-git", activityAt: "2026-10-04T10:00:00Z" },
+      { projectId: "p-dir", activityAt: null, statusEnteredAt: "2026-10-04T11:00:00Z" },
+    ];
+    expect(preselectProject([git, plain], fallback)).toBe("p-dir");
+    const both = [
+      { projectId: "p-git", activityAt: "2026-10-04T12:00:00Z", statusEnteredAt: "2026-10-01T00:00:00Z" },
+      { projectId: "p-dir", activityAt: "2026-10-04T11:00:00Z", statusEnteredAt: "2026-10-04T13:00:00Z" },
+    ];
+    expect(preselectProject([git, plain], both)).toBe("p-git");
   });
 
   it("requires a choice when nothing shows activity and there are several projects", () => {
@@ -228,5 +242,35 @@ describe("flowNotice", () => {
     const both = flowNotice({ workspaceId: "w", modeError: "boom", openError: "Could not open." });
     expect(both).toContain("boom");
     expect(both?.endsWith("Could not open.")).toBe(true);
+  });
+});
+
+describe("listAllWorkspaces", () => {
+  const pages = (data: string[][]) => {
+    const calls: Array<{ limit: number; cursor?: string }> = [];
+    const fetchPage = async (page: { limit: number; cursor?: string }) => {
+      calls.push(page);
+      const index = page.cursor ? Number(page.cursor) : 0;
+      return { entries: data[index] ?? [], pageInfo: { nextCursor: index + 1 < data.length ? String(index + 1) : null } };
+    };
+    return { calls, fetchPage };
+  };
+
+  it("follows the cursor until the last page", async () => {
+    const { calls, fetchPage } = pages([["a", "b"], ["c"], ["d"]]);
+    expect(await listAllWorkspaces(fetchPage, { size: 2, maxPages: 10 })).toEqual(["a", "b", "c", "d"]);
+    expect(calls).toEqual([{ limit: 2 }, { limit: 2, cursor: "1" }, { limit: 2, cursor: "2" }]);
+  });
+
+  it("makes one request when everything fits in one page", async () => {
+    const { calls, fetchPage } = pages([["a"]]);
+    expect(await listAllWorkspaces(fetchPage)).toEqual(["a"]);
+    expect(calls).toHaveLength(1);
+  });
+
+  it("stops after the page cap", async () => {
+    const { calls, fetchPage } = pages([["a"], ["b"], ["c"]]);
+    expect(await listAllWorkspaces(fetchPage, { size: 1, maxPages: 2 })).toEqual(["a", "b"]);
+    expect(calls).toHaveLength(2);
   });
 });

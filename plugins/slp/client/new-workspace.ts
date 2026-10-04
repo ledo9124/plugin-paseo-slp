@@ -16,12 +16,19 @@ export interface ProjectChoice {
 export interface WorkspaceActivity {
   projectId: string;
   activityAt: string | null;
+  /** When the workspace's status last changed; stands in when `activityAt` is missing. */
+  statusEnteredAt?: string | null;
   archivingAt?: string | null;
 }
 
+/** A workspace's recency: `activityAt`, else `statusEnteredAt` (it moves when an agent starts or finishes). */
+function recency(workspace: WorkspaceActivity): number {
+  return Date.parse(workspace.activityAt ?? workspace.statusEnteredAt ?? "");
+}
+
 /**
- * The project of the most recently active workspace (its `activityAt`), among
- * the projects offered. Null when no workspace has activity: Human then picks.
+ * The project of the most recently active workspace (see `recency`), among
+ * the projects offered. Null when no workspace has a usable time: Human then picks.
  * The only project is preselected too, since there is nothing to choose.
  */
 export function preselectProject(
@@ -31,13 +38,34 @@ export function preselectProject(
   const known = new Set(projects.map((project) => project.projectId));
   let best: { projectId: string; at: number } | null = null;
   for (const workspace of workspaces) {
-    if (workspace.archivingAt || !known.has(workspace.projectId) || !workspace.activityAt) continue;
-    const at = Date.parse(workspace.activityAt);
+    if (workspace.archivingAt || !known.has(workspace.projectId)) continue;
+    const at = recency(workspace);
     if (Number.isNaN(at)) continue;
     if (!best || at > best.at) best = { projectId: workspace.projectId, at };
   }
   if (best) return best.projectId;
   return projects.length === 1 ? (projects[0]?.projectId ?? null) : null;
+}
+
+export const WORKSPACE_PAGE = { size: 200, maxPages: 10 } as const; // 200 is the daemon's page limit
+
+/**
+ * Every workspace the daemon lists, page by page, so the newest one is not
+ * missed whatever order the daemon returns them in. Stops after `maxPages`.
+ */
+export async function listAllWorkspaces<T>(
+  fetchPage: (page: { limit: number; cursor?: string }) => Promise<{ entries: T[]; pageInfo: { nextCursor: string | null } }>,
+  { size, maxPages }: { size: number; maxPages: number } = WORKSPACE_PAGE,
+): Promise<T[]> {
+  const all: T[] = [];
+  let cursor: string | undefined;
+  for (let n = 0; n < maxPages; n++) {
+    const { entries, pageInfo } = await fetchPage({ limit: size, ...(cursor ? { cursor } : {}) });
+    all.push(...entries);
+    if (!pageInfo.nextCursor) break;
+    cursor = pageInfo.nextCursor;
+  }
+  return all;
 }
 
 /** Worktrees need a git repository. */
