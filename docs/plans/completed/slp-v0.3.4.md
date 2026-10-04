@@ -4,7 +4,7 @@ Date: 2026-10-04
 
 ## Status
 
-Active
+Completed
 
 ## Outcome
 
@@ -93,7 +93,9 @@ need. Out of scope: role texts, ledger data model (D5-B), auto-on policy.
   owners: A7 (height from text and width), A8 (one refresh per burst, skip
   unchanged buttons, count 0 after a mode change), A9 (notice, Save off
   while the read fails). Typecheck clean, `npm test` 125/125
-- [ ] Checks and live test
+- [x] Checks and live test: `npm run typecheck` clean, `npm test` 129/129;
+  a clean copy compiles with Paseo's compiler (client 119388 bytes, server
+  121643 bytes); scratch workspaces archived
   - Live check 1, 2026-10-04, 6767 running this checkout (directory
     install; settings backed up to `%TEMP%/slp-settings-backup-v034`, hash
     `60cbcbc5...`), web app at app.paseo.sh paired to 6767 with
@@ -148,3 +150,19 @@ Second line of the answer." and the count clears
 - Repository-required checks: `npm run typecheck`, `npm test`.
 
 ## Result
+
+v0.3.4 released on 2026-10-04 (Human's D2).
+- One-step SLP workspace: a "New SLP workspace" screen from the sidebar and
+  the command center creates a workspace (Local or Worktree), turns SLP on,
+  and opens the panel there. Proved live. The command-center item shows only
+  on host routes, a Paseo limit.
+- Follow-ups: grouped Peer models, settings edge cases, multiline answers,
+  the panel in the Explorer, collapse, live member status, the waiting count,
+  refresh on events. Proved live except the forced-failure paths and "No
+  report yet", which are unit-tested only.
+- `docs/plans/completed/slp-ui-ux.md` corrected: its new-workspace claim
+  covered an existing workspace, not Paseo's New workspace screen.
+
+Follow-ups, none started: D5 option B; `onEvent` progress for slow worktree
+creates; a searchable project select if the list grows long; a possible
+command id collision when SLP is installed on two hosts (untested).
