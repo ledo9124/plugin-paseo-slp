@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type { PluginClientContext } from "@getpaseo/plugin/client";
-import { HeaderButtons } from "./header-buttons";
+import { createHeaderButtons } from "./header-buttons";
 
 function setup() {
   const update = vi.fn();
@@ -8,12 +8,12 @@ function setup() {
     addHeaderButton: vi.fn(() => ({ update, remove: vi.fn() })),
     openPanel: vi.fn(),
   } as unknown as PluginClientContext;
-  const buttons = new HeaderButtons(client, "slp");
+  const buttons = createHeaderButtons(client, "slp");
   buttons.ensure("ws");
   return { buttons, update };
 }
 
-describe("HeaderButtons.setMode", () => {
+describe("header buttons setMode", () => {
   it("updates the button only when mode, lock, or waiting count changed", () => {
     const { buttons, update } = setup();
     buttons.setMode("ws", { mode: "on", locked: false, waiting: 2 });
