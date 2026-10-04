@@ -12,7 +12,7 @@ const root = join(__dirname, "..");
 const sources = [
   join(root, "index.client.tsx"),
   ...["client", "shared"].flatMap((dir) =>
-    readdirSync(join(root, dir))
+    (readdirSync(join(root, dir), { recursive: true }) as string[])
       .filter((name) => /\.tsx?$/.test(name) && !/\.test\.tsx?$/.test(name))
       .map((name) => join(root, dir, name)),
   ),

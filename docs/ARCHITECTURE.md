@@ -29,7 +29,11 @@ Results are in the [completed v0.1 plan](plans/completed/slp-plugin-v0.1.md).
     subprocess.
   - `index.client.tsx`: client entry, run inside every connected Paseo app.
     It adds the SLP workspace panel, the header button, and the settings
-    screen.
+    screen. The Paseo mobile app evaluates this bundle in Hermes with
+    experimental class support, where a class in the bundle came out
+    undefined and stopped the plugin on the phone (0.3.4 and earlier). Client
+    and shared code therefore declare no classes;
+    `client/no-classes.test.ts` enforces it.
   - `server/`, `client/`, `shared/`: Paseo's compiler rejects imports across
     these boundaries and code modules at the plugin root.
     - `server/`: `PaseoHost` and its fake, `SlpService` (mode and
