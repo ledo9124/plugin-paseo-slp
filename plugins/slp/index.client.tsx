@@ -1,6 +1,6 @@
 import type { PluginClientContext } from "@getpaseo/plugin/client";
 import { GROUP_LABEL, listWorkspaceModes } from "./shared/contracts";
-import { HeaderButtons, headerModeSink } from "./client/header-buttons";
+import { createHeaderButtons, headerModeSink } from "./client/header-buttons";
 import { announceSlpActivity, onSlpActivity, stopSlpActivity } from "./client/live-updates";
 import { createNewWorkspaceSurface } from "./client/new-workspace-surface";
 import { SlpSettingsScreen } from "./client/settings-screen";
@@ -12,7 +12,7 @@ const NEW_WORKSPACE_SURFACE_ID = "new-workspace";
 const MODES_REFRESH_MS = 30_000;
 
 export default function contribute(client: PluginClientContext) {
-  const buttons = new HeaderButtons(client, PANEL_ID);
+  const buttons = createHeaderButtons(client, PANEL_ID);
   headerModeSink.current = (workspaceId, state) => buttons.setMode(workspaceId, state);
 
   // Best effort: a failed call leaves the buttons as they are.
