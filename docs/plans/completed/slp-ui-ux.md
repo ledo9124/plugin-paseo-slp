@@ -4,7 +4,7 @@ Date: 2026-10-04
 
 ## Status
 
-Active
+Completed
 
 ## Outcome
 
@@ -71,7 +71,7 @@ policy.
     - the command center lists "SLP: open the SLP panel (turn SLP on)" for the workspace.
   - Live check 2, after the review fixes: opening the Supervisor's instructions editor and switching to Lead shows Lead collapsed; text typed on Templates survives a switch to Lead and back; settings file hash unchanged. Scratch workspace archived.
   - Not seen live: the "Starting the Supervisor and the Lead..." hint (the group started too fast); the no-catalog fallback inputs.
-- [ ] Merge, tag, 6767 update
+- [x] Merge, tag, 6767 update: `faa922d` (feature) and `f73e0b8` (release) merged into main as `9621f3e` (`--no-ff`); typecheck and 80 tests pass on main; a clean copy compiled with Paseo's compiler (client 94175 bytes, server 120831 bytes); tag `v0.3.3` and main pushed; 6767 runs `v0.3.3` from Git with its settings byte-identical (hash `60cbcbc5...`)
 
 ## Decisions
 
@@ -86,4 +86,17 @@ policy.
 
 ## Result
 
-Pending.
+v0.3.3 shipped on 2026-10-04 (Human's D1).
+- Item 1: a workspace created after the app loads now gets its SLP header
+  button (the plugin never subscribed to workspace updates), and the
+  command center opens the SLP panel. Proved live.
+- Item 2: settings in four tabs with one shared Save. Proved live.
+- Item 3: the small fixes from the audit. Proved live, except the
+  starting hint and the no-catalog fallback, which were not seen.
+- D5: Human kept the panel's pending decision as one free-text field.
+
+Follow-ups, none started: the long Peer model list; a multiline answer
+field (4b), which would also let the panel open in the Explorer (11); live
+member status (5b); a waiting count on the header button (12); activity
+and closed-item collapse (13); refresh on agent events (14); the
+pre-existing settings edge cases from the review.
