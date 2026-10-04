@@ -92,12 +92,15 @@ export function ProcessSection({ workspaceId }: { workspaceId: string }) {
   const fetchReport = useRpc(getReport);
   const [open, setOpen] = useState(false);
   const [data, setData] = useState<{ report: Report; markdown: string } | null>(null);
+  // The report comes back null when the workspace has no group (yet); that is an answer, not a wait.
+  const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
       const next = await fetchReport({ workspaceId });
       setData(next.report && next.markdown ? { report: next.report, markdown: next.markdown } : null);
+      setLoaded(true);
       setError(null);
     } catch (cause) {
       setError(String(cause instanceof Error ? cause.message : cause));
@@ -126,7 +129,11 @@ export function ProcessSection({ workspaceId }: { workspaceId: string }) {
       {open && data ? <ReportRows report={data.report} markdown={data.markdown} /> : null}
       {open && !data && !error ? (
         <Card>
-          <SettingsRow label="Loading the report..." />
+          {loaded ? (
+            <SettingsRow label="No report yet" hint="The report appears once this workspace has a group" />
+          ) : (
+            <SettingsRow label="Loading the report..." />
+          )}
         </Card>
       ) : null}
     </SettingsSection>

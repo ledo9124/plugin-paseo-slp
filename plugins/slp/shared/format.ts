@@ -13,3 +13,17 @@ export function total(values: Record<string, number>): number {
 export function nativeQuestionBreaks(byRole: Record<string, number>): Record<string, number> {
   return Object.fromEntries(Object.entries(byRole).filter(([role]) => role !== "supervisor"));
 }
+
+/**
+ * Items waiting for Human in a group: pending decisions plus unanswered native
+ * questions, the count the panel's "Needs you" section shows. An ended group
+ * (its workspace archived) can no longer be answered, so it waits for nobody.
+ */
+export function waitingForHuman(
+  decisions: ReadonlyArray<{ status: string }>,
+  nativeQuestions: ReadonlyArray<unknown>,
+  running: boolean,
+): number {
+  if (!running) return 0;
+  return decisions.filter((d) => d.status === "pending").length + nativeQuestions.length;
+}

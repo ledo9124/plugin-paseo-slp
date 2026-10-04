@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { View } from "react-native";
 import type { PluginWorkspacePanelProps } from "@getpaseo/plugin/client";
-import { useRpc } from "@getpaseo/plugin/client";
+import { useAgent, useRpc } from "@getpaseo/plugin/client";
 import { ScrollView } from "@getpaseo/plugin/client/react-native";
 import { SettingsAction, SettingsRow, SettingsSection, SettingsSwitch } from "@getpaseo/plugin/client/ui";
 import {
@@ -14,13 +14,17 @@ import {
   type NativeQuestion,
   type WorkspaceView,
 } from "../shared/contracts";
+import { waitingForHuman } from "../shared/format";
 import { Card } from "./card";
 import { headerModeSink } from "./header-buttons";
 import { assignmentStatusLabel, memberName, memberState } from "./labels";
 import { LedgerSections, NeedsYouSection } from "./ledger-sections";
+import { onSlpActivity } from "./live-updates";
 import { ProcessSection } from "./process-section";
 
-const REFRESH_MS = 5000;
+// Slow fallback: agent and workspace updates refresh the panel sooner, but a
+// ledger change that comes with no agent update waits for this.
+const REFRESH_MS = 10_000;
 
 function messageOf(cause: unknown): string {
   return String(cause instanceof Error ? cause.message : cause);
@@ -34,7 +38,33 @@ function holding(member: MemberView, ledger: Ledger | null): string | null {
   return open ? `owns ${open.id} (${assignmentStatusLabel(open.status)})` : null;
 }
 
-export function SlpPanel({ workspaceId, navigation }: PluginWorkspacePanelProps) {
+/** One group member. Status comes live from the client's agent state; the fetched status is the fallback. */
+function MemberRow({
+  member,
+  ledger,
+  index,
+  onOpen,
+}: {
+  member: MemberView;
+  ledger: Ledger | null;
+  index: number;
+  onOpen?: (agentId: string) => void;
+}) {
+  const liveStatus = useAgent(member.agentId ?? "", (agent) => agent.status);
+  const state = memberState({ ...member, status: liveStatus ?? member.status });
+  return (
+    <SettingsAction
+      label={memberName(member)}
+      hint={[member.provider, state, holding(member, ledger)].filter(Boolean).join(" · ")}
+      actionLabel="Open"
+      disabled={!member.agentId || !onOpen}
+      onPress={() => member.agentId && onOpen?.(member.agentId)}
+      testID={member.role === "peer" ? `slp-member-peer-${index}` : `slp-member-${member.role}`}
+    />
+  );
+}
+
+export function SlpPanel({ workspaceId, navigation, theme }: PluginWorkspacePanelProps) {
   const fetchView = useRpc(getWorkspace);
   const fetchLedger = useRpc(getLedger);
   const sendMode = useRpc(setWorkspaceMode);
@@ -46,11 +76,17 @@ export function SlpPanel({ workspaceId, navigation }: PluginWorkspacePanelProps)
   const [loadError, setLoadError] = useState<string | null>(null);
   const [modeError, setModeError] = useState<string | null>(null);
   const [changing, setChanging] = useState<Mode | null>(null);
+  // What waits for Human, from the last refresh; the header button shows it.
+  const waiting = useRef(0);
 
   const apply = useCallback(
     (next: WorkspaceView) => {
       setView(next);
-      headerModeSink.current?.(workspaceId, { mode: next.mode, locked: next.lockedAt !== null });
+      headerModeSink.current?.(workspaceId, {
+        mode: next.mode,
+        locked: next.lockedAt !== null,
+        waiting: waiting.current,
+      });
     },
     [workspaceId],
   );
@@ -58,6 +94,8 @@ export function SlpPanel({ workspaceId, navigation }: PluginWorkspacePanelProps)
   const refresh = useCallback(async () => {
     try {
       const [nextView, nextLedger] = await Promise.all([fetchView({ workspaceId }), fetchLedger({ workspaceId })]);
+      const nextDecisions = nextLedger.groupId ? nextLedger.ledger.decisions : [];
+      waiting.current = waitingForHuman(nextDecisions, nextLedger.nativeQuestions, !!nextView.group && !nextView.group.endedAt);
       apply(nextView);
       setLedger(nextLedger.groupId ? nextLedger.ledger : null);
       setNativeQuestions(nextLedger.nativeQuestions);
@@ -70,8 +108,14 @@ export function SlpPanel({ workspaceId, navigation }: PluginWorkspacePanelProps)
   useEffect(() => {
     void refresh();
     const timer = setInterval(() => void refresh(), REFRESH_MS);
-    return () => clearInterval(timer);
-  }, [refresh]);
+    const off = onSlpActivity((id) => {
+      if (id === null || id === workspaceId) void refresh();
+    });
+    return () => {
+      clearInterval(timer);
+      off();
+    };
+  }, [refresh, workspaceId]);
 
   const changeMode = async (mode: Mode) => {
     setChanging(mode);
@@ -126,6 +170,7 @@ export function SlpPanel({ workspaceId, navigation }: PluginWorkspacePanelProps)
       {view.group ? (
         <NeedsYouSection
           workspaceId={workspaceId}
+          theme={theme}
           decisions={ledger?.decisions ?? []}
           nativeQuestions={nativeQuestions}
           running={!view.group.endedAt}
@@ -168,14 +213,12 @@ export function SlpPanel({ workspaceId, navigation }: PluginWorkspacePanelProps)
           <Card>
             <SettingsRow label="Started" hint={new Date(view.group.startedAt).toLocaleString()} />
             {view.group.members.map((member, index) => (
-              <SettingsAction
+              <MemberRow
                 key={member.agentId ?? `${member.role}-${index}`}
-                label={memberName(member)}
-                hint={[member.provider, memberState(member), holding(member, ledger)].filter(Boolean).join(" · ")}
-                actionLabel="Open"
-                disabled={!member.agentId || !navigation}
-                onPress={() => member.agentId && navigation?.openAgent({ agentId: member.agentId })}
-                testID={member.role === "peer" ? `slp-member-peer-${index}` : `slp-member-${member.role}`}
+                member={member}
+                ledger={ledger}
+                index={index}
+                onOpen={navigation ? (agentId) => navigation.openAgent({ agentId }) : undefined}
               />
             ))}
           </Card>
@@ -185,6 +228,7 @@ export function SlpPanel({ workspaceId, navigation }: PluginWorkspacePanelProps)
       {view.group && ledger ? (
         <LedgerSections
           workspaceId={workspaceId}
+          theme={theme}
           ledger={ledger}
           members={view.group.members}
           running={!view.group.endedAt}

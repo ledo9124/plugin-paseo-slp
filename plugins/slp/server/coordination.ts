@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import type { Assignment, Brief, Decision, Finding, Ledger, NativeQuestion, Role } from "../shared/contracts";
+import { waitingForHuman } from "../shared/format";
 import type { SlpSettings } from "../shared/settings";
 import type { PaseoHost } from "./paseo-host";
 import type { WorkspaceQueue } from "./queue";
@@ -728,6 +729,13 @@ export class Coordination {
       heldMessages: group?.held.length ?? 0,
       events: group?.events.slice(-200) ?? [],
     };
+  }
+
+  /** What waits for Human in a workspace's group; the same rule as the panel's "Needs you". */
+  waitingForHuman(workspaceId: string): number {
+    const group = this.deps.store.get(workspaceId)?.group;
+    if (!group) return 0;
+    return waitingForHuman(group.ledger.decisions, openNativeQuestions(group), !group.endedAt);
   }
 
   // ---- Internals ------------------------------------------------------------

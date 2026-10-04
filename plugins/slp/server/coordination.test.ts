@@ -911,9 +911,12 @@ describe("native questions (slice 7, I2)", () => {
       },
     ]);
     expect(buildReport(group()).nativeQuestions).toEqual({ byRole: { supervisor: 1 }, unanswered: 1 });
+    expect(coordination.waitingForHuman("ws")).toBe(1);
 
     await coordination.onPermissionResolved({ agentId: idOf("supervisor"), workspaceId: "ws", requestId: "perm-1" });
     expect(coordination.ledgerView("ws").nativeQuestions).toEqual([]);
+    expect(coordination.waitingForHuman("ws")).toBe(0);
+    expect(coordination.waitingForHuman("no-such-workspace")).toBe(0);
     const report = buildReport(deps.store.get("ws")!.group!);
     expect(report.nativeQuestions).toEqual({ byRole: { supervisor: 1 }, unanswered: 0 });
     expect(renderReport(report)).toContain("Asked through the Supervisor's question tool: 1; unanswered native questions 0");

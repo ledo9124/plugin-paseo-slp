@@ -69,16 +69,33 @@ need. Out of scope: role texts, ledger data model (D5-B), auto-on policy.
 
 ## Progress
 
-- [ ] B1 one-step entry design
-- [ ] B2 settings
-- [ ] B3 panel content
-- [ ] B4 panel data
+- [x] B1 one-step entry design (A1, accepted): create, set mode on, open
+  panel via the public SDK; `openPanel` may race the app's store (retry, then
+  navigate); Human chose P2 (D6)
+- [x] B2 settings (A2, accepted): Peer models grouped by provider with a
+  summary; per-section three-way draft merge with a "Changed elsewhere"
+  notice; invalid settings show the error, Check again, two-press Reset
+- [x] B3 panel content (A3, accepted): multiline answer field; panel
+  locations workspace and explorer (workspace stays default); closed
+  assignments and decisions behind "Show N closed" toggles ("activity" read
+  as those lists)
+- [x] B4 panel data (A4, accepted): live member status via `useAgent`;
+  waiting count on the header ("SLP on · 2"); refresh on workspace/agent
+  events, polls 10 s panel / 30 s header; "No report yet"
 - [ ] Entry implementation
 - [ ] Review
 - [ ] Checks and live test
 - [ ] Merge, tag, push, 6767 update
 
 ## Decisions
+
+- 2026-10-04 (Human D4): option B alone; no upstream Paseo request.
+- 2026-10-04 (Human D6): the entry is P2, a small "New SLP workspace"
+  screen from a sidebar item and a command-center item; the most recently
+  active workspace's project preselected; default Local, Worktree offered
+  for git projects; no extra fields.
+- 2026-10-04 (Lead, finding F1): `npm test` also runs `client/**/*.test.ts`;
+  client tests stay pure (node environment).
 
 ## Validation
 

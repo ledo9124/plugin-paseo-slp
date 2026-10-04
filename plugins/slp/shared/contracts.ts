@@ -7,6 +7,9 @@ export type Role = z.infer<typeof RoleSchema>;
 export const ModeSchema = z.enum(["on", "off"]);
 export type Mode = z.infer<typeof ModeSchema>;
 
+/** Label on every group member's agent; the client uses it to spot SLP agent updates. */
+export const GROUP_LABEL = "slp.group";
+
 export const MemberViewSchema = z.object({
   role: RoleSchema,
   agentId: z.string().nullable(),
@@ -51,7 +54,15 @@ export const listWorkspaceModes = defineRpc({
   name: "slp.workspace.list",
   input: z.object({}),
   output: z.object({
-    workspaces: z.array(z.object({ workspaceId: z.string(), mode: ModeSchema, locked: z.boolean() })),
+    workspaces: z.array(
+      z.object({
+        workspaceId: z.string(),
+        mode: ModeSchema,
+        locked: z.boolean(),
+        /** Items waiting for Human in the running group: pending decisions and unanswered native questions. */
+        waiting: z.number().int(),
+      }),
+    ),
   }),
 });
 
