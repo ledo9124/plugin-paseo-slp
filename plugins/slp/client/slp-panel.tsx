@@ -19,7 +19,7 @@ import { Card } from "./card";
 import { headerModeSink } from "./header-buttons";
 import { assignmentStatusLabel, memberName, memberState } from "./labels";
 import { LedgerSections, NeedsYouSection } from "./ledger-sections";
-import { onSlpActivity } from "./live-updates";
+import { onSlpActivity, touches } from "./live-updates";
 import { ProcessSection } from "./process-section";
 
 // Slow fallback: agent and workspace updates refresh the panel sooner, but a
@@ -108,8 +108,8 @@ export function SlpPanel({ workspaceId, navigation, theme }: PluginWorkspacePane
   useEffect(() => {
     void refresh();
     const timer = setInterval(() => void refresh(), REFRESH_MS);
-    const off = onSlpActivity((id) => {
-      if (id === null || id === workspaceId) void refresh();
+    const off = onSlpActivity((ids) => {
+      if (touches(ids, workspaceId)) void refresh();
     });
     return () => {
       clearInterval(timer);
@@ -121,7 +121,10 @@ export function SlpPanel({ workspaceId, navigation, theme }: PluginWorkspacePane
     setChanging(mode);
     setModeError(null);
     try {
-      apply(await sendMode({ workspaceId, mode }));
+      const next = await sendMode({ workspaceId, mode });
+      // A mode change starts or ends the group, so nothing waits for Human yet; the old count is stale.
+      waiting.current = 0;
+      apply(next);
     } catch (cause) {
       setModeError(messageOf(cause));
       await refresh();

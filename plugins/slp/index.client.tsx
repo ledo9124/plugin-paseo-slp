@@ -66,10 +66,10 @@ export default function contribute(client: PluginClientContext) {
       onSelect: ({ openSurface }) => openSurface(NEW_WORKSPACE_SURFACE_ID),
     }),
     client.paseo.workspaces.subscribe((update) => {
-      if (update.kind === "upsert") {
-        buttons.ensure(update.workspace.id);
-        announceSlpActivity(update.workspace.id);
-      } else buttons.remove(update.id);
+      // Only the button set follows workspaces. A new SLP workspace gets its mode and count from the
+      // updates of its members (they carry the group label), or from the fallback poll.
+      if (update.kind === "upsert") buttons.ensure(update.workspace.id);
+      else buttons.remove(update.id);
     }),
     client.paseo.agents.subscribe((update) => {
       if (update.kind === "remove") announceSlpActivity(null);

@@ -12,7 +12,14 @@ import {
   type NativeQuestion,
 } from "../shared/contracts";
 import { Card } from "./card";
-import { answerHeight, closedToggleLabel, splitAssignments } from "./ledger-closed";
+import {
+  ANSWER_DEFAULT_WIDTH,
+  ANSWER_FONT_SIZE,
+  ANSWER_LINE_HEIGHT,
+  answerHeight,
+  closedToggleLabel,
+  splitAssignments,
+} from "./ledger-closed";
 import { assignmentStatusLabel, findingKindLabel, memberName, roleLabel } from "./labels";
 
 // Human's view of the coordination ledger (required behavior 7, slice 4):
@@ -59,7 +66,7 @@ function DecisionForm(props: {
   const decide = useRpc(humanDecide);
   const toast = useToast();
   const [text, setText] = useState("");
-  const [height, setHeight] = useState(answerHeight(0));
+  const [width, setWidth] = useState(ANSWER_DEFAULT_WIDTH);
   const [findingId, setFindingId] = useState(NO_FINDING);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -75,7 +82,6 @@ function DecisionForm(props: {
         ...(findingId !== NO_FINDING ? { findingId } : {}),
       });
       setText("");
-      setHeight(answerHeight(0));
       setFindingId(NO_FINDING);
       toast.show(
         result.notified.length
@@ -94,24 +100,24 @@ function DecisionForm(props: {
   return (
     <Card>
       <SettingsRow label={props.label} hint={props.hint} />
-      <View style={{ padding: 12 }}>
+      <View style={{ padding: 12 }} onLayout={(event) => setWidth(event.nativeEvent.layout.width - 24)}>
         <TextInput
           multiline
           value={text}
           onChangeText={setText}
-          onContentSizeChange={(event) => setHeight(answerHeight(event.nativeEvent.contentSize.height))}
           editable={!(props.disabled || busy)}
           placeholder="Your decision"
           placeholderTextColor={props.theme.colors.foregroundMuted}
           style={{
-            height,
+            height: answerHeight(text, width),
             padding: 8,
             borderWidth: 1,
             borderRadius: 6,
             borderColor: props.theme.colors.border,
             color: props.theme.colors.foreground,
             backgroundColor: props.theme.colors.surface1,
-            fontSize: 14,
+            fontSize: ANSWER_FONT_SIZE,
+            lineHeight: ANSWER_LINE_HEIGHT,
             textAlignVertical: "top",
           }}
           testID={`${props.testID}-text`}

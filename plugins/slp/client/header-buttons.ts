@@ -28,6 +28,8 @@ export class HeaderButtons {
   }
 
   setMode(workspaceId: string, state: ModeState): void {
+    const known = this.modes.get(workspaceId);
+    if (known && known.mode === state.mode && known.locked === state.locked && known.waiting === state.waiting) return;
     this.modes.set(workspaceId, state);
     this.registrations.get(workspaceId)?.update(this.button(workspaceId));
   }

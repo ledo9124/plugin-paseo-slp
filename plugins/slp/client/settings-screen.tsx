@@ -504,7 +504,8 @@ export function SlpSettingsScreen({ theme }: PluginSurfaceProps) {
     });
   }, [settings.status, settings.status === "ready" ? settings.revision : null]);
 
-  if (settings.status === "error") {
+  // Nothing was ever loaded: there is no editor to keep.
+  if (settings.status === "error" && !view) {
     return (
       <Problem>
         <Card>
@@ -569,6 +570,9 @@ export function SlpSettingsScreen({ theme }: PluginSurfaceProps) {
   const clashes = SECTIONS.filter((key) => view.conflicts.includes(key) && changed(key));
   const loadSaved = () => setView((current) => current && { draft: saved, base: saved, conflicts: [], version: current.version + 1 });
 
+  // A failed read leaves the editor in place, but there is no revision to save
+  // against until a read succeeds again.
+  const readFailed = settings.status === "error" ? settings.error : null;
   const save = () => {
     if (settings.status === "ready" || settings.status === "invalid") void settings.save(draft, settings.revision);
   };
@@ -599,6 +603,20 @@ export function SlpSettingsScreen({ theme }: PluginSurfaceProps) {
   return (
     <ScrollView contentContainerStyle={{ padding: 16 }} stickyHeaderIndices={[0]}>
       <TabBar<TabKey> tabs={tabs} active={tab} onSelect={setTab} theme={theme} />
+      {readFailed !== null ? (
+        <SettingsSection title="Settings unavailable">
+          <Card>
+            <SettingsAction
+              label="Reading the saved settings failed"
+              hint="Your edits are kept. Save is off until the saved settings can be read again."
+              error={readFailed}
+              actionLabel="Try again"
+              onPress={() => void settings.reload()}
+              testID="slp-settings-read-retry"
+            />
+          </Card>
+        </SettingsSection>
+      ) : null}
       {clashes.length ? (
         <SettingsSection title="Changed elsewhere">
           <Card>
@@ -647,7 +665,7 @@ export function SlpSettingsScreen({ theme }: PluginSurfaceProps) {
                 .join("\n")}
               error={settings.saveError ?? (settings.status === "invalid" ? settings.error : null)}
               actionLabel={settings.saving ? "Saving..." : "Save"}
-              disabled={settings.saving}
+              disabled={settings.saving || readFailed !== null}
               onPress={save}
             />
           </Card>

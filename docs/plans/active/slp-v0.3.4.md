@@ -87,7 +87,12 @@ need. Out of scope: role texts, ledger data model (D5-B), auto-on policy.
   project preselected by latest `activityAt`; Local default, Worktree for git
   projects; create, turn on, open the panel (3 s retry, then open the
   workspace); mode or open failures shown as a toast
-- [ ] Review
+- [x] Review (A6, fresh Peer): one bug, the answer field's height ratcheted
+  to 240 px on react-native-web; minor: header refresh churn, stale count
+  after a mode change, the editor hidden on a refetch error. Fixed by their
+  owners: A7 (height from text and width), A8 (one refresh per burst, skip
+  unchanged buttons, count 0 after a mode change), A9 (notice, Save off
+  while the read fails). Typecheck clean, `npm test` 125/125
 - [ ] Checks and live test
 - [ ] Merge, tag, push, 6767 update
 
