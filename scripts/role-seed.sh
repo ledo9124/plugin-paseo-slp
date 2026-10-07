@@ -1,6 +1,6 @@
 #!/bin/bash
 # Seed for docs/product/role-scenarios.md.
-# Usage: role-seed.sh <name>  -> $TEMP/slp-live/roles/<name> (work) and <name>-origin.git
+# Usage: role-seed.sh <name> [premise]  -> $TEMP/slp-live/roles/<name> (work) and <name>-origin.git
 # Needs the v0.1 slice 7 notes CLI clone at $TEMP/slp-live/s7e (commit b1092bd).
 set -e
 R="$TEMP/slp-live/roles"; N="$1"; W="$R/$N"; O="$R/$N-origin.git"
@@ -51,6 +51,16 @@ Left:
 - [ ] `search`
 - [ ] `export` to Markdown
 X
+# R4 (premise): an earlier session's plan note rests on a field that does not exist.
+if [ "$2" = premise ]; then
+cat >> docs/plan.md <<'X'
+
+Decisions from the last session:
+- `search` matches on the `search_text` field that `add` already stores
+  (title and body, lowercased, without diacritics), so search needs no
+  text processing of its own.
+X
+fi
 git add -A; git commit -q -m "docs: product, decision 0001, plan"
 git init -q --bare "$O"; git remote add origin "$O"; git push -q -u origin master
 git clone -q "$O" "$R/$N-tmp"; cd "$R/$N-tmp"
