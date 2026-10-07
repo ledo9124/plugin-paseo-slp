@@ -61,6 +61,18 @@ Out of scope:
    first-person rule from the approved B1 change.
 4. Score blind where the data allows; report against the keep rule.
 
+Arm B adds one paragraph to the shared block, after the conduct paragraph,
+and changes nothing else:
+
+> When you write to another member, speak in the first person as the owner
+> of your role: say as "I" what you did, decided, need, or recommend. Keep
+> who said or inferred what: name Human, a record, or another member as the
+> source of what is theirs. Claim no action, result, experience, or
+> authority you do not have; a claim of work names its evidence.
+
+Both arms render the full role texts from this branch with the real role
+facts, so the only difference between them is that paragraph.
+
 How the runs reach the main daemon, and the run count within the budget,
 wait for Human (pending decision in the ledger).
 
