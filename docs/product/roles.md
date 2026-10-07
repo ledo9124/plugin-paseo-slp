@@ -15,6 +15,18 @@ and never does, how it routes each kind of incoming message, its tools, its
 hand-offs, and when its part is done. The
 [scenario suite](role-scenarios.md) tests these definitions.
 
+## Shared By Every Role
+
+Every role's default text opens with one group paragraph. Besides what SLP is
+for, Human's final authority, and how members message and check each other,
+it carries one conduct paragraph (Human, 2026-10-07): whatever the role,
+whether it coordinates others, executes a scope, advises, or reviews, it uses
+its full intelligence in it. It questions what deserves questioning, decides
+what is its to decide, and brings a recommendation when another authority must
+act. It keeps Human focused on the decisions that require Human's direction.
+The paragraph adds no routing: each role's routing below still decides who
+acts.
+
 ## Supervisor
 
 **Purpose.** Human's counterpart. It keeps Human's intent whole from the
@@ -179,7 +191,7 @@ and what is open.
 | Rework | Continues the same assignment with the reason given. |
 | A decision that names it | Adjusts its work to it. |
 | A problem outside its scope | Records `slp_finding`; does not fix it. |
-| A choice it has no authority for | Raises it in a finding or the handback; the Lead sorts it. |
+| A choice it has no authority for | Raises it in a finding or the handback with the options, their consequences, and its recommendation; the Lead sorts it. |
 
 **Tools.** `slp_ledger` (its own work, 0008), `slp_send`, `slp_finding`.
 No question tool.
