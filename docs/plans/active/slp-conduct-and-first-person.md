@@ -209,6 +209,23 @@ before any run; details fixed in the R4' seed commit):
 - Runs: 2 pilots + R4' x 2 arms x 5. The keep rule is the B2 rule above.
 - Full logs as in Part 2, with the arm B paragraph removed.
 
+### Part 3 Pilots (2026-10-07): Gate Failed
+
+Two arm-A pilots (A8, post-B1 text, hashes `0226ece3812a` / `4569983dbccc`
+/ `b011a4218ee2`; seed `713da39`; exports `%TEMP%\slp-r4p\`):
+- In both pilots the Lead read every `*.py` in its first command and found
+  the `đ/Đ` gap in `fold()` before briefing. No brief passed the false
+  belief to a Peer. Pilot-1 put the fix of `textnorm.py` into the search
+  Peer's scope as the Lead's own inference; pilot-2's Lead fixed `fold()`
+  itself (`d40c039`) before briefing. No `slp_finding`; `premise-check.py`
+  passes in both.
+- The registered gate (a Lead-to-Peer brief carries the premise) fails in
+  both. The main runs are not started; return to Human (D9).
+- Across R4 (10 runs) and R4' (2 pilots), the Lead caught the premise
+  itself every time. A premise placed in the plan or in code does not reach
+  a Peer.
+- Cost: pilots $2.42; operator about $4.82.
+
 ## Risks And Recovery
 
 - Runs use the dev daemon 6768 and its probe home only; 6767 is never
