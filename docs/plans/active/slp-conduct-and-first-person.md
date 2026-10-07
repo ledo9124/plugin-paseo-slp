@@ -73,8 +73,11 @@ and changes nothing else:
 Both arms render the full role texts from this branch with the real role
 facts, so the only difference between them is that paragraph.
 
-How the runs reach the main daemon, and the run count within the budget,
-wait for Human (pending decision in the ledger).
+Human chose (ledger D7, 2026-10-07): the runs use the isolated dev daemon
+6768 with the probe home, not the main daemon, so Human's settings and groups
+stay untouched; stop and return to Human if 6768 causes a real problem. Run
+count: B1 R1-R3 twice, and B2 on R4 and R3, two arms, five runs each (20
+groups), within about $40-55 in total.
 
 ## B2 Keep Rule (Registered 2026-10-07, Before Any Run)
 
@@ -115,11 +118,11 @@ Decision:
 
 ## Risks And Recovery
 
-- Runs share Human's main daemon. Recovery depends on the method Human
-  picks: restore the backed-up plugin settings, or reinstall the release
-  `v0.3.5` as `docs/RUNBOOK.md` describes. Archive only the workspaces the
-  runs create.
-- Spend: stop and return to Human if the total heads past about $53.
+- Runs use the dev daemon 6768 and its probe home only; 6767 is never
+  touched. Recovery: stop 6768 (`daemon stop` with the probe home) and
+  archive the scratch workspaces. One group at a time, with a free-memory
+  check before each.
+- Spend: stop and return to Human before going meaningfully past $55 (D7).
 
 ## Progress
 
