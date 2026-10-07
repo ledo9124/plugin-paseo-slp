@@ -42,12 +42,12 @@ describe("default templates", () => {
     expect(views[0].whenToUse).toMatch(/Human cannot answer yet/);
   });
 
-  it("carry the approved dual-lane SKILL.md byte for byte (4,834 bytes, LF)", () => {
+  it("carry the approved dual-lane SKILL.md byte for byte (5,299 bytes, LF; the D14 text with the D16 changes)", () => {
     const text = DEFAULT_TEMPLATES[0];
-    expect(Buffer.byteLength(text, "utf8")).toBe(4834);
+    expect(Buffer.byteLength(text, "utf8")).toBe(5299);
     expect(text).not.toContain("\r");
     expect(createHash("sha256").update(text, "utf8").digest("hex")).toBe(
-      "feebf81464e349a284c8607cbb3794a532f23317765249f7a47aa1d59a85cc61",
+      "aa971b3a6d20d51600b82ab3c886b660b9bfe4b0ebadccbd94dfcaa1ef283dcf",
     );
   });
 

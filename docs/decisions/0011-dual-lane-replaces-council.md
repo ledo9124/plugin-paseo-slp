@@ -4,7 +4,7 @@ Date: 2026-10-07
 
 ## Status
 
-Accepted by Human on 2026-10-07 (ledger D12-D14). Shipping dual-lane on a
+Accepted by Human on 2026-10-07 (ledger D12-D14, D16). Shipping dual-lane on a
 two-use smoke test is Human's knowing exception to decision 0007 item 3.4,
 which asks each template to show that it changes outcomes (Better-SLP).
 Human, on the replacement (D12): "phần dual lane sẽ là thay thế cho council
@@ -17,7 +17,7 @@ changed default.
 
 ## Context
 
-Plan `docs/plans/active/slp-dual-lane.md` holds the smoke-test steps,
+Plan `docs/plans/completed/slp-dual-lane.md` holds the smoke-test steps,
 registered before any run.
 
 - **The overlap.** The council (two blind proposals, one challenge round, an
@@ -36,11 +36,22 @@ registered before any run.
   council would keep it. One real install stores the council with a backslash
   before each of its six backticks (2,828 characters against the shipped
   2,822).
+- **The smoke test (two uses, $2.53).** Steps 1, 4 and 7 were seen. Step 2
+  (lanes on different models), step 5 (the challenge round) and step 6 (an
+  arbiter packet without the Lead's own view) were not seen as written.
+- **Human's changes after it (D16).** Human named the models: "dùng opus và
+  fabel là 2 đưa phân tích còn sonnent 5.5 là trọng tài" (the lanes on Opus
+  5.5 and Fable 5.1, the arbiter on Sonnet 5.5). Human approved two more
+  changes and chose to release without a rerun: "Duyệt cả hai, phát hành
+  luôn". The round may be skipped only with a stated reason, and the
+  arbiter's packet holds only positions A and B, not the Lead's view.
 
 ## Decision
 
-1. **Dual-lane is the only default template.** Its text is the approved
-   `SKILL.md`, byte for byte; a test pins its length and hash. The council is
+1. **Dual-lane is the only default template.** Its text is the `SKILL.md`
+   Human approved (D14) with the D16 changes, byte for byte; a test pins its
+   length and hash. It names the lane and arbiter models, so a Lead naming
+   them follows a model Human named (decision 0009). The council is
    removed from the defaults entirely.
 2. **One-time migration of an unmodified council.** When the template store
    loads an existing `templates.json`:
@@ -72,8 +83,9 @@ registered before any run.
 
 ## Consequences
 
-- Dual-lane is unproven as to outcomes. The smoke test may find a missing
-  step before release; if so the result returns to Human before merging.
+- Dual-lane is unproven as to outcomes. The text with the D16 changes was
+  not rerun; steps 2, 5 and 6 were not seen in the smoke test of the earlier
+  text. Human chose to release anyway (D16).
 - A running group keeps the catalog it was created with. After the
   migration `slp_template("council")` fails for it; Human accepted this
   (D14).

@@ -37,7 +37,7 @@ Why this shape: one model's first idea anchors everyone; in an open debate the m
 - The frame and the mode go into the arbiter's packet. Either lane may say the frame is wrong: that is a finding.
 
 ## 2. Two lanes, blind
-- Two Peers, kind \`design\` (or \`investigate\` for a question), on different providers when slp_ledger peerModels allows.
+- Two Peers, kind \`design\` (or \`investigate\` for a question): lane A on \`claude/claude-opus-5-5\`, lane B on \`claude/claude-fable-5-1\`. Name the model in slp_delegate. If a named model is not in slp_ledger peerModels, use the default and say so in the packet.
 - The same brief to both except the side: the goal, the constraints with their sources, what is settled and why, and the frame. No preferred answer. Claims in issues or docs are claims to check against the code.
 - Ask for: the proposal or answer, the evidence, its cost, the assumptions it rests on, what would prove it wrong, and what from the other side it accepts. Agreement is allowed; disagreement earns nothing.
 
@@ -45,11 +45,12 @@ Why this shape: one model's first idea anchors everyone; in an open debate the m
 - Put the two handbacks side by side: where they agree, where they contradict, and which assumptions differ. Pick the one disagreement that decides the choice.
 - If it can be checked (code, a measurement, a record, a small experiment), check it yourself or through a fresh Peer, not a lane, with the smallest test that settles it, within the goal's scope and budget. Its result is evidence.
 - Then one round: send each lane the other's position as "Lane X", with no model or author named, plus the test result. Ask it to revise or defend, with evidence, on the same question. A point that is true but beside the question is not a refutation. No further rounds.
+- Skip the round only when the lanes already agree on the deciding point, or the test settled it; say which in the packet.
 
 ## 4. Arbiter
-- A fresh Peer, kind \`review\`, on another model when possible, gets only one packet: the goal and constraints, the frame and mode, the two revised positions as A and B in random order, the test and its result, and each challenge with its reply. Drop names, tone, and who argued harder.
+- A fresh Peer, kind \`review\`, on \`claude/claude-sonnet-5-5\`, gets only one packet: the goal and constraints, the frame and mode, the two revised positions as A and B in random order, the test and its result, and each challenge with its reply. Label the positions only A and B (in Vet, say which is the case and which the check). Drop names, tone, and who argued harder. The packet holds nothing else, not your own view.
 - It judges the frame first, then recommends a synthesis, which may take from both and need not split the difference. It says where the lanes agree, where the real decision lies, the risks, and what evidence would change its view.
-- For a high-stakes choice, a shadow arbiter on another model gets the same packet. If the two differ, report both; do not force agreement.
+- For a high-stakes choice, a shadow arbiter on a model the lanes and the arbiter do not use, when slp_ledger peerModels has one, gets the same packet. If the two differ, report both; do not force agreement.
 
 ## 5. Outcome
 - Accept the Peers whose work you used. Write the decision packet: recommendation, agreement, the open disagreement, the test and its result, risks, and what would reopen it.

@@ -4,7 +4,7 @@ Date: 2026-10-07
 
 ## Status
 
-Active
+Completed
 
 ## Outcome
 
@@ -90,6 +90,11 @@ it gives a reason.
 
 - 2026-10-07 (Lead, D15 on finding F2): steps 2 and 5 were not seen, so no
   merge; options go to Human.
+- 2026-10-07, Human (D16): the lanes on Opus 5.5 and Fable 5.1, the arbiter
+  on Sonnet 5.5, named in the template; skip the challenge round only with a
+  stated reason; the arbiter's packet holds only A and B, not the Lead's
+  view; "Duyệt cả hai, phát hành luôn": release without a rerun. The Lead
+  role text and `tools.ts` stay unchanged: the template names the models.
 
 ## Validation
 
@@ -112,3 +117,8 @@ packets `%TEMP%\slp-dual\packets.md`):
   are not Human's decisions on Harness.
 
 ## Result
+
+v0.3.7 ships dual-lane with the D16 changes (decision 0011), by Human's
+choice without a rerun. Steps 2, 5 and 6 were not seen in the smoke test of
+the earlier text; the changed text is untested live. Smoke-test cost: $2.53
+for the two uses.
