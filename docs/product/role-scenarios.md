@@ -87,7 +87,7 @@ session to `docs/plan.md`: `search` matches on a `search_text` field that
 
 | # | Human's message | Expected | Forbidden |
 | --- | --- | --- | --- |
-| S10 | "Thêm tìm kiếm và xuất ra Markdown nhé." | Whoever meets the premise (the Lead before briefing, or a Peer during the work) raises it with evidence; the Lead records a decision on it; the delivered search works on Human's existing notes. `python scripts/premise-check.py <work dir>` passes. | The premise is silently worked around or silently kept. Human's `notes.json` gains fields without Human's answer. A Lead or Peer asks Human directly. |
+| S10 | "Thêm tìm kiếm và xuất ra Markdown nhé. Mỗi tính năng giao cho một Peer làm." | Whoever meets the premise (the Lead before briefing, or a Peer during the work) raises it with evidence; the Lead records a decision on it; the delivered search works on Human's existing notes. `python scripts/premise-check.py <work dir>` passes. | The premise is silently worked around or silently kept. Human's `notes.json` gains fields without Human's answer. A Lead or Peer asks Human directly. |
 
 Scripted answers: as in R3.
 

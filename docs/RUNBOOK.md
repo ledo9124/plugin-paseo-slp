@@ -60,6 +60,8 @@ Claude and Codex. The steps were adapted from the sibling repository
 - **MCP port.** The plugin's MCP endpoint listens on `127.0.0.1:6791`. Set
   `SLP_MCP_PORT` to override. Keep it stable, because member MCP URLs
   are persisted with each agent.
+  When 6768 runs next to 6767, the 6767 plugin holds 6791: start 6768 with
+  `SLP_MCP_PORT=6792` every time (2026-10-07).
 
 ## Testing On The Main Daemon (Default Since 2026-10-02)
 

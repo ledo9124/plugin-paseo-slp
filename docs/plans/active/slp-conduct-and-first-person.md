@@ -116,6 +116,12 @@ Decision:
 - Five runs per arm detect only large effects. A miss is not proof of no
   effect.
 
+R4 for B2 (2026-10-07, after B1 validation, before any B2 run): Human's
+message adds "Mỗi tính năng giao cho một Peer làm." In both B1 R3 runs the
+Lead did the work itself, so no member-to-member channel existed for the
+first-person rule or for a Peer to challenge the premise. R3 stays unchanged
+for B2 and keeps measuring the guards. The arms see the same message.
+
 ## Risks And Recovery
 
 - Runs use the dev daemon 6768 and its probe home only; 6767 is never
@@ -127,7 +133,14 @@ Decision:
 ## Progress
 
 - [x] B1 text and tests (A1, `168a7ac`; tsc 0, vitest 133/133)
-- [ ] B1 validation, R1-R3 twice
+- [x] B1 validation, R1-R3 twice (A2, dev daemon 6768): all six runs pass;
+  instruction hashes Supervisor `0226ece3812a`, Lead `4569983dbccc`, the
+  same in every run, prompts carry the B1 paragraph; test groups $4.27
+  ($0.51-1.07 each), 3-10 minutes each; exports in
+  `%TEMP%\slp-b1b21-*`. Not exercised: S9 and the Peer's B1 line, because
+  in both R3 runs the Lead did the work itself (S8 allows it). In R1 S5 the
+  operator left the Supervisor's closing change question unanswered, as S5
+  forbids project changes.
 - [x] Premise scenario and its result check (R4; the check fails a
   premise-following search and passes a title-and-body search)
 - [ ] B2 runs, arm A and arm B
