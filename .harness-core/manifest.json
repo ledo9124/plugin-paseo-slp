@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
-  "core_version": "0.1.16",
+  "core_version": "0.1.18",
   "files": [
     {
       "path": "AGENTS.md",
-      "upstream_sha256": "1f2174ff21013d691f582aa434353c92c38d46408e3f468bbcc11471f0a544b4"
+      "upstream_sha256": "e39f13bc0251dc1508d1cf9748d797682fe0707d5cfca1a09700039fb718819f"
     },
     {
       "path": ".agents/skills/audit-onboarding-proposal/SKILL.md",
@@ -56,11 +56,11 @@
     },
     {
       "path": "docs/WORKFLOW.md",
-      "upstream_sha256": "2aa47d7ba7e45d0284bccf5fd9ab3261f2c1ec73b3e855eb26cfce3d676bf979"
+      "upstream_sha256": "6cc6e14e8ef9f4ae3ebfff4c4754647bc3c91f6b4cb8979b2b84780600f4521d"
     },
     {
       "path": "docs/README.md",
-      "upstream_sha256": "c94d45be05355194908c38f8fa2352731d3e6341175a9785e3aa63d55cff160f"
+      "upstream_sha256": "16a43e0984034ac38d1d03decb31f278d0fe73e164f7d105ce547ce1dc7f1b17"
     },
     {
       "path": "docs/patterns/encoding-invariants.md",
@@ -68,11 +68,11 @@
     },
     {
       "path": "docs/product/README.md",
-      "upstream_sha256": "463441ca9b77d8ae5cbb40fd653277496b005447f98f77d6f3bc3ca51195a65b"
+      "upstream_sha256": "382c053d1f09ae5503bd22fa3288c4d1c402f970498e1565fcc88999e906edae"
     },
     {
       "path": "docs/plans/README.md",
-      "upstream_sha256": "e552bbb5a2940754a9c4ab7d4582ec68dba12f6a536da6cb2d9a7a2effc31550"
+      "upstream_sha256": "64b8b66e54a96e0c257b72bae4e01a690a957257e4f7b3f8c293ae1fd3bcd705"
     },
     {
       "path": "docs/plans/active/README.md",

@@ -11,9 +11,9 @@ validation material.
   read-only. Inspect only what is needed; change nothing.
 - For a bounded change, inspect affected behavior and proof, implement, and
   validate. No control-plane operation is required.
-- Use one `docs/plans/active/` file when work spans sessions, coordinates
-  contributors, has dependencies, or needs recovery. Move it to
-  `docs/plans/completed/` only after validation.
+- Use one `docs/plans/active/` file when `docs/WORKFLOW.md` (Does The Work
+  Need Durable Memory?) calls for one. Move it to `docs/plans/completed/` only
+  after validation.
 - Before edits, identify repository authority for each new externally
   observable policy. Plans are not authority; choices accepted docs settle are
   not open. If materially different choices remain open, stop before

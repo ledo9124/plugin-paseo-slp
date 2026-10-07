@@ -8,9 +8,8 @@ intent from chat history or a partial diff.
 
 Use an ephemeral plan for bounded, single-session work.
 
-Create one durable plan when work spans sessions, coordinates contributors, has
-meaningful dependencies or ordering, requires recovery steps, or would be unsafe
-to resume from the diff alone.
+Create one durable plan when `../WORKFLOW.md` ("Does The Work Need Durable
+Memory?") calls for one.
 
 Use `docs/templates/exec-plan.md` and place the file under `active/`.
 For an explicitly authorized baseline-to-rerun Harness experiment, use
