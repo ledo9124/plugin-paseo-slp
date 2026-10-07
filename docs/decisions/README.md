@@ -57,3 +57,8 @@ documents here as real choices are accepted, then index them in this file.
   options and a recommendation), attribution rules (only Human's quoted
   words are Human's), and a first-person paragraph. The last two are
   Human's exception to 0007 item 5: measured as not harmful, not proven.
+- [0011 Dual-Lane Replaces The Council As The Default Template](0011-dual-lane-replaces-council.md):
+  Accepted. Dual-lane is the only default template; an unmodified shipped
+  council in an existing install is replaced once, after a backup of
+  `templates.json`. Shipped on a two-use smoke test: Human's exception to
+  0007 item 3.4. Amends 0008 for the defaults.
