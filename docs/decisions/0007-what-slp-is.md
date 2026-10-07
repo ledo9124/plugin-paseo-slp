@@ -17,7 +17,8 @@ conversation and asked to record the outcome:
 - the "SLP Core Definition v0.2" draft and Seatworks v3 are references.
   Neither overrides the product overview.
 
-Amends nothing. It defines the product that decisions 0001-0006 implement.
+Amends nothing. Decision 0010 records a Human exception to item 5 for two
+role texts. It defines the product that decisions 0001-0006 implement.
 
 ## Context
 

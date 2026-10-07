@@ -52,3 +52,8 @@ documents here as real choices are accepted, then index them in this file.
   Peers are one line of work on the default model; the Lead names the
   workflow per goal and briefs carry it; checks ask open questions with
   evidence; effort per role, settings as selects.
+- [0010 Conduct, Attribution, And First-Person Role Texts](0010-conduct-attribution-and-first-person-texts.md):
+  Accepted. Every role carries Human's conduct paragraph (a Peer adds
+  options and a recommendation), attribution rules (only Human's quoted
+  words are Human's), and a first-person paragraph. The last two are
+  Human's exception to 0007 item 5: measured as not harmful, not proven.
