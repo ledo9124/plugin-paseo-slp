@@ -191,6 +191,9 @@ logs (A7, `%TEMP%\slp-mis\scores.md`), then un-blinded with the key file.
   sets.
 - Cost: test groups $12.28; implementer $0.29, operator $3.73, scorer
   $5.74; about $22 before the Lead's own share.
+- Human (ledger D10, 2026-10-07): "Giữ adc37c3, dừng ở đây". `adc37c3` stays
+  on this branch, **unproven**; no `quote` field and no further
+  misattribution work.
 
 ## Part 3: B2 Rerun On R4' (Human, ledger D9)
 
