@@ -18,6 +18,16 @@ describe("role instructions", () => {
     }
   });
 
+  it("gives every role the first-person paragraph (Human, D11)", () => {
+    for (const role of ROLES) {
+      expect(flat(roleInstructions(role, facts)), role).toContain(
+        'When you write to another member, speak in the first person as the owner of your role: say as "I" what you did, decided, need, or recommend. ' +
+          "Keep who said or inferred what: name Human, a record, or another member as the source of what is theirs. " +
+          "Claim no action, result, experience, or authority you do not have; a claim of work names its evidence.",
+      );
+    }
+  });
+
   it("carries the conduct paragraph once per role", () => {
     for (const role of ROLES) {
       expect(flat(roleInstructions(role, facts)).split("use your full intelligence").length - 1, role).toBe(1);

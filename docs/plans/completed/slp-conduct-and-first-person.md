@@ -4,7 +4,7 @@ Date: 2026-10-07
 
 ## Status
 
-Active
+Completed
 
 ## Outcome
 
@@ -252,11 +252,20 @@ Two arm-A pilots (A8, post-B1 text, hashes `0226ece3812a` / `4569983dbccc`
 - [x] B2 runs, arm A and arm B (A3: 20 groups, $17.77; arm texts verified by
   hash and by prompt text in every member)
 - [x] Scoring (A4, blind) and report
+- [x] Part 2: misattribution fix, run and scored (not kept); Part 3: R4'
+  pilots (gate failed)
+- [x] Release v0.3.6 with all three texts (Human, D11)
 
 ## Decisions
 
 - 2026-10-07: the B2 baseline is the post-B1 text (Lead, engineering
   choice: it isolates the first-person rule and matches what ships).
+
+- 2026-10-07, Human (ledger D11): apply all three texts for real use (B1,
+  the attribution fix `adc37c3`, and the B2 paragraph), knowing that two of
+  them are unproven; merge, push main and a release tag, and update 6767
+  keeping Human's settings; no third B2 design. Recorded as decision 0010,
+  an exception to 0007 item 5.
 
 ## Validation
 
@@ -270,7 +279,8 @@ B1 (2026-10-07): done on this branch. `168a7ac` carries the conduct paragraph
 and the Peer recommendation line; R1-R3 pass twice on 6768. The Peer line is
 not yet exercised live, because no R1-R3 run created a Peer.
 
-B2 (2026-10-07): **not exercised, and no effect on P: do not adopt.**
+B2 (2026-10-07): **not exercised, and no effect on P.** Human adopted it
+anyway as unproven (D11, decision 0010).
 Scores were blind (A4, `%TEMP%\slp-b1b2\b2-scores.md`), then un-blinded
 with the key file. Evidence rules per ledger D7 (finding F1).
 
@@ -301,3 +311,9 @@ with the key file. Evidence rules per ledger D7 (finding F1).
 - Cost: test groups $22.04 (B1 $4.27, B2 $17.77). The group's own agents
   bring the goal to about $53-60; the Lead's and the Supervisor's exact
   figures are not visible from inside the group.
+
+Final (2026-10-07): v0.3.6 ships all three texts (decision 0010). Measured:
+B1 not harmful (R1-R3 pass); the attribution fix did not meet its keep rule
+(S 0.83 to 0.80; firm slips per run 1.5 to 0.7); B2 tied on P and was not
+exercised; the R4' redesign failed its pilot gate. Not proven live: the
+Peer recommendation line, and the Peer challenge channel.
