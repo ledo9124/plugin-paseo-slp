@@ -24,6 +24,24 @@ describe("role instructions", () => {
     }
   });
 
+  it("has the Supervisor quote Human, keep its own reading apart, and ask a how-far level Human did not name (Human, D9)", () => {
+    const text = flat(roleInstructions("supervisor", facts));
+    expect(text).toContain(
+      'A level Human did not name (for example merge, when Human named commit and push) is still open: ask it; do not read it from the others.',
+    );
+    expect(text).toContain(
+      'status "settled"): Human\'s own words, quoted, and only what they settle. ' +
+        'Your reading of them is not Human\'s: record it as a separate decision with source "agent" that names you, or ask Human.',
+    );
+  });
+
+  it("has the Lead cite Human only for words a decision quotes from Human (Human, D9)", () => {
+    expect(flat(roleInstructions("lead", facts))).toContain(
+      "Cite Human only for the words a decision quotes from Human; anything else in that decision names whoever wrote it. " +
+        "Never tell a member that Human confirmed or decided something unless a decision quotes Human saying it.",
+    );
+  });
+
   it("has a Peer raise a choice it cannot settle with options, consequences, and a recommendation", () => {
     expect(flat(roleInstructions("peer", facts))).toContain(
       "raise it in a finding or your handback with the options, their consequences, and your recommendation, and the Lead sorts it.",
