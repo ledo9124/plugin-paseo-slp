@@ -81,12 +81,34 @@ it gives a reason.
 
 ## Progress
 
-- [ ] Implementation and records (tests pass)
-- [ ] Smoke test U1, U2
+- [x] Implementation and records (A9, `f928e67`; typecheck 0, vitest 145/145;
+  the shipped text equals the approved file, sha256 `feebf814...`)
+- [x] Smoke test U1, U2 (A10): steps 2 and 5 not seen; back to Human (D15)
 - [ ] Merge, tag v0.3.7, push, update 6767 with backups
 
 ## Decisions
 
+- 2026-10-07 (Lead, D15 on finding F2): steps 2 and 5 were not seen, so no
+  merge; options go to Human.
+
 ## Validation
+
+Smoke test (A10, 6768, branch at `f928e67`; evidence `%TEMP%\slp-dual\steps.md`,
+packets `%TEMP%\slp-dual\packets.md`):
+- Migration on the probe home: `[council]` (sha256 `0201b7be...`) became
+  `[dual-lane]` (`0c9bf7b9...`); the backup `templates.json.bak-v0.3.6` is
+  byte-identical to the old file; it ran once, at plugin load.
+- U1 (A2): Two sides, $1.06, 3.1 min. U2 (A3 candidate): Vet, $1.47, 4.9 min.
+  The Lead loaded the template and picked the expected mode both times.
+  Both clones are unchanged.
+- Steps: 1 seen; 2 partly (blind yes, different models no: all Peers on
+  Sonnet; the pool had one provider because codex did not answer on 6768,
+  and the template says "providers"); 3 seen in U2, partly in U1 (no cost or
+  assumptions asked); 4 seen (the Lead tested by reading or grepping); 5 not
+  seen (both Leads skipped the challenge round, with a reason); 6 partly (a
+  fresh `review` arbiter judged the frame first, but U1's packet carried the
+  Lead's own view); 7 seen.
+- In U2 the operator, playing Human, chose the recommended options. Those
+  are not Human's decisions on Harness.
 
 ## Result
