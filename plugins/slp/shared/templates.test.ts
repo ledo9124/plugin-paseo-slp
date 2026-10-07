@@ -1,5 +1,6 @@
+import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
-import { DEFAULT_TEMPLATES } from "./default-templates";
+import { DEFAULT_TEMPLATES, LEGACY_COUNCIL_TEXTS } from "./default-templates";
 import { parseSkill, toTemplateView } from "./templates";
 
 const text = (front: string, body = "Body\n") => `---\n${front}\n---\n${body}`;
@@ -35,9 +36,25 @@ describe("parseSkill", () => {
 });
 
 describe("default templates", () => {
-  it("ship only the council, with a when-to-use line (Human, 2026-10-03)", () => {
+  it("ship only dual-lane, with a when-to-use line (Human, 2026-10-07)", () => {
     const views = DEFAULT_TEMPLATES.map(toTemplateView);
-    expect(views.map((view) => view.name)).toEqual(["council"]);
-    expect(views[0].whenToUse).toMatch(/Human cannot answer/);
+    expect(views.map((view) => view.name)).toEqual(["dual-lane"]);
+    expect(views[0].whenToUse).toMatch(/Human cannot answer yet/);
+  });
+
+  it("carry the approved dual-lane SKILL.md byte for byte (5,299 bytes, LF; the D14 text with the D16 changes)", () => {
+    const text = DEFAULT_TEMPLATES[0];
+    expect(Buffer.byteLength(text, "utf8")).toBe(5299);
+    expect(text).not.toContain("\r");
+    expect(createHash("sha256").update(text, "utf8").digest("hex")).toBe(
+      "aa971b3a6d20d51600b82ab3c886b660b9bfe4b0ebadccbd94dfcaa1ef283dcf",
+    );
+  });
+
+  it("keep the legacy council only as its clean and backtick-escaped texts", () => {
+    const [clean, escaped] = LEGACY_COUNCIL_TEXTS;
+    expect(toTemplateView(clean).name).toBe("council");
+    expect(escaped.length - clean.length).toBe(6);
+    expect(escaped.replaceAll("\\`", "`")).toBe(clean);
   });
 });

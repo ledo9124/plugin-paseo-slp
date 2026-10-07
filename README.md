@@ -19,7 +19,7 @@ per-role instructions, tools, and templates (decision 0008), with role
 definitions tuned on a scenario suite. v0.3 comes from the real runs: the
 Supervisor follows the Lead through its end-of-turn reply, asks for the
 result (report or changes, and how far) when Human's words leave it open,
-and puts a recommendation on every question; the council is the default
+and puts a recommendation on every question; dual-lane is the default
 template. Accepted in `docs/decisions/0001-0008`. SLP is a
 per-workspace toggle: when it is off, agents behave normally. SLP does not
 depend on Repository Harness (`docs/product/slp-and-harness.md`).
@@ -44,7 +44,7 @@ Requires Paseo `>=0.10.2`. In the host's `config.json` (default
 Restart the daemon after changing either setting, then install a release:
 
 ```bash
-paseo plugin install https://github.com/ledo9124/plugin-paseo-slp.git:plugins/slp --ref v0.3.6
+paseo plugin install https://github.com/ledo9124/plugin-paseo-slp.git:plugins/slp --ref v0.3.7
 paseo plugin ls          # slp should be running
 ```
 
@@ -61,8 +61,10 @@ paseo plugin ls          # slp should be running
     `bypassPermissions`, Codex `full-access`);
   - each role's default instructions and SLP tools, which Settings shows
     and lets you replace or reset;
-  - one template, `council` (`SKILL.md` text): two blind proposals, one
-    challenge round, an anonymous compile, and an arbiter. Settings,
+  - one template, `dual-lane` (`SKILL.md` text): two blind lanes from the
+    two sides of the deciding tension (or one case and one check), a test of
+    their deciding disagreement, and an arbiter on an anonymous packet.
+    Settings,
     Templates: add, edit, remove, or import a folder of `SKILL.md` files.
     The Supervisor and the Lead see the catalog; the Lead loads a template
     when it uses one.
