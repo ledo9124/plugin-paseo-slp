@@ -162,6 +162,36 @@ failed keep rule.
 - Limits: the scenario mix differs (baseline has R3, treatment has more
   R2); per-scenario rates are reported next to S.
 
+### Part 2 Result (2026-10-07): Not Kept
+
+Fix `adc37c3` (A5). Ten treatment runs on 6768 (A6, Supervisor
+`225eeccd9ae9`, Lead `89f83c3c91ac`); 22 runs scored blind from full session
+logs (A7, `%TEMP%\slp-mis\scores.md`), then un-blinded with the key file.
+
+| | Baseline (12) | Treatment (10) |
+| --- | --- | --- |
+| S, strict (ambiguous counted) | 10/12 = 0.83 | 8/10 = 0.80 |
+| S, firm only | 7/12 = 0.58 | 5/10 = 0.50 |
+| Runs with a "merge" slip | 7/12 | 5/10 |
+| Slip items, strict / firm | 36 / 18 (3.0 / 1.5 per run) | 21 / 7 (2.1 / 0.7 per run) |
+| R4 runs slipping (strict) | 5/5 | 4/5 |
+
+- The rule needs S(treatment) at most half of S(baseline). Neither cut
+  comes close, so the fix is not kept. Per the rule and D9, return to Human;
+  no tool change is built.
+- Fewer slip items per run, mainly firm ones (1.5 to 0.7). The rule does not
+  count this, and the scenario mix differs.
+- Slips that survive the fix: the Lead still cites "no merge" as
+  "Human (D2)" after the Supervisor labelled it a reading (treatment m-13);
+  the Supervisor records its reading inside a source-human decision ("Merge
+  was not named, so it is not authorized", m-18); it treats "À đúng rồi" as
+  confirming an unanswered read-back (m-22); and briefs credit Human with
+  derived constraints (m-07, m-12).
+- G: no new type is firm in the treatment. Candidates are flagged in both
+  sets.
+- Cost: test groups $12.28; implementer $0.29, operator $3.73, scorer
+  $5.74; about $22 before the Lead's own share.
+
 ## Part 3: B2 Rerun On R4' (Human, ledger D9)
 
 Runs after Part 2, on the fixed text if Part 2 is kept. Design (registered
