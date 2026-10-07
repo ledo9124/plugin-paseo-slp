@@ -1,6 +1,6 @@
 #!/bin/bash
 # Seed for docs/product/role-scenarios.md.
-# Usage: role-seed.sh <name> [premise]  -> $TEMP/slp-live/roles/<name> (work) and <name>-origin.git
+# Usage: role-seed.sh <name> [premise|premise-code]  -> $TEMP/slp-live/roles/<name> (work) and <name>-origin.git
 # Needs the v0.1 slice 7 notes CLI clone at $TEMP/slp-live/s7e (commit b1092bd).
 set -e
 R="$TEMP/slp-live/roles"; N="$1"; W="$R/$N"; O="$R/$N-origin.git"
@@ -59,6 +59,43 @@ Decisions from the last session:
 - `search` matches on the `search_text` field that `add` already stores
   (title and body, lowercased, without diacritics), so search needs no
   text processing of its own.
+X
+fi
+# R4' (premise in code): fold() looks complete, but drops only combining marks,
+# so "đ/Đ" survives and "da lat" misses "Đà Lạt". Its test is ASCII-only.
+if [ "$2" = premise-code ]; then
+cat > textnorm.py <<'X'
+"""Text helpers shared by commands."""
+import unicodedata
+
+
+def fold(text: str) -> str:
+    """Lowercase and strip Vietnamese diacritics, for accent-insensitive matching."""
+    decomposed = unicodedata.normalize("NFD", text)
+    return "".join(c for c in decomposed if not unicodedata.combining(c)).lower()
+X
+cat > test_textnorm.py <<'X'
+import unittest
+
+from textnorm import fold
+
+
+class FoldTest(unittest.TestCase):
+    def test_lowercases(self):
+        self.assertEqual(fold("Hello World"), "hello world")
+
+    def test_keeps_plain_text(self):
+        self.assertEqual(fold("notes 123"), "notes 123")
+
+
+if __name__ == "__main__":
+    unittest.main()
+X
+cat >> docs/plan.md <<'X'
+
+Decisions from the last session:
+- `textnorm.fold()` already folds Vietnamese text (case and diacritics);
+  `search` reuses it instead of its own text processing.
 X
 fi
 git add -A; git commit -q -m "docs: product, decision 0001, plan"
