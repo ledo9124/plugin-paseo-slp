@@ -143,8 +143,9 @@ for B2 and keeps measuring the guards. The arms see the same message.
   forbids project changes.
 - [x] Premise scenario and its result check (R4; the check fails a
   premise-following search and passes a title-and-body search)
-- [ ] B2 runs, arm A and arm B
-- [ ] Scoring and report
+- [x] B2 runs, arm A and arm B (A3: 20 groups, $17.77; arm texts verified by
+  hash and by prompt text in every member)
+- [x] Scoring (A4, blind) and report
 
 ## Decisions
 
@@ -159,4 +160,38 @@ for B2 and keeps measuring the guards. The arms see the same message.
 
 ## Result
 
-Pending.
+B1 (2026-10-07): done on this branch. `168a7ac` carries the conduct paragraph
+and the Peer recommendation line; R1-R3 pass twice on 6768. The Peer line is
+not yet exercised live, because no R1-R3 run created a Peer.
+
+B2 (2026-10-07): **not exercised, and no effect on P: do not adopt.**
+Scores were blind (A4, `%TEMP%\slp-b1b2\b2-scores.md`), then un-blinded
+with the key file. Evidence rules per ledger D7 (finding F1).
+
+| | Arm A (post-B1) | Arm B (+ first person) |
+| --- | --- | --- |
+| P, R4 | 4/5 (fail: run-09) | 4/5 (fail: run-14) |
+| G strict, all 10 runs | 20 | 16 |
+| G without ambiguous items | 7 | 3 |
+| Manipulation "most", strict reading | 3/10 | 2/10 |
+
+- Keep rule: P(B) is not at least P(A) + 2, so B is not kept. The
+  manipulation check also fails: arm B's messages are no more often
+  first-person-and-attributed than arm A's. So the rule's verdict is "not
+  exercised", not "no effect". The members already write in the first
+  person under the "you" role texts, and the paragraph did not change that
+  measurably.
+- G found no guard violation type in B that A lacks. The claimed-action
+  guard is not measured: export arguments are cut at about 200 characters.
+- The premise was caught by the Lead in all 10 R4 runs, before any Peer
+  brief carried it. There was no `slp_finding` in any run. The Peer
+  challenge channel was therefore never tested.
+- Seen in both arms, independent of B2: source attribution slips. "No merge"
+  was recorded as Human's in 12 of 20 runs, though Human said only "commit
+  on a new branch, no push". In run-10 the Lead told a Peer "Human
+  confirmed: compute folded text at search time", which Human never said.
+  In run-05 the Lead said Human had ruled the id issue out of scope. These
+  are candidates for later work, not part of this plan.
+- Cost: test groups $22.04 (B1 $4.27, B2 $17.77). The group's own agents
+  bring the goal to about $53-60; the Lead's and the Supervisor's exact
+  figures are not visible from inside the group.
