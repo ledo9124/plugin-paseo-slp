@@ -137,7 +137,7 @@ for B2 and keeps measuring the guards. The arms see the same message.
   instruction hashes Supervisor `0226ece3812a`, Lead `4569983dbccc`, the
   same in every run, prompts carry the B1 paragraph; test groups $4.27
   ($0.51-1.07 each), 3-10 minutes each; exports in
-  `%TEMP%\slp-b1b21-*`. Not exercised: S9 and the Peer's B1 line, because
+  `%TEMP%\slp-b1b2b1-*`. Not exercised: S9 and the Peer's B1 line, because
   in both R3 runs the Lead did the work itself (S8 allows it). In R1 S5 the
   operator left the Supervisor's closing change question unanswered, as S5
   forbids project changes.
