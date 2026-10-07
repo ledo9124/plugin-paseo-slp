@@ -19,7 +19,8 @@ Use `docs/README.md` for the complete map.
 
 Use an ephemeral plan for bounded work. Create one plan in
 `docs/plans/active/` when work spans sessions, coordinates contributors, has
-meaningful dependencies, needs recovery, or cannot safely resume from its diff.
+meaningful dependencies or ordering, needs recovery, or cannot safely resume
+from its diff. This is the one list; other documents point here.
 
 Use `docs/templates/exec-plan.md`. Keep progress and task-local decisions in the
 same file; avoid parallel task records without an independent audience.
