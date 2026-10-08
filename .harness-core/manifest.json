@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "core_version": "0.1.19",
+  "core_version": "0.1.20",
   "files": [
     {
       "path": "AGENTS.md",
@@ -44,7 +44,7 @@
     },
     {
       "path": ".agents/skills/migrate-harness/scripts/find_legacy.py",
-      "upstream_sha256": "671b9acb4977aded751e886fb88977bafa6bb0cb08ea3f634aa528f43442901d"
+      "upstream_sha256": "55f6f8ae723d6b9c80e8628db707f3d3c8abb62b184e5dbdf826398237c798b7"
     },
     {
       "path": ".agents/skills/onboard-repository/SKILL.md",
