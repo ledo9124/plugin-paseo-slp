@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "core_version": "0.1.18",
+  "core_version": "0.1.19",
   "files": [
     {
       "path": "AGENTS.md",
@@ -35,6 +35,18 @@
       "upstream_sha256": "77982c7e2c70c3becb5076c2ce10eefb49ada39f53ed01da930f092fe6d263c5"
     },
     {
+      "path": ".agents/skills/migrate-harness/SKILL.md",
+      "upstream_sha256": "48506073c88ae96b7f6d4190c65dc86df6c8ea512c473e6dfeba1c7010167506"
+    },
+    {
+      "path": ".agents/skills/migrate-harness/agents/openai.yaml",
+      "upstream_sha256": "f5fa8240dc0657ad66913b097104b6c207ad689451a6621f365f486680351bd3"
+    },
+    {
+      "path": ".agents/skills/migrate-harness/scripts/find_legacy.py",
+      "upstream_sha256": "671b9acb4977aded751e886fb88977bafa6bb0cb08ea3f634aa528f43442901d"
+    },
+    {
       "path": ".agents/skills/onboard-repository/SKILL.md",
       "upstream_sha256": "a8c8a5ad14f8b1bcb3c8654c81ba975179c2889760af65112a6470c7971b08c6"
     },
@@ -60,7 +72,7 @@
     },
     {
       "path": "docs/README.md",
-      "upstream_sha256": "16a43e0984034ac38d1d03decb31f278d0fe73e164f7d105ce547ce1dc7f1b17"
+      "upstream_sha256": "5d5d263645541f6604a09e6fa629e935291cab5ccd0e3d87ca2d456ac6480604"
     },
     {
       "path": "docs/patterns/encoding-invariants.md",
