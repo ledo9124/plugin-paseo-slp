@@ -15,7 +15,8 @@ Start with the smallest authoritative surface.
 - `decisions/` and `product/`: generic structure for this repository's own
   choices and product documents; both start empty of content.
 - `.agents/skills/` (repository root): an invariant-encoding skill that
-  responds to matching requests, and explicit-only onboarding,
+  responds to matching requests; a migration skill that, when asked, removes
+  what earlier Harness releases left behind; and explicit-only onboarding,
   proposal-audit, and Harness-improvement skills.
 
 ## Owned By This Repository

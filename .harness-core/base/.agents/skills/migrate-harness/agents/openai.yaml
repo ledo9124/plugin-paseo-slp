@@ -1,0 +1,6 @@
+interface:
+  display_name: "Migrate Harness"
+  short_description: "Update from an older Harness and remove its legacy"
+  default_prompt: "Use $migrate-harness to migrate this repository from its earlier Harness release and remove the legacy it left behind."
+policy:
+  allow_implicit_invocation: true
