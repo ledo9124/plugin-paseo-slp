@@ -52,6 +52,26 @@ describe("role instructions", () => {
     );
   });
 
+  it("bans send_agent_prompt for what it bypasses, not a stale cause (Human, D17)", () => {
+    for (const role of ROLES) {
+      const text = flat(roleInstructions(role, facts));
+      expect(text, role).toContain(
+        "Message members only with slp_send; do not use Paseo's send_agent_prompt or create_agent: " +
+          "they bypass SLP's held messages, the ledger, the relay of the Lead's reply, and the SLP panel.",
+      );
+      expect(text, role).not.toContain("cancels a busy recipient's turn");
+    }
+  });
+
+  it("has the Supervisor steer only when the Lead's work would be wasted, as a short note (Human, D6-D7)", () => {
+    expect(flat(roleInstructions("supervisor", facts))).toContain(
+      `Steer (slp_send with delivery "steer") only when the Lead's work would otherwise be wasted: ` +
+        "Human's answer stops, narrows, or reverses what the Lead is doing now. " +
+        "Then steer one short note: the decision id and what to stop or keep; send the rest after-turn, " +
+        "and the Lead decides how to redirect. Otherwise send after-turn. When unsure, steer the one-line note.",
+    );
+  });
+
   it("has a Peer raise a choice it cannot settle with options, consequences, and a recommendation", () => {
     expect(flat(roleInstructions("peer", facts))).toContain(
       "raise it in a finding or your handback with the options, their consequences, and your recommendation, and the Lead sorts it.",

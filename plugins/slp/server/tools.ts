@@ -93,7 +93,7 @@ export function memberTools(coordination: Coordination, host: () => PaseoHost): 
     {
       name: "slp_send",
       description:
-        'Message a group member by agent id or by role ("supervisor", "lead"). delivery "after-turn" (default) waits until the recipient finishes its current turn; "steer" joins its running turn now, for interventions only.',
+        'Message a group member by agent id or by role ("supervisor", "lead"). delivery "after-turn" (default) waits until the recipient finishes its current turn; "steer" joins its running turn now: only when the recipient\'s current work would otherwise be wasted; keep it short and send the rest after-turn.',
       inputSchema: schema(SendInput),
       call: (args, secret) => coordination.send(host(), secret, parse(SendInput, args)),
     },
