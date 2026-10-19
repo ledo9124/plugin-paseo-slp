@@ -13,14 +13,17 @@ completes Human's rough input before work starts. Agents decide what their
 authority covers, and only what really matters reaches Human. Human can see
 and redirect the work without reading transcripts.
 
-Status: v0.3, proved live on Paseo `v0.10.2` and on four real runs. v0.1
+Status: v0.4, proved live on Paseo `v0.10.2` to `v0.12.0` and on four real runs. v0.1
 built the group, the ledger, the panel, and the process report; v0.2 added
 per-role instructions, tools, and templates (decision 0008), with role
 definitions tuned on a scenario suite. v0.3 comes from the real runs: the
 Supervisor follows the Lead through its end-of-turn reply, asks for the
 result (report or changes, and how far) when Human's words leave it open,
 and puts a recommendation on every question; dual-lane is the default
-template. Accepted in `docs/decisions/0001-0008`. SLP is a
+template. v0.4 adds a steer rule for the Supervisor, an auto-compact window
+per role, a Supervisor handoff to a fresh Lead with the Peers kept, the
+Lead as sender of a Peer's brief on Paseo 0.12, and a Review mode in
+dual-lane (decisions 0012, 0013). Accepted in `docs/decisions/`. SLP is a
 per-workspace toggle: when it is off, agents behave normally. SLP does not
 depend on Repository Harness (`docs/product/slp-and-harness.md`).
 
@@ -44,7 +47,7 @@ Requires Paseo `>=0.10.2`. In the host's `config.json` (default
 Restart the daemon after changing either setting, then install a release:
 
 ```bash
-paseo plugin install https://github.com/ledo9124/plugin-paseo-slp.git:plugins/slp --ref v0.3.7
+paseo plugin install https://github.com/ledo9124/plugin-paseo-slp.git:plugins/slp --ref v0.4.0
 paseo plugin ls          # slp should be running
 ```
 
@@ -61,9 +64,14 @@ paseo plugin ls          # slp should be running
     `bypassPermissions`, Codex `full-access`);
   - each role's default instructions and SLP tools, which Settings shows
     and lets you replace or reset;
+  - an auto-compact window per role (Context; 100k to 1M tokens, empty for
+    Claude Code's default), given to each Claude member when it is created
+    as Claude Code's `--autocompact`; Human's own settings files are not
+    touched;
   - one template, `dual-lane` (`SKILL.md` text): two blind lanes from the
     two sides of the deciding tension (or one case and one check), a test of
-    their deciding disagreement, and an arbiter on an anonymous packet.
+    their deciding disagreement, and an arbiter on an anonymous packet; in
+    its Review mode, two blind Opus lenses (intent, claims) on a change.
     Settings,
     Templates: add, edit, remove, or import a folder of `SKILL.md` files.
     The Supervisor and the Lead see the catalog; the Lead loads a template
