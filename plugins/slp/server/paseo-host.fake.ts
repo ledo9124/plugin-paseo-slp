@@ -1,9 +1,10 @@
-import type { ActiveTurnBehavior, CreateAgentInput, HostAgent, PaseoHost } from "./paseo-host";
+import type { ActiveTurnBehavior, CreateAgentInput, HostAgent, PaseoHost, SendPromptOptions } from "./paseo-host";
 
 export interface FakeSend {
   agentId: string;
   text: string;
   activeTurnBehavior?: ActiveTurnBehavior;
+  sourceAgentId?: string;
 }
 
 // In-memory PaseoHost that mirrors the upstream behavior the plugin relies on:
@@ -15,6 +16,8 @@ export class FakePaseoHost implements PaseoHost {
   injectIntoAgents = true;
   /** Effort ids per `provider/model`; unknown models answer null. */
   readonly efforts = new Map<string, string[]>();
+  /** Makes the next sendPrompt call fail. */
+  failNextSend = false;
   /** Makes the next createAgent call whose title matches fail. */
   failCreateFor: string | null = null;
   private readonly byKey = new Map<string, string>();
@@ -75,8 +78,17 @@ export class FakePaseoHost implements PaseoHost {
     return this.agents.get(agentId) ?? null;
   }
 
-  async sendPrompt(agentId: string, text: string, options?: { activeTurnBehavior?: ActiveTurnBehavior }) {
-    this.sends.push({ agentId, text, activeTurnBehavior: options?.activeTurnBehavior });
+  async sendPrompt(agentId: string, text: string, options?: SendPromptOptions) {
+    if (this.failNextSend) {
+      this.failNextSend = false;
+      throw new Error(`send failed: ${agentId}`);
+    }
+    this.sends.push({
+      agentId,
+      text,
+      activeTurnBehavior: options?.activeTurnBehavior,
+      ...(options?.sourceAgentId ? { sourceAgentId: options.sourceAgentId } : {}),
+    });
   }
 
   async archiveAgent(agentId: string): Promise<void> {

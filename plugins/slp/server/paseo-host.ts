@@ -58,11 +58,20 @@ export interface CreateAgentInput {
 
 export type ActiveTurnBehavior = "interrupt" | "steer";
 
+export interface SendPromptOptions {
+  activeTurnBehavior?: ActiveTurnBehavior;
+  /**
+   * The member the message is from. Paseo 0.12 shows it as the sender; older
+   * hosts drop it, and a host without agent provenance gets a plain send.
+   */
+  sourceAgentId?: string;
+}
+
 export interface PaseoHost {
   createAgent(input: CreateAgentInput): Promise<HostAgent>;
   listAgents(filter?: { labels?: Record<string, string>; includeArchived?: boolean }): Promise<HostAgent[]>;
   getAgent(agentId: string): Promise<HostAgent | null>;
-  sendPrompt(agentId: string, text: string, options?: { activeTurnBehavior?: ActiveTurnBehavior }): Promise<void>;
+  sendPrompt(agentId: string, text: string, options?: SendPromptOptions): Promise<void>;
   archiveAgent(agentId: string): Promise<void>;
   /** Effort ids a `provider/model` lists, or null when the daemon cannot say. */
   thinkingOptions(providerModel: string): Promise<string[] | null>;
@@ -151,12 +160,14 @@ export function createPaseoHost(paseo: PaseoApi): PaseoHost {
     },
 
     async sendPrompt(agentId, text, options) {
-      // SDK 0.10.2 forwards activeTurnBehavior to the daemon but omits it from
-      // PaseoAgentSendOptions, hence the widened type.
-      const handle = paseo.agents.ref(agentId) as unknown as {
-        send(text: string, options?: { activeTurnBehavior?: ActiveTurnBehavior }): Promise<void>;
-      };
-      await handle.send(text, options);
+      const handle = paseo.agents.ref(agentId);
+      try {
+        await handle.send(text, options);
+      } catch (error) {
+        // A 0.12 client refuses a source the host cannot carry.
+        if (!options?.sourceAgentId || !/provenance/i.test(String(error))) throw error;
+        await handle.send(text, { activeTurnBehavior: options.activeTurnBehavior });
+      }
     },
 
     async archiveAgent(agentId) {

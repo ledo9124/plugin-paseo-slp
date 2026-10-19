@@ -229,6 +229,7 @@ export class Coordination {
       caller.group.members.push(member);
       caller.group.ledger.assignments.push(assignment);
       this.save(caller);
+      let created: string | null = null;
       try {
         const agent = await host.createAgent({
           workspaceId: caller.record.workspaceId,
@@ -243,13 +244,20 @@ export class Coordination {
           providerOptions: setup.providerOptions,
           labels: { [GROUP_LABEL]: caller.group.id, [ROLE_LABEL]: "peer" },
           idempotencyKey: `slp:${caller.group.id}:peer:${assignment.id}`,
-          prompt: renderBrief(assignment),
+        });
+        created = agent.id;
+        // The brief goes as the Lead's message, not as the create prompt:
+        // Paseo 0.12 shows a create prompt as sent by the parent, the
+        // Supervisor (D18).
+        await host.sendPrompt(agent.id, renderBrief(assignment), {
+          activeTurnBehavior: "steer",
+          sourceAgentId: caller.member.agentId ?? undefined,
         });
         member.agentId = agent.id;
         assignment.peerAgentId = agent.id;
-        // The brief is the new Peer's initial prompt.
         assignment.briefDeliveredAt = this.deps.now();
       } catch (error) {
+        if (created) await host.archiveAgent(created).catch(() => undefined);
         caller.group.members = caller.group.members.filter((m) => m !== member);
         caller.group.ledger.assignments = caller.group.ledger.assignments.filter((a) => a !== assignment);
         this.save(caller);

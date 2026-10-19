@@ -172,8 +172,8 @@ describe("slp_delegate", () => {
     });
   });
 
-  it("creates a Peer with the default model, its provider's mode, the Peer role, and the brief as prompt", async () => {
-    const { host, coordination, secretOf, group } = await setup();
+  it("creates a Peer with the default model, its provider's mode, the Peer role, and the brief from the Lead", async () => {
+    const { host, coordination, secretOf, idOf, group } = await setup();
     const result = await coordination.delegate(host, secretOf("lead"), delegateInput);
 
     const created = host.created.at(-1)!;
@@ -188,11 +188,28 @@ describe("slp_delegate", () => {
     expect(created.providerOptions).toEqual({ disallowedTools: ["AskUserQuestion"] });
     expect(created.preapprovedTools?.map((t) => t.tool)).toEqual(["slp_ledger", "slp_send", "slp_finding"]);
     expect(created.systemPrompt).toContain("Your role: Peer");
-    expect(created.prompt).toContain("Goal: Users can export reports as CSV");
-    expect(created.prompt).toContain("No new runtime dependency (source: Human)");
-    expect(created.prompt).toContain("not a binding constraint");
+    // Paseo 0.12 labels a create prompt with the parent, the Supervisor (D18):
+    // the brief follows as the Lead's message.
+    expect(created.prompt).toBeUndefined();
+    expect(created.parent).toBe(idOf("supervisor"));
+    const brief = host.sends.at(-1)!;
+    expect(brief).toMatchObject({ agentId: result.peerAgentId, activeTurnBehavior: "steer", sourceAgentId: idOf("lead") });
+    expect(brief.text).toContain("Goal: Users can export reports as CSV");
+    expect(brief.text).toContain("No new runtime dependency (source: Human)");
+    expect(brief.text).toContain("not a binding constraint");
+    expect(group().ledger.assignments[0].briefDeliveredAt).not.toBeNull();
     expect(result).toMatchObject({ assignmentId: "A1", created: true });
     expect(group().ledger.assignments[0]).toMatchObject({ id: "A1", status: "assigned", peerAgentId: result.peerAgentId });
+  });
+
+  it("archives the new Peer and leaves no assignment when its brief cannot be sent", async () => {
+    const { host, coordination, secretOf, group } = await setup();
+    host.failNextSend = true;
+    await expect(coordination.delegate(host, secretOf("lead"), delegateInput)).rejects.toThrow(/send failed/);
+    const peer = [...host.agents.values()].find((agent) => agent.title === "SLP Peer 1")!;
+    expect(peer.archivedAt).not.toBeNull();
+    expect(group().ledger.assignments).toHaveLength(0);
+    expect(group().members.filter((m) => m.role === "peer")).toHaveLength(0);
   });
 
   it("uses the allowed model's provider mode and rejects models off the list", async () => {
@@ -285,12 +302,12 @@ describe("templates", () => {
 
     await coordination.delegate(host, secretOf("lead"), { ...delegateInput, template: "review" });
     expect(group().ledger.assignments[0].template).toBe("review");
-    expect(host.created.at(-1)?.prompt).toContain("Template: review");
+    expect(host.sends.at(-1)?.text).toContain("Template: review");
     expect(group().events.find((e) => e.kind === "delegate")?.data.template).toBe("review");
 
     await coordination.delegate(host, secretOf("lead"), delegateInput);
     expect(group().ledger.assignments[1].template).toBeUndefined();
-    expect(host.created.at(-1)?.prompt).not.toContain("Template:");
+    expect(host.sends.at(-1)?.text).not.toContain("Template:");
   });
 
   it("keeps the template when an existing Peer is reassigned", async () => {
@@ -846,7 +863,7 @@ describe("workflow and compaction (0009)", () => {
       ...delegateInput,
       brief: { ...BRIEF, workflow: "docs/WORKFLOW.md, Bounded Change" },
     });
-    const prompt = host.created.at(-1)!.prompt!;
+    const prompt = host.sends.at(-1)!.text;
     expect(prompt).toContain("Project workflow (read it before you start): docs/WORKFLOW.md, Bounded Change");
     expect(prompt).toContain("the records and constraints your change");
   });
