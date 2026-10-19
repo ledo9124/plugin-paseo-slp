@@ -244,7 +244,7 @@ export class Coordination {
           preapprovedTools: setup.preapprovedTools,
           providerOptions: setup.providerOptions,
           labels: { [GROUP_LABEL]: caller.group.id, [ROLE_LABEL]: "peer" },
-          idempotencyKey: `slp:${caller.group.id}:peer:${assignment.id}`,
+          idempotencyKey: `slp:${caller.group.id}:peer:${assignment.id}:${member.secret.slice(0, 8)}`,
         });
         created = agent.id;
         // The brief goes as the Lead's message, not as the create prompt:
@@ -556,7 +556,6 @@ export class Coordination {
       const settings = await this.deps.settings();
       const setup = memberSetup("lead", settings.lead.provider, settings, this.deps.templates.list());
       const previous = { secret: lead.secret, tools: lead.tools, instructionsHash: lead.instructionsHash, customInstructions: lead.customInstructions };
-      const handoffs = group.events.filter((e) => e.kind === "handoff").length;
       // A new secret: the old Lead's MCP URL stops working with the handoff.
       lead.secret = this.deps.newSecret();
       applySetup(lead, setup);
@@ -570,7 +569,8 @@ export class Coordination {
           settings,
           setup,
           mcpUrl: this.deps.mcpUrl(lead.secret),
-          idempotencyKey: `slp:${group.id}:lead:${handoffs + 1}`,
+          // Unique per attempt: Paseo refuses a reused key with a different request.
+          idempotencyKey: `slp:${group.id}:lead:${this.deps.newId()}`,
           now: this.deps.now,
         });
       } catch (error) {
@@ -578,6 +578,7 @@ export class Coordination {
         this.save(caller);
         throw error;
       }
+      lead.previousAgentIds = [...(lead.previousAgentIds ?? []), oldId];
       lead.agentId = agent.id;
       lead.owesSupervisor = false;
       lead.compactions = 0;
@@ -592,32 +593,70 @@ export class Coordination {
         kind: "message",
         text: renderHandoff(oldId, input.note),
       });
+      group.retiring = [...(group.retiring ?? []), oldId];
       this.event(group, "handoff", { from: oldId, to: agent.id, by: caller.member.agentId });
       this.save(caller);
-      await this.flush(host, group, agent.id);
 
-      // Peers keep their assignments; those with open work learn who the Lead is now.
-      const peers = group.members.filter(
-        (m) => m.role === "peer" && m.agentId && this.openAssignmentOf(group.ledger, m.agentId),
-      );
-      for (const peer of peers) {
-        await this.deliver(
-          host,
-          group,
-          {
-            fromAgentId: caller.member.agentId,
-            fromRole: "supervisor",
-            toAgentId: peer.agentId!,
-            kind: "notice",
-            text: `The Lead changed: ${agent.id} replaces ${oldId}. Your assignment and brief are unchanged; your handback reaches the new Lead. Address the Lead as "lead".`,
-          },
-          "after-turn",
-        );
+      // The role has moved. What follows only delivers: a failure is reported,
+      // and what stays held is delivered by reconcile.
+      const oldLeadArchived = await this.retireIfIdle(host, group, oldId);
+      const problems: string[] = [];
+      try {
+        await this.flush(host, group, agent.id);
+      } catch (error) {
+        problems.push(`The handoff message to the new Lead is held for redelivery: ${String(error)}`);
       }
-      if (old && !old.archivedAt) await host.archiveAgent(oldId);
+      // Only Peers still working learn who the Lead is; one waiting for
+      // acceptance is not woken.
+      const peersTold: string[] = [];
+      for (const peer of group.members) {
+        if (peer.role !== "peer" || !peer.agentId) continue;
+        if (this.openAssignmentOf(group.ledger, peer.agentId)?.status !== "assigned") continue;
+        const live = await host.getAgent(peer.agentId).catch(() => null);
+        if (!live || live.archivedAt) continue;
+        try {
+          await this.deliver(
+            host,
+            group,
+            {
+              fromAgentId: caller.member.agentId,
+              fromRole: "supervisor",
+              toAgentId: peer.agentId,
+              kind: "notice",
+              text: `The Lead changed: ${agent.id} replaces ${oldId}. Your assignment and brief are unchanged; your handback reaches the new Lead. Address the Lead as "lead".`,
+            },
+            "after-turn",
+          );
+          peersTold.push(peer.agentId);
+        } catch (error) {
+          problems.push(`Peer ${peer.agentId} was not told: ${String(error)}`);
+        }
+      }
+      if (problems.length) this.event(group, "handoff-problems", { problems });
       this.save(caller);
-      return { previousLead: oldId, lead: agent.id, peersTold: peers.map((p) => p.agentId) };
+      return { previousLead: oldId, lead: agent.id, oldLeadArchived, peersTold, ...(problems.length ? { problems } : {}) };
     });
+  }
+
+  /**
+   * Archives an old Lead once it is idle (Human D24): now, at its turn end, or
+   * at reconcile. True once it is archived or gone.
+   */
+  private async retireIfIdle(host: PaseoHost, group: GroupRecord, agentId: string): Promise<boolean> {
+    const agent = await host.getAgent(agentId).catch(() => undefined);
+    if (agent === undefined) return false;
+    if (agent && !agent.archivedAt) {
+      if (BUSY_STATUSES.has(agent.status)) return false;
+      try {
+        await host.archiveAgent(agentId);
+      } catch (error) {
+        this.event(group, "lead-archive-failed", { agentId, error: String(error) });
+        return false;
+      }
+      this.event(group, "lead-archived", { agentId });
+    }
+    group.retiring = (group.retiring ?? []).filter((id) => id !== agentId);
+    return true;
   }
 
   // ---- Human panel (slice 4) ------------------------------------------------
@@ -717,6 +756,11 @@ export class Coordination {
       const record = this.deps.store.get(event.workspaceId!);
       const group = record?.group;
       if (!record || !group || group.endedAt) return;
+      if (group.retiring?.includes(event.agentId)) {
+        await this.retireIfIdle(host, group, event.agentId);
+        this.deps.store.put(record);
+        return;
+      }
       const member = group.members.find((m) => m.agentId === event.agentId);
       if (!member) return;
 
@@ -801,7 +845,9 @@ export class Coordination {
       await this.deps.queue.run(workspaceId, async () => {
         const record = this.deps.store.get(workspaceId);
         const group = record?.group;
-        if (!record || !group || group.endedAt || group.held.length === 0) return;
+        if (!record || !group || group.endedAt) return;
+        for (const agentId of [...(group.retiring ?? [])]) await this.retireIfIdle(host, group, agentId);
+        if (group.held.length === 0) return this.deps.store.put(record);
         for (const agentId of new Set(group.held.map((m) => m.toAgentId))) {
           const agent = await host.getAgent(agentId).catch(() => null);
           if (agent?.archivedAt) {

@@ -18,12 +18,20 @@ export class FakePaseoHost implements PaseoHost {
   readonly efforts = new Map<string, string[]>();
   /** Makes the next sendPrompt call fail. */
   failNextSend = false;
+  /** Makes every sendPrompt call to this agent fail. */
+  failSendTo: string | null = null;
+  /** Every createAgent request, including failed ones. */
+  readonly attempts: CreateAgentInput[] = [];
+  /** Runs inside createAgent, before it returns: lets a test change the world mid-call. */
+  duringCreate: (() => void) | null = null;
   /** Makes the next createAgent call whose title matches fail. */
   failCreateFor: string | null = null;
   private readonly byKey = new Map<string, string>();
   private nextId = 1;
 
   async createAgent(input: CreateAgentInput): Promise<HostAgent> {
+    this.attempts.push(input);
+    this.duringCreate?.();
     if (this.failCreateFor && input.title === this.failCreateFor) {
       this.failCreateFor = null;
       throw new Error(`create failed: ${input.title}`);
@@ -79,6 +87,7 @@ export class FakePaseoHost implements PaseoHost {
   }
 
   async sendPrompt(agentId: string, text: string, options?: SendPromptOptions) {
+    if (this.failSendTo === agentId) throw new Error(`send failed: ${agentId}`);
     if (this.failNextSend) {
       this.failNextSend = false;
       throw new Error(`send failed: ${agentId}`);

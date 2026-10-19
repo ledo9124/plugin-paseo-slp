@@ -18,7 +18,8 @@ function num(value: unknown): number {
 
 export function buildReport(group: GroupRecord): Report {
   const roleOf = (agentId: unknown) =>
-    group.members.find((m) => m.agentId === agentId)?.role ?? (agentId ? "unknown" : "none");
+    group.members.find((m) => m.agentId === agentId || m.previousAgentIds?.includes(agentId as string))?.role ??
+    (agentId ? "unknown" : "none");
   const report: Report = {
     groupId: group.id,
     startedAt: group.startedAt,

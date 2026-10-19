@@ -26,6 +26,8 @@ export interface MemberRecord {
   owesSupervisor?: boolean;
   /** Completed context compactions seen in the member's timeline (0009). */
   compactions?: number;
+  /** Earlier occupants of the role, oldest first (a Lead after handoffs). */
+  previousAgentIds?: string[];
 }
 
 /** A message waiting for its recipient's turn to end (decision 0004). */
@@ -58,6 +60,8 @@ export interface GroupRecord {
   events: EventRecord[];
   /** Timeline tool-call and message keys already counted (slice 5); timelines can repeat turns. */
   seen: string[];
+  /** Old Leads after a handoff, archived once idle (Human D24). */
+  retiring?: string[];
 }
 
 export function emptyLedger(): Ledger {

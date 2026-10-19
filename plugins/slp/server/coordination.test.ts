@@ -1024,7 +1024,7 @@ describe("slp_handoff (Human D11-D12)", () => {
     const result = await coordination.handoff(host, secretOf("supervisor"), { note: "CSV export in review; restart the dev server" });
 
     const newLead = idOf("lead");
-    expect(result).toEqual({ previousLead: oldLead, lead: newLead, peersTold: [peerAgentId] });
+    expect(result).toEqual({ previousLead: oldLead, lead: newLead, oldLeadArchived: true, peersTold: [peerAgentId] });
     expect(newLead).not.toBe(oldLead);
     const created = host.created.at(-1)!;
     expect(created).toMatchObject({
@@ -1067,6 +1067,72 @@ describe("slp_handoff (Human D11-D12)", () => {
     expect(secretOf("lead")).toBe(oldSecret);
     expect(host.agents.get(oldLead)!.archivedAt).toBeNull();
     expect(group().events.some((e) => e.kind === "handoff")).toBe(false);
+  });
+
+  it("can be retried after a failed create: each attempt has its own idempotency key", async () => {
+    const { host, coordination, secretOf, idOf } = await setup();
+    const oldLead = idOf("lead");
+    host.failCreateFor = "SLP Lead";
+    await expect(coordination.handoff(host, secretOf("supervisor"), { note: "n" })).rejects.toThrow(/create failed/);
+    const result = await coordination.handoff(host, secretOf("supervisor"), { note: "n" });
+    const keys = host.attempts.slice(-2).map((input) => input.idempotencyKey);
+    expect(keys[0]).not.toBe(keys[1]);
+    expect(result.previousLead).toBe(oldLead);
+    expect(idOf("lead")).toBe(result.lead);
+  });
+
+  it("finishes the handoff when a Peer cannot be told, and reports it", async () => {
+    const { host, coordination, secretOf, idOf, group } = await setup();
+    const { peerAgentId } = await coordination.delegate(host, secretOf("lead"), delegateInput);
+    const oldLead = idOf("lead");
+    host.failSendTo = peerAgentId!;
+    const result = await coordination.handoff(host, secretOf("supervisor"), { note: "n" });
+    expect(result.peersTold).toEqual([]);
+    expect(result.problems?.[0]).toMatch(new RegExp(`Peer ${peerAgentId} was not told`));
+    expect(host.agents.get(oldLead)!.archivedAt).not.toBeNull();
+    expect(idOf("lead")).toBe(result.lead);
+    expect(group().events.some((e) => e.kind === "handoff-problems")).toBe(true);
+  });
+
+  it("archives an old Lead that started a turn during the handoff only once that turn ends (Human D24)", async () => {
+    const { host, coordination, secretOf, idOf, group } = await setup();
+    const oldLead = idOf("lead");
+    host.duringCreate = () => {
+      host.agents.get(oldLead)!.status = "running";
+      host.duringCreate = null;
+    };
+    const result = await coordination.handoff(host, secretOf("supervisor"), { note: "n" });
+    expect(result.oldLeadArchived).toBe(false);
+    expect(host.agents.get(oldLead)!.archivedAt).toBeNull();
+    expect(group().retiring).toEqual([oldLead]);
+    host.agents.get(oldLead)!.status = "idle";
+    await coordination.onTurnEnded(host, { agentId: oldLead, workspaceId: "ws", outcome: { kind: "completed" }, lastReply: "late" });
+    expect(host.agents.get(oldLead)!.archivedAt).not.toBeNull();
+    expect(group().retiring).toEqual([]);
+  });
+
+  it("archives a waiting old Lead at reconcile when its turn-end event was missed", async () => {
+    const { host, coordination, secretOf, idOf, group } = await setup();
+    const oldLead = idOf("lead");
+    host.duringCreate = () => {
+      host.agents.get(oldLead)!.status = "running";
+      host.duringCreate = null;
+    };
+    await coordination.handoff(host, secretOf("supervisor"), { note: "n" });
+    host.agents.get(oldLead)!.status = "idle";
+    await coordination.reconcile(host);
+    expect(host.agents.get(oldLead)!.archivedAt).not.toBeNull();
+    expect(group().retiring).toEqual([]);
+  });
+
+  it("does not wake a Peer whose work waits for acceptance", async () => {
+    const { host, coordination, secretOf } = await setup();
+    const { peerAgentId } = await coordination.delegate(host, secretOf("lead"), delegateInput);
+    await coordination.onTurnEnded(host, { agentId: peerAgentId!, workspaceId: "ws", outcome: { kind: "completed" }, lastReply: "Done" });
+    host.sends.length = 0;
+    const result = await coordination.handoff(host, secretOf("supervisor"), { note: "n" });
+    expect(result.peersTold).toEqual([]);
+    expect(host.sends.some((s) => s.agentId === peerAgentId)).toBe(false);
   });
 
   it("gives the new Lead the auto-compact window set for the Lead", async () => {
