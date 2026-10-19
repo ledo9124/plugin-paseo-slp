@@ -82,10 +82,10 @@ describe("role instructions", () => {
 
   it("names the auto-compact windows set in Settings, or how to read the default (review A3)", () => {
     const set = flat(roleInstructions("supervisor", { ...facts, contextWindows: { lead: 600_000 } }));
-    expect(set).toContain("compacts it on its own near its auto-compact window: 600,000 tokens.");
+    expect(set).toContain("compacts it on its own near its auto-compact window: 600,000 tokens for a Claude member.");
     const unset = flat(roleInstructions("lead", facts));
     expect(unset).toContain("nears its auto-compact window (Claude Code's default, at most lastUsage.contextWindowMaxTokens)");
-    expect(flat(roleInstructions("lead", { ...facts, contextWindows: { peers: 300_000 } }))).toContain("(300,000 tokens)");
+    expect(flat(roleInstructions("lead", { ...facts, contextWindows: { peers: 300_000 } }))).toContain("(300,000 tokens for a Claude member)");
   });
 
   it("gives a Peer near its context window no next step, and has the Lead decide its handoff note (Human D12, D23-D24)", () => {

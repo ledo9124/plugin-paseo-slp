@@ -50,12 +50,14 @@ Out of scope (D19): D5-B, UI improvements, test cleanup.
    the brief with the Lead as source (fallback: plain send).
 5. Handoff: Supervisor tool `slp_handoff`; new Lead with the Lead role's
    current setup; held messages move; the Lead member gets a new secret;
-   old Lead archived when idle; handoff note in the new Lead's first prompt.
+   old Lead archived when idle; the old Lead's note goes to the new Lead
+   in the Supervisor's handoff message after it is created.
    Role texts (Supervisor, Lead, Peer-context rule).
 6. Threshold setting per role (`autoCompactWindow`), Claude only, applied as
    `extraArgs.autocompact` at creation. Behavior beyond that waits for D21.
 7. Dual template after D20.
-8. Validation, review by two fresh Peers, live checks on 6767, docs,
+8. Validation, review by two fresh Peers, live checks on a scratch daemon
+   (D26), docs,
    decision record, merge, tag v0.4.0, push.
 
 ## Risks And Recovery
@@ -67,8 +69,8 @@ Out of scope (D19): D5-B, UI improvements, test cleanup.
   (c) the new Lead gets the role's setup, labels, and a new MCP secret on
   the Lead member (the old Lead's URL stops working); (d) the Supervisor's text allows the handoff tool; (e) the note
   plus `slp_ledger`.
-- A dev build on 6767 affects Human's running groups during the live check:
-  check `slp.workspace.list`, back up settings, switch back after.
+- A live check must not touch 6767 or Human's config files (D26): it runs
+  on a scratch daemon with its own home and port.
 - Rollback: the previous release `v0.3.7`.
 
 ## Progress
@@ -81,11 +83,14 @@ Out of scope (D19): D5-B, UI improvements, test cleanup.
 - [x] 6. Threshold setting, T1 base (3b80afa); D21 may add more.
 - [x] Clean compile with Paseo v0.10.2's compilePlugin (client 123,538 B,
   server 136,219 B).
-- [ ] Review: A2 (intent lens), A3 (claims lens), on f1c8b0e..3b80afa.
+- [x] Review: A2 (intent lens), A3 (claims lens), on f1c8b0e..3b80afa;
+  fixed in c2c31c7 and f085834.
+- [x] Pre-merge verdict: A4 (intent), A5 (claims), Opus, on
+  f1c8b0e..f085834: ready to merge; fixes in e3bd462 and the next commit.
 - [x] 7. Dual template: Review mode (D20 R1), migration, decisions 0012
   and 0013 (089d7a2).
 - [x] Live check on a scratch Paseo 0.12.0 daemon (D26: port 6768, home
-  %TEMP%slp-d19-home, MCP 6792; 6767 untouched; stopped after), driving
+  %TEMP%/slp-d19-home, MCP 6792; 6767 untouched; stopped after), driving
   the plugin's MCP tools with the members' secrets:
   - Lead created with `extraArgs.autocompact: "600000"`, Peer with
     `"300000"`, Supervisor without; parents the Supervisor.
@@ -114,9 +119,9 @@ Out of scope (D19): D5-B, UI improvements, test cleanup.
 
 - Focused proof: unit tests per change (roles, tools, coordination, service,
   settings, templates).
-- Integration or end-to-end proof: 6767 live check: a scratch SLP group,
-  a delegate (sender label), a handoff with a Peer kept, the threshold seen
-  through `/autocompact` on a member.
+- Integration or end-to-end proof: live check on a scratch 0.12.0 daemon
+  (D26): a scratch SLP group, a delegate (sender label), a handoff with a
+  Peer kept, the threshold in each member's stored `extraArgs`.
 - Repository-required checks: `tsc --noEmit -p plugins/slp`, `vitest run`,
   a clean compile with Paseo's `compilePlugin`.
 

@@ -24,11 +24,12 @@ export const DEFAULT_ROLE_TOOLS: Record<Role, readonly SlpTool[]> = {
   peer: ["slp_ledger", "slp_send", "slp_finding"],
 };
 
-// Human's per-role overrides (decision 0008). Absent means the default, so
-// "reset to default" removes the field and earlier settings stay valid.
 /** Claude Code's auto-compact window bounds, in tokens (its `--autocompact` flag). */
 export const AUTO_COMPACT_MIN = 100_000;
 export const AUTO_COMPACT_MAX = 1_000_000;
+
+// Human's per-role overrides (decision 0008). Absent means the default, so
+// "reset to default" removes the field and earlier settings stay valid.
 
 const RoleOverrides = {
   /**

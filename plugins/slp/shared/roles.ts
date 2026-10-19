@@ -20,7 +20,7 @@ export interface RoleFacts {
 /** A window as a role text names it: the set number, or how to read the default. */
 function windowText(tokens: number | undefined): string {
   return tokens
-    ? `${tokens.toLocaleString("en-US")} tokens`
+    ? `${tokens.toLocaleString("en-US")} tokens for a Claude member`
     : "Claude Code's default, at most lastUsage.contextWindowMaxTokens";
 }
 
