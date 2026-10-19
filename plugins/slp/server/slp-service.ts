@@ -58,7 +58,7 @@ export interface MemberSetup {
   /** Human replaced the role's default text in Settings. */
   customInstructions: boolean;
   preapprovedTools: Array<{ server: string; tool: string }>;
-  providerOptions?: { disallowedTools: string[] };
+  providerOptions?: { disallowedTools: string[]; extraArgs?: Record<string, string> };
 }
 
 export function memberSetup(
@@ -85,9 +85,63 @@ export function memberSetup(
     instructionsHash: createHash("sha256").update(systemPrompt).digest("hex").slice(0, 12),
     customInstructions: config.instructions !== undefined,
     preapprovedTools: tools.map((tool) => ({ server: MCP_SERVER_NAME, tool })),
-    providerOptions:
-      providerId(provider) === "claude" ? { disallowedTools: [...CLAUDE_DISALLOWED[role]] } : undefined,
+    providerOptions: providerId(provider) === "claude" ? claudeOptions(role, config.autoCompactWindow) : undefined,
   };
+}
+
+/**
+ * Claude Code's `--autocompact` flag sets the window for this session only;
+ * its `/autocompact` command would write the user's settings file (D22).
+ */
+function claudeOptions(role: Role, autoCompactWindow: number | undefined): NonNullable<MemberSetup["providerOptions"]> {
+  return {
+    disallowedTools: [...CLAUDE_DISALLOWED[role]],
+    ...(autoCompactWindow ? { extraArgs: { autocompact: String(autoCompactWindow) } } : {}),
+  };
+}
+
+/**
+ * Creates the Supervisor or a Lead with the role's settings (0008). Only the
+ * Supervisor notifies Human: Paseo skips the finish attention of an agent
+ * with a parent (Human, 2026-10-03; 0009).
+ */
+export async function createRoleAgent(
+  host: PaseoHost,
+  input: {
+    workspaceId: string;
+    group: GroupRecord;
+    member: MemberRecord;
+    settings: SlpSettings;
+    setup: MemberSetup;
+    mcpUrl: string;
+    idempotencyKey: string;
+    now(): string;
+  },
+): Promise<HostAgent> {
+  const { group, member, setup } = input;
+  const config = input.settings[member.role as "supervisor" | "lead"];
+  const effort = await resolveEffort(host, config.provider, config.thinkingOptionId);
+  if (effort.dropped) {
+    group.events.push({
+      at: input.now(),
+      kind: "effort-dropped",
+      data: { role: member.role, provider: config.provider, thinkingOptionId: effort.dropped },
+    });
+  }
+  return host.createAgent({
+    workspaceId: input.workspaceId,
+    provider: config.provider,
+    modeId: config.modeId,
+    thinkingOptionId: effort.thinkingOptionId,
+    parent: member.role === "supervisor" ? undefined : (supervisorOf(group) ?? undefined),
+    title: ROLE_TITLES[member.role],
+    systemPrompt: setup.systemPrompt,
+    mcpServers: slpMcpServers(input.mcpUrl),
+    preapprovedTools: setup.preapprovedTools,
+    labels: { [GROUP_LABEL]: group.id, [ROLE_LABEL]: member.role },
+    idempotencyKey: input.idempotencyKey,
+    providerOptions: setup.providerOptions,
+  });
 }
 
 /** Records on the member what it was created with; the MCP endpoint and report read it. */
@@ -248,7 +302,16 @@ export class SlpService {
     this.deps.store.put({ ...record, mode: "on", group });
     try {
       for (const member of group.members) {
-        const agent = await this.createMember(host, record.workspaceId, group, member, settings, setups.get(member)!);
+        const agent = await createRoleAgent(host, {
+          workspaceId: record.workspaceId,
+          group,
+          member,
+          settings,
+          setup: setups.get(member)!,
+          mcpUrl: this.deps.mcpUrl(member.secret),
+          idempotencyKey: `slp:${group.id}:${member.role}`,
+          now: this.deps.now,
+        });
         member.agentId = agent.id;
         this.deps.store.put({ ...record, mode: "on", group });
       }
@@ -264,41 +327,6 @@ export class SlpService {
   private async stopGroup(host: PaseoHost, record: WorkspaceRecord): Promise<void> {
     if (record.group) await this.archiveMembers(host, record.group);
     this.deps.store.put({ ...record, mode: "off", group: null });
-  }
-
-  private async createMember(
-    host: PaseoHost,
-    workspaceId: string,
-    group: GroupRecord,
-    member: MemberRecord,
-    settings: SlpSettings,
-    setup: MemberSetup,
-  ): Promise<HostAgent> {
-    const config = settings[member.role as "supervisor" | "lead"];
-    const effort = await resolveEffort(host, config.provider, config.thinkingOptionId);
-    if (effort.dropped) {
-      group.events.push({
-        at: this.deps.now(),
-        kind: "effort-dropped",
-        data: { role: member.role, provider: config.provider, thinkingOptionId: effort.dropped },
-      });
-    }
-    return host.createAgent({
-      workspaceId,
-      provider: config.provider,
-      modeId: config.modeId,
-      thinkingOptionId: effort.thinkingOptionId,
-      // Only the Supervisor notifies Human: Paseo skips the finish attention
-      // of an agent with a parent (Human, 2026-10-03; 0009).
-      parent: member.role === "supervisor" ? undefined : (supervisorOf(group) ?? undefined),
-      title: ROLE_TITLES[member.role],
-      systemPrompt: setup.systemPrompt,
-      mcpServers: slpMcpServers(this.deps.mcpUrl(member.secret)),
-      preapprovedTools: setup.preapprovedTools,
-      labels: { [GROUP_LABEL]: group.id, [ROLE_LABEL]: member.role },
-      idempotencyKey: `slp:${group.id}:${member.role}`,
-      providerOptions: setup.providerOptions,
-    });
   }
 
   private async archiveMembers(host: PaseoHost, group: GroupRecord): Promise<void> {

@@ -14,6 +14,7 @@ import type { Role } from "../shared/contracts";
 import { Card } from "./card";
 import { TabBar, type Tab } from "./tab-bar";
 import { groupPeerModels } from "./settings-peer-models";
+import { formatAutoCompact, parseAutoCompact } from "./auto-compact";
 import { SECTIONS, stable, syncDraft, type Section } from "./settings-sync";
 import { TemplatesSection, useTemplates } from "./templates-section";
 import {
@@ -137,6 +138,31 @@ function RoleModelFields({
         onValueChange={(next) => onChange({ ...value, thinkingOptionId: next || undefined })}
       />
     </Card>
+  );
+}
+
+// Claude Code's auto-compact window for the role's Claude members (Human
+// D11-D13), passed as --autocompact when a member is created (D22).
+function AutoCompactField({ value, onChange }: { value?: number; onChange(next: number | undefined): void }) {
+  const [error, setError] = useState<string | null>(null);
+  return (
+    <SettingsSection title="Context">
+      <Card>
+        <SettingsInput
+          label="Auto-compact window"
+          hint="Claude members: Claude Code compacts the context at this size, 100k to 1M tokens (for example 600k). Empty for Claude Code's default. Applies to members created after saving."
+          error={error}
+          initialValue={formatAutoCompact(value)}
+          onChangeText={(text) => {
+            const parsed = parseAutoCompact(text);
+            if ("error" in parsed) return setError(parsed.error);
+            setError(null);
+            onChange(parsed.value ?? undefined);
+          }}
+          testID="slp-settings-auto-compact"
+        />
+      </Card>
+    </SettingsSection>
   );
 }
 
@@ -588,6 +614,10 @@ export function SlpSettingsScreen({ theme }: PluginSurfaceProps) {
           onChange={(next) => setDraft({ ...draft, [key]: { ...draft[key], ...next } })}
         />
       </SettingsSection>
+      <AutoCompactField
+        value={draft[key].autoCompactWindow}
+        onChange={(autoCompactWindow) => setDraft({ ...draft, [key]: { ...draft[key], autoCompactWindow } })}
+      />
       <RoleOverrides
         role={key}
         provider={draft[key].provider}
@@ -637,6 +667,10 @@ export function SlpSettingsScreen({ theme }: PluginSurfaceProps) {
             catalog={catalog}
             value={draft.peers}
             onChange={(next) => setDraft({ ...draft, peers: { ...draft.peers, ...next } })}
+          />
+          <AutoCompactField
+            value={draft.peers.autoCompactWindow}
+            onChange={(autoCompactWindow) => setDraft({ ...draft, peers: { ...draft.peers, autoCompactWindow } })}
           />
           <RoleOverrides
             role="peer"

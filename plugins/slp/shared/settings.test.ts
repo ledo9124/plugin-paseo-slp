@@ -42,4 +42,15 @@ describe("SLP settings defaults", () => {
     expect(parsed.peers.efforts).toEqual({ claude: "medium" });
     expect(slpSettings.schema.parse({}).supervisor.thinkingOptionId).toBeUndefined();
   });
+
+  it("takes an auto-compact window per role within Claude Code's 100k-1M range, absent by default (D13, D22)", () => {
+    const defaults = slpSettings.schema.parse({});
+    expect(defaults.lead.autoCompactWindow).toBeUndefined();
+    expect(defaults.peers.autoCompactWindow).toBeUndefined();
+    const set = slpSettings.schema.parse({ lead: { provider: "claude/x", modeId: "auto", autoCompactWindow: 600_000 } });
+    expect(set.lead.autoCompactWindow).toBe(600_000);
+    for (const bad of [99_999, 1_000_001, 600_000.5]) {
+      expect(() => slpSettings.schema.parse({ lead: { provider: "claude/x", modeId: "auto", autoCompactWindow: bad } })).toThrow();
+    }
+  });
 });

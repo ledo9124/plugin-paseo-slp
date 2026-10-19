@@ -32,6 +32,14 @@ const DelegateInput = z.object({
   template: z.string().optional().describe("Name of the stored template this assignment follows."),
 });
 const TemplateInput = z.object({ name: z.string().min(1) });
+const HandoffInput = z.object({
+  note: z
+    .string()
+    .min(1)
+    .describe(
+      "What the new Lead needs beyond the ledger: the goal's state, work in flight, background processes to restart, open questions. Ask the Lead for it first; if it cannot answer, write it from the ledger.",
+    ),
+});
 const AcceptInput = z.object({
   assignmentId: z.string(),
   outcome: z.enum(["accepted", "rework", "dropped"]),
@@ -131,6 +139,13 @@ export function memberTools(coordination: Coordination, host: () => PaseoHost): 
         'Lead or Supervisor, for a pending decision you recorded. action "update" replaces its text (to correct or sharpen the question); "withdraw" removes it from what Human must answer. The reason is required; the Supervisor is told.',
       inputSchema: schema(ReviseDecisionInput),
       call: (args, secret) => coordination.reviseDecision(host(), secret, parse(ReviseDecisionInput, args)),
+    },
+    {
+      name: "slp_handoff",
+      description:
+        "Supervisor only. Hand the Lead role to a new Lead agent, for example when the Lead's context is nearly full or its earlier context is no longer needed. Only between the Lead's turns. The Peers, their assignments, and the ledger stay; messages held for the old Lead go to the new one; the old Lead is archived, and its background processes end with it.",
+      inputSchema: schema(HandoffInput),
+      call: (args, secret) => coordination.handoff(host(), secret, parse(HandoffInput, args)),
     },
     {
       name: "slp_template",

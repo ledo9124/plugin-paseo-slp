@@ -72,6 +72,24 @@ describe("role instructions", () => {
     );
   });
 
+  it("lets the Supervisor hand off the Lead any time, note first, and report after (Human D11-D12)", () => {
+    const text = flat(roleInstructions("supervisor", facts));
+    expect(text).toContain("You may also hand the Lead role to a fresh Lead at any time, and tell Human after");
+    expect(text).toContain("First ask the Lead with slp_send for a handoff note");
+    expect(text).toContain("call slp_handoff with it between the Lead's turns");
+    expect(text).toContain("The Peers stay and follow the new Lead.");
+  });
+
+  it("gives a Peer near its context window no next step, and has the Lead write a handoff note (Human D12)", () => {
+    const text = flat(roleInstructions("lead", facts));
+    expect(text).toContain(
+      "only when it is the next step of that Peer's own last scope and its context has room. " +
+        "When its context use (Paseo's get_agent_status, lastUsage.contextWindowUsedTokens) nears its window, " +
+        "the next step goes to a fresh Peer, with a brief that carries what the step needs.",
+    );
+    expect(text).toContain("When the Supervisor asks you for a handoff note, reply with it");
+  });
+
   it("has a Peer raise a choice it cannot settle with options, consequences, and a recommendation", () => {
     expect(flat(roleInstructions("peer", facts))).toContain(
       "raise it in a finding or your handback with the options, their consequences, and your recommendation, and the Lead sorts it.",

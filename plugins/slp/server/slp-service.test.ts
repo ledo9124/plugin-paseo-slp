@@ -74,8 +74,10 @@ describe("SlpService.setMode", () => {
       "slp_finding",
       "slp_decide",
       "slp_revise_decision",
+      "slp_handoff",
     ]);
     expect(tools(lead)).toContain("slp_delegate");
+    expect(tools(lead)).not.toContain("slp_handoff");
     expect(tools(lead)).toHaveLength(9);
     // The Supervisor does not work on the project; the Lead delegates only
     // through slp_delegate (0006); only the Supervisor asks Human (0008).
@@ -93,7 +95,7 @@ describe("SlpService.setMode", () => {
     await service.setMode(host, "ws-1", "on");
     const [supervisor] = host.created;
     expect(supervisor.systemPrompt).toContain(
-      "Your SLP tools: slp_group, slp_ledger, slp_send, slp_finding, slp_decide, slp_revise_decision.",
+      "Your SLP tools: slp_group, slp_ledger, slp_send, slp_finding, slp_decide, slp_revise_decision, slp_handoff.",
     );
     const [supervisorRecord, leadRecord] = store.get("ws-1")!.group!.members;
     expect(supervisorRecord).toMatchObject({ customInstructions: false, instructionsHash: expect.stringMatching(/^[0-9a-f]{12}$/) });
@@ -147,6 +149,21 @@ describe("SlpService.setMode", () => {
     expect(supervisor.systemPrompt).toContain("- bugfix:");
     expect(supervisor.systemPrompt).not.toContain("- review:");
     expect(lead.systemPrompt).not.toContain("Catalog:");
+  });
+
+  it("passes each Claude member its role's auto-compact window as --autocompact, never through settings files (D22)", async () => {
+    const { service, host } = setup({
+      ...SETTINGS,
+      supervisor: { ...SETTINGS.supervisor, autoCompactWindow: 400_000 },
+      lead: { ...SETTINGS.lead, autoCompactWindow: 600_000 },
+    });
+    await service.setMode(host, "ws-1", "on");
+    const [supervisor, lead] = host.created;
+    expect(supervisor.providerOptions).toMatchObject({ extraArgs: { autocompact: "400000" } });
+    expect(lead.providerOptions).toMatchObject({ extraArgs: { autocompact: "600000" } });
+    const peer = memberSetup("peer", "claude/claude-sonnet-5-5", { ...SETTINGS, peers: { ...SETTINGS.peers, autoCompactWindow: 300_000 } });
+    expect(peer.providerOptions).toEqual({ disallowedTools: ["AskUserQuestion"], extraArgs: { autocompact: "300000" } });
+    expect(memberSetup("peer", "codex/gpt-6-luna", { ...SETTINGS, peers: { ...SETTINGS.peers, autoCompactWindow: 300_000 } }).providerOptions).toBeUndefined();
   });
 
   it("gives a non-Claude Lead no Claude-only options", async () => {

@@ -30,6 +30,9 @@ export interface HostUsage {
   cachedInputTokens?: number;
   outputTokens?: number;
   totalCostUsd?: number;
+  /** Context the provider reports in use, and its window (Paseo 0.10.2+). */
+  contextWindowUsedTokens?: number;
+  contextWindowMaxTokens?: number;
 }
 
 export interface CreateAgentInput {
@@ -52,8 +55,8 @@ export interface CreateAgentInput {
   idempotencyKey?: string;
   parent?: string;
   prompt?: string;
-  /** Provider-native options, validated by the provider (for Claude, `disallowedTools`). */
-  providerOptions?: Record<string, string[]>;
+  /** Provider-native options, validated by the provider (for Claude, `disallowedTools` and `extraArgs`). */
+  providerOptions?: Record<string, unknown>;
 }
 
 export type ActiveTurnBehavior = "interrupt" | "steer";

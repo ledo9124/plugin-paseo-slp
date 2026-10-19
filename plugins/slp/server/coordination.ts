@@ -10,6 +10,7 @@ import {
   ROLE_LABEL,
   SlpError,
   applySetup,
+  createRoleAgent,
   memberSetup,
   resolveEffort,
   slpMcpServers,
@@ -531,6 +532,94 @@ export class Coordination {
     });
   }
 
+  /**
+   * The Supervisor hands the Lead role to a new Lead agent (Human D11-D12).
+   * The Peers, their assignments, and the ledger stay; messages held for the
+   * old Lead and the Supervisor's open request move to the new one, and the
+   * old Lead is archived. Only between the old Lead's turns, so no running
+   * work is cut off.
+   */
+  handoff(host: PaseoHost, secret: string, input: { note: string }) {
+    return this.withCaller(secret, async (caller) => {
+      this.requireRole(caller, ["supervisor"], "slp_handoff");
+      const { group } = caller;
+      const lead = group.members.find((m) => m.role === "lead");
+      if (!lead?.agentId) throw new SlpError("invalid", "This group has no Lead to hand off.");
+      const oldId = lead.agentId;
+      const old = await host.getAgent(oldId);
+      if (old && !old.archivedAt && BUSY_STATUSES.has(old.status)) {
+        throw new SlpError(
+          "invalid",
+          "The Lead is in a turn. Hand off after it ends; archiving it now would cut off its work and its background processes.",
+        );
+      }
+      const settings = await this.deps.settings();
+      const setup = memberSetup("lead", settings.lead.provider, settings, this.deps.templates.list());
+      const previous = { secret: lead.secret, tools: lead.tools, instructionsHash: lead.instructionsHash, customInstructions: lead.customInstructions };
+      const handoffs = group.events.filter((e) => e.kind === "handoff").length;
+      // A new secret: the old Lead's MCP URL stops working with the handoff.
+      lead.secret = this.deps.newSecret();
+      applySetup(lead, setup);
+      this.save(caller);
+      let agent;
+      try {
+        agent = await createRoleAgent(host, {
+          workspaceId: caller.record.workspaceId,
+          group,
+          member: lead,
+          settings,
+          setup,
+          mcpUrl: this.deps.mcpUrl(lead.secret),
+          idempotencyKey: `slp:${group.id}:lead:${handoffs + 1}`,
+          now: this.deps.now,
+        });
+      } catch (error) {
+        Object.assign(lead, previous);
+        this.save(caller);
+        throw error;
+      }
+      lead.agentId = agent.id;
+      lead.owesSupervisor = false;
+      lead.compactions = 0;
+      for (const message of group.held) if (message.toAgentId === oldId) message.toAgentId = agent.id;
+      // The handoff goes first, then what was held for the old Lead.
+      group.held.unshift({
+        id: this.deps.newId(),
+        at: this.deps.now(),
+        fromAgentId: caller.member.agentId,
+        fromRole: "supervisor",
+        toAgentId: agent.id,
+        kind: "message",
+        text: renderHandoff(oldId, input.note),
+      });
+      this.event(group, "handoff", { from: oldId, to: agent.id, by: caller.member.agentId });
+      this.save(caller);
+      await this.flush(host, group, agent.id);
+
+      // Peers keep their assignments; those with open work learn who the Lead is now.
+      const peers = group.members.filter(
+        (m) => m.role === "peer" && m.agentId && this.openAssignmentOf(group.ledger, m.agentId),
+      );
+      for (const peer of peers) {
+        await this.deliver(
+          host,
+          group,
+          {
+            fromAgentId: caller.member.agentId,
+            fromRole: "supervisor",
+            toAgentId: peer.agentId!,
+            kind: "notice",
+            text: `The Lead changed: ${agent.id} replaces ${oldId}. Your assignment and brief are unchanged; your handback reaches the new Lead. Address the Lead as "lead".`,
+          },
+          "after-turn",
+        );
+      }
+      if (old && !old.archivedAt) await host.archiveAgent(oldId);
+      this.save(caller);
+      return { previousLead: oldId, lead: agent.id, peersTold: peers.map((p) => p.agentId) };
+    });
+  }
+
   // ---- Human panel (slice 4) ------------------------------------------------
 
   /**
@@ -816,6 +905,8 @@ export class Coordination {
         cachedInputTokens: usage.cachedInputTokens ?? null,
         outputTokens: usage.outputTokens ?? null,
         totalCostUsd: usage.totalCostUsd ?? null,
+        contextWindowUsedTokens: usage.contextWindowUsedTokens ?? null,
+        contextWindowMaxTokens: usage.contextWindowMaxTokens ?? null,
       });
     }
   }
@@ -1111,6 +1202,20 @@ export function renderBrief(assignment: Assignment): string {
     "End your turn with a handback: what you did, the evidence, the records and constraints your change",
     "touches with the evidence that each still holds, what is unresolved, and anything that should change",
     "the plan. If the premise looks wrong, record slp_finding (kind reopen) with evidence.",
+  ].join("\n");
+}
+
+function renderHandoff(previousLead: string, note: string): string {
+  return [
+    `Handoff: you are now this SLP group's Lead, replacing ${previousLead}, which is archived.`,
+    "The Peers, their assignments, the findings, and the decisions are unchanged; Peers now hand back to you.",
+    "Before you act, read the project's entry file and its workflow, and slp_ledger.",
+    "Restart any background process the note lists that the work still needs: it ended with the previous Lead.",
+    "",
+    "The handoff note:",
+    note,
+    "",
+    "In your reply at the end of this turn, say what you took over and what comes next.",
   ].join("\n");
 }
 
