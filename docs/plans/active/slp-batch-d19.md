@@ -82,11 +82,31 @@ Out of scope (D19): D5-B, UI improvements, test cleanup.
 - [x] Clean compile with Paseo v0.10.2's compilePlugin (client 123,538 B,
   server 136,219 B).
 - [ ] Review: A2 (intent lens), A3 (claims lens), on f1c8b0e..3b80afa.
-- [ ] 7. Dual template (waits for D20).
+- [x] 7. Dual template: Review mode (D20 R1), migration, decisions 0012
+  and 0013 (089d7a2).
+- [x] Live check on a scratch Paseo 0.12.0 daemon (D26: port 6768, home
+  %TEMP%slp-d19-home, MCP 6792; 6767 untouched; stopped after), driving
+  the plugin's MCP tools with the members' secrets:
+  - Lead created with `extraArgs.autocompact: "600000"`, Peer with
+    `"300000"`, Supervisor without; parents the Supervisor.
+  - D18: the Peer's timeline shows "[Message received] SLP Lead"; its
+    transcript envelope has `source-agent-id` = the Lead.
+  - `slp_handoff` during the Lead's turn: refused ("The Lead is in a
+    turn").
+  - After the Lead replied with its own note: `slp_handoff` created Lead
+    2c269b2b (autocompact 600000, parent the Supervisor), archived the old
+    Lead, delivered the handoff note, held the notice for the busy Peer;
+    the Peer's handback reached the new Lead, which accepted A1 with its
+    new secret; its reply was relayed to the Supervisor.
+  - Usage events carry `contextWindowUsedTokens` and
+    `contextWindowMaxTokens`.
 - [ ] 8. Validation, review, live checks, release.
 
 ## Decisions
 
+- 2026-10-19: Human chose R1 (D20), T1 (D21), the old Lead's own note and
+  archive once idle (D23, D24), and live checks on a scratch daemon with
+  Human installing v0.4.0 on 6767 (D26).
 - 2026-10-19: per-agent threshold through `extraArgs.autocompact`, not
   `/autocompact` (D22; `/autocompact` writes the user settings file).
 
