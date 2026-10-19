@@ -30,8 +30,9 @@ Claude and Codex. The steps were adapted from the sibling repository
   never on 6767, and write none of Human's global config files. The D19
   batch ran the installed 0.12.0 CLI
   (`resources/app.asar/node_modules/@getpaseo/cli/dist/index.js` through
-  `Paseo.exe`, as `bin/paseo.cmd` does, with `ELECTRON_RUN_AS_NODE=1` and
-  without `PASEO_DESKTOP_MANAGED`) with `--home %TEMP%/slp-d19-home`,
+  `Paseo.exe` and `app.asar.unpacked/dist/daemon/node-entrypoint-runner.js
+  node-script`, as `bin/paseo.cmd` does, with `ELECTRON_RUN_AS_NODE=1` and
+  `PASEO_NODE_ENV=production`, but without `PASEO_DESKTOP_MANAGED`) with `--home %TEMP%/slp-d19-home`,
   `daemon.listen` `127.0.0.1:6768`, and
   `SLP_MCP_PORT=6792`; `daemon stop` with the same home ended it. Set
   `PASEO_AGENT_ID=` empty when an agent runs the CLI, or Paseo sends as

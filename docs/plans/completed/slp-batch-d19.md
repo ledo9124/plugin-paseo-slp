@@ -4,7 +4,7 @@ Date: 2026-10-19
 
 ## Status
 
-Active
+Completed
 
 ## Outcome
 
@@ -127,4 +127,20 @@ Out of scope (D19): D5-B, UI improvements, test cleanup.
 
 ## Result
 
-Pending.
+v0.4.0, merged to main and tagged (2026-10-19).
+
+- Evidence:
+  - 174 unit tests and the typecheck pass.
+  - A clean copy compiles with Paseo v0.10.2's `compilePlugin`.
+  - The live check ran on a scratch 0.12.0 daemon (above).
+  - Reviews: lenses A2/A3; a pre-merge verdict A4/A5, Opus, the template's Review mode; and the fix round A6. Every finding is fixed or recorded below.
+- Human decisions: D6-D8, D11-D13, D17, D18, D20, D21, D23, D24 and D26. D22 is the Lead's route within D13. Records: decisions 0012 and 0013.
+- Not done here:
+  - Human installs v0.4.0 on 6767 (D26). Its stored v0.3.7 dual-lane then migrates once, with a `templates.json.bak-v0.3.7` backup.
+- Limits and follow-ups:
+  - The new create-then-send order for Peer briefs ran live only on 0.12.0. On 0.10.x and 0.11.x it was checked by reading the source and by the compile.
+  - A Supervisor tool list saved in Settings before v0.4.0 lacks `slp_handoff`; Human has none saved.
+  - The report label "Busy-send violations" predates D17's new reason.
+  - The `held-dropped` reason says "handed back" also for an accepted or dropped assignment.
+  - The Settings unmount path has no rendered test.
+  - The old Lead's background processes end with it, and its note must list them.

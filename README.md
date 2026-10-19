@@ -13,7 +13,8 @@ completes Human's rough input before work starts. Agents decide what their
 authority covers, and only what really matters reaches Human. Human can see
 and redirect the work without reading transcripts.
 
-Status: v0.4, proved live on Paseo `v0.10.2` to `v0.12.0` and on four real runs. v0.1
+Status: v0.4, proved live on Paseo `v0.12.0` (a scratch daemon); earlier
+releases proved live on `v0.10.2` and on four real runs. v0.1
 built the group, the ledger, the panel, and the process report; v0.2 added
 per-role instructions, tools, and templates (decision 0008), with role
 definitions tuned on a scenario suite. v0.3 comes from the real runs: the
