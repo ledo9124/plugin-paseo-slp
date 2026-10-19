@@ -52,6 +52,56 @@ describe("role instructions", () => {
     );
   });
 
+  it("bans send_agent_prompt for what it bypasses, not a stale cause (Human, D17)", () => {
+    for (const role of ROLES) {
+      const text = flat(roleInstructions(role, facts));
+      expect(text, role).toContain(
+        "Message members only with slp_send; do not use Paseo's send_agent_prompt or create_agent: " +
+          "they bypass SLP's held messages, the ledger, the relay of the Lead's reply, and the SLP panel.",
+      );
+      expect(text, role).not.toContain("cancels a busy recipient's turn");
+    }
+  });
+
+  it("has the Supervisor steer only when the Lead's work would be wasted, as a short note (Human, D6-D7)", () => {
+    expect(flat(roleInstructions("supervisor", facts))).toContain(
+      `Steer (slp_send with delivery "steer") only when the Lead's work would otherwise be wasted: ` +
+        "Human's answer stops, narrows, or reverses what the Lead is doing now. " +
+        "Then steer one short note: the decision id and what to stop or keep; send the rest after-turn, " +
+        "and the Lead decides how to redirect. Otherwise send after-turn. When unsure, steer the one-line note.",
+    );
+  });
+
+  it("lets the Supervisor hand off the Lead any time with the Lead's own note, and report after (Human D11-D12, D23-D24)", () => {
+    const text = flat(roleInstructions("supervisor", facts));
+    expect(text).toContain("You may also hand the Lead role to a fresh Lead at any time, and tell Human after");
+    expect(text).toContain("First ask the Lead with slp_send for its handoff note: the Lead decides what to hand off.");
+    expect(text).toContain("Then call slp_handoff with the note as the Lead wrote it.");
+    expect(text).toContain("the old Lead is archived once its turn has ended.");
+  });
+
+  it("names the auto-compact windows set in Settings, or how to read the default (review A3)", () => {
+    const set = flat(roleInstructions("supervisor", { ...facts, contextWindows: { lead: 600_000 } }));
+    expect(set).toContain("compacts it on its own near its auto-compact window: 600,000 tokens for a Claude member.");
+    const unset = flat(roleInstructions("lead", facts));
+    expect(unset).toContain("nears its auto-compact window (Claude Code's default, at most lastUsage.contextWindowMaxTokens)");
+    expect(flat(roleInstructions("lead", { ...facts, contextWindows: { peers: 300_000 } }))).toContain("(300,000 tokens for a Claude member)");
+  });
+
+  it("gives a Peer near its context window no next step, and has the Lead decide its handoff note (Human D12, D23-D24)", () => {
+    const text = flat(roleInstructions("lead", facts));
+    expect(text).toContain(
+      "only when it is the next step of that Peer's own last scope and its context has room. " +
+        "When its context use (Paseo's get_agent_status, lastUsage.contextWindowUsedTokens) nears its auto-compact window " +
+        "(Claude Code's default, at most lastUsage.contextWindowMaxTokens), " +
+        "the next step goes to a fresh Peer, with a brief that carries what the step needs.",
+    );
+    expect(text).toContain(
+      "When the Supervisor asks you for a handoff note, you decide what the next Lead needs: current work, open items, " +
+        "background work (what you started and how to restart it), and what matters for the next step.",
+    );
+  });
+
   it("has a Peer raise a choice it cannot settle with options, consequences, and a recommendation", () => {
     expect(flat(roleInstructions("peer", facts))).toContain(
       "raise it in a finding or your handback with the options, their consequences, and your recommendation, and the Lead sorts it.",

@@ -172,8 +172,8 @@ describe("slp_delegate", () => {
     });
   });
 
-  it("creates a Peer with the default model, its provider's mode, the Peer role, and the brief as prompt", async () => {
-    const { host, coordination, secretOf, group } = await setup();
+  it("creates a Peer with the default model, its provider's mode, the Peer role, and the brief from the Lead", async () => {
+    const { host, coordination, secretOf, idOf, group } = await setup();
     const result = await coordination.delegate(host, secretOf("lead"), delegateInput);
 
     const created = host.created.at(-1)!;
@@ -188,11 +188,28 @@ describe("slp_delegate", () => {
     expect(created.providerOptions).toEqual({ disallowedTools: ["AskUserQuestion"] });
     expect(created.preapprovedTools?.map((t) => t.tool)).toEqual(["slp_ledger", "slp_send", "slp_finding"]);
     expect(created.systemPrompt).toContain("Your role: Peer");
-    expect(created.prompt).toContain("Goal: Users can export reports as CSV");
-    expect(created.prompt).toContain("No new runtime dependency (source: Human)");
-    expect(created.prompt).toContain("not a binding constraint");
+    // Paseo 0.12 labels a create prompt with the parent, the Supervisor (D18):
+    // the brief follows as the Lead's message.
+    expect(created.prompt).toBeUndefined();
+    expect(created.parent).toBe(idOf("supervisor"));
+    const brief = host.sends.at(-1)!;
+    expect(brief).toMatchObject({ agentId: result.peerAgentId, activeTurnBehavior: "steer", sourceAgentId: idOf("lead") });
+    expect(brief.text).toContain("Goal: Users can export reports as CSV");
+    expect(brief.text).toContain("No new runtime dependency (source: Human)");
+    expect(brief.text).toContain("not a binding constraint");
+    expect(group().ledger.assignments[0].briefDeliveredAt).not.toBeNull();
     expect(result).toMatchObject({ assignmentId: "A1", created: true });
     expect(group().ledger.assignments[0]).toMatchObject({ id: "A1", status: "assigned", peerAgentId: result.peerAgentId });
+  });
+
+  it("archives the new Peer and leaves no assignment when its brief cannot be sent", async () => {
+    const { host, coordination, secretOf, group } = await setup();
+    host.failNextSend = true;
+    await expect(coordination.delegate(host, secretOf("lead"), delegateInput)).rejects.toThrow(/send failed/);
+    const peer = [...host.agents.values()].find((agent) => agent.title === "SLP Peer 1")!;
+    expect(peer.archivedAt).not.toBeNull();
+    expect(group().ledger.assignments).toHaveLength(0);
+    expect(group().members.filter((m) => m.role === "peer")).toHaveLength(0);
   });
 
   it("uses the allowed model's provider mode and rejects models off the list", async () => {
@@ -285,12 +302,12 @@ describe("templates", () => {
 
     await coordination.delegate(host, secretOf("lead"), { ...delegateInput, template: "review" });
     expect(group().ledger.assignments[0].template).toBe("review");
-    expect(host.created.at(-1)?.prompt).toContain("Template: review");
+    expect(host.sends.at(-1)?.text).toContain("Template: review");
     expect(group().events.find((e) => e.kind === "delegate")?.data.template).toBe("review");
 
     await coordination.delegate(host, secretOf("lead"), delegateInput);
     expect(group().ledger.assignments[1].template).toBeUndefined();
-    expect(host.created.at(-1)?.prompt).not.toContain("Template:");
+    expect(host.sends.at(-1)?.text).not.toContain("Template:");
   });
 
   it("keeps the template when an existing Peer is reassigned", async () => {
@@ -702,7 +719,7 @@ describe("telemetry", () => {
   it("counts built-in sends and creates, Human messages, and usage once each, ignoring plugin prompts", async () => {
     const { host, coordination, idOf, group } = await setup();
     const lead = idOf("lead");
-    host.agents.get(lead)!.lastUsage = { inputTokens: 100, cachedInputTokens: 40, outputTokens: 20, totalCostUsd: 0.01 };
+    host.agents.get(lead)!.lastUsage = { inputTokens: 100, cachedInputTokens: 40, outputTokens: 20, totalCostUsd: 0.01, contextWindowUsedTokens: 420_000, contextWindowMaxTokens: 1_000_000 };
     const timeline = [
       { type: "user_message", text: "Please also check the README", messageId: "m1" },
       { type: "user_message", text: "SLP message:\n\n<slp-message ...>", messageId: "m2" },
@@ -719,7 +736,7 @@ describe("telemetry", () => {
     expect(kinds.filter((k) => k === "builtin-send")).toHaveLength(1);
     expect(kinds.filter((k) => k === "builtin-create")).toHaveLength(1);
     expect(group().events.filter((e) => e.kind === "usage")).toEqual([
-      expect.objectContaining({ data: expect.objectContaining({ role: "lead", inputTokens: 100, totalCostUsd: 0.01 }) }),
+      expect.objectContaining({ data: expect.objectContaining({ role: "lead", inputTokens: 100, totalCostUsd: 0.01, contextWindowUsedTokens: 420_000, contextWindowMaxTokens: 1_000_000 }) }),
     ]);
   });
 
@@ -846,7 +863,7 @@ describe("workflow and compaction (0009)", () => {
       ...delegateInput,
       brief: { ...BRIEF, workflow: "docs/WORKFLOW.md, Bounded Change" },
     });
-    const prompt = host.created.at(-1)!.prompt!;
+    const prompt = host.sends.at(-1)!.text;
     expect(prompt).toContain("Project workflow (read it before you start): docs/WORKFLOW.md, Bounded Change");
     expect(prompt).toContain("the records and constraints your change");
   });
@@ -977,6 +994,168 @@ describe("reconcile and lifecycle", () => {
     await service.onWorkspaceArchived("ws");
     await expect(coordination.send(host, secret, { to: "supervisor", text: "x" })).rejects.toMatchObject({
       code: "forbidden",
+    });
+  });
+});
+
+describe("slp_handoff (Human D11-D12)", () => {
+  it("is the Supervisor's, and waits for the Lead's turn to end", async () => {
+    const { host, coordination, secretOf, idOf, group } = await setup();
+    await expect(coordination.handoff(host, secretOf("lead"), { note: "n" })).rejects.toMatchObject({ code: "forbidden" });
+    host.agents.get(idOf("lead"))!.status = "running";
+    await expect(coordination.handoff(host, secretOf("supervisor"), { note: "n" })).rejects.toMatchObject({
+      code: "invalid",
+      message: expect.stringMatching(/in a turn/),
+    });
+    expect(group().events.some((e) => e.kind === "handoff")).toBe(false);
+    expect(host.agents.get(idOf("lead"))!.archivedAt).toBeNull();
+  });
+
+  it("creates a new Lead, moves held messages to it, keeps the Peers, and archives the old Lead", async () => {
+    const { host, coordination, secretOf, idOf, group } = await setup();
+    const { peerAgentId } = await coordination.delegate(host, secretOf("lead"), delegateInput);
+    const oldLead = idOf("lead");
+    const oldSecret = secretOf("lead");
+    host.agents.get(oldLead)!.status = "running";
+    await coordination.send(host, secretOf("supervisor"), { to: "lead", text: "held for the old Lead" });
+    host.agents.get(oldLead)!.status = "idle";
+    host.sends.length = 0;
+
+    const result = await coordination.handoff(host, secretOf("supervisor"), { note: "CSV export in review; restart the dev server" });
+
+    const newLead = idOf("lead");
+    expect(result).toEqual({ previousLead: oldLead, lead: newLead, oldLeadArchived: true, peersTold: [peerAgentId] });
+    expect(newLead).not.toBe(oldLead);
+    const created = host.created.at(-1)!;
+    expect(created).toMatchObject({
+      title: "SLP Lead",
+      parent: idOf("supervisor"),
+      labels: { "slp.role": "lead", "slp.group": group().id },
+    });
+    expect(created.prompt).toBeUndefined();
+    expect(created.systemPrompt).toContain("Your role: Lead");
+    // A new secret: the old Lead's MCP URL stops working.
+    expect(secretOf("lead")).not.toBe(oldSecret);
+    expect(created.mcpServers?.slp).toMatchObject({ url: `http://mcp.test/mcp/${secretOf("lead")}` });
+    await expect(coordination.ledger(oldSecret)).rejects.toMatchObject({ code: "forbidden" });
+    // The handoff and the held message reach the new Lead together, handoff first.
+    const toNew = host.sends.filter((s) => s.agentId === newLead);
+    expect(toNew).toHaveLength(1);
+    expect(toNew[0].text.indexOf("Handoff: you are now")).toBeLessThan(toNew[0].text.indexOf("held for the old Lead"));
+    expect(toNew[0].text).toContain("restart the dev server");
+    expect(group().held).toHaveLength(0);
+    expect(group().members.find((m) => m.role === "lead")!.owesSupervisor).toBe(true);
+    // The Peer stays, is told, and hands back to the new Lead.
+    expect(host.agents.get(peerAgentId!)!.archivedAt).toBeNull();
+    expect(host.sends.find((s) => s.agentId === peerAgentId)?.text).toContain(`${newLead} replaces ${oldLead}`);
+    host.sends.length = 0;
+    await coordination.onTurnEnded(host, { agentId: peerAgentId!, workspaceId: "ws", outcome: { kind: "completed" }, lastReply: "Done" });
+    expect(host.sends.map((s) => s.agentId)).toEqual([newLead]);
+    expect(group().ledger.assignments[0].status).toBe("handed-back");
+    // The old Lead is archived; its late turn end is ignored.
+    expect(host.agents.get(oldLead)!.archivedAt).not.toBeNull();
+    expect(group().events.find((e) => e.kind === "handoff")?.data).toMatchObject({ from: oldLead, to: newLead });
+  });
+
+  it("keeps the old Lead and its secret when the new Lead cannot be created", async () => {
+    const { host, coordination, secretOf, idOf, group } = await setup();
+    const oldLead = idOf("lead");
+    const oldSecret = secretOf("lead");
+    host.failCreateFor = "SLP Lead";
+    await expect(coordination.handoff(host, secretOf("supervisor"), { note: "n" })).rejects.toThrow(/create failed/);
+    expect(idOf("lead")).toBe(oldLead);
+    expect(secretOf("lead")).toBe(oldSecret);
+    expect(host.agents.get(oldLead)!.archivedAt).toBeNull();
+    expect(group().events.some((e) => e.kind === "handoff")).toBe(false);
+  });
+
+  it("can be retried after a failed create: each attempt has its own idempotency key", async () => {
+    const { host, coordination, secretOf, idOf } = await setup();
+    const oldLead = idOf("lead");
+    host.failCreateFor = "SLP Lead";
+    await expect(coordination.handoff(host, secretOf("supervisor"), { note: "n" })).rejects.toThrow(/create failed/);
+    const result = await coordination.handoff(host, secretOf("supervisor"), { note: "n" });
+    const keys = host.attempts.slice(-2).map((input) => input.idempotencyKey);
+    expect(keys[0]).not.toBe(keys[1]);
+    expect(result.previousLead).toBe(oldLead);
+    expect(idOf("lead")).toBe(result.lead);
+  });
+
+  it("finishes the handoff when a Peer cannot be told, and reports it", async () => {
+    const { host, coordination, secretOf, idOf, group } = await setup();
+    const { peerAgentId } = await coordination.delegate(host, secretOf("lead"), delegateInput);
+    const oldLead = idOf("lead");
+    host.failSendTo = peerAgentId!;
+    const result = await coordination.handoff(host, secretOf("supervisor"), { note: "n" });
+    expect(result.peersTold).toEqual([]);
+    expect(result.problems?.[0]).toMatch(new RegExp(`Peer ${peerAgentId} was not told`));
+    expect(host.agents.get(oldLead)!.archivedAt).not.toBeNull();
+    expect(idOf("lead")).toBe(result.lead);
+    expect(group().events.some((e) => e.kind === "handoff-problems")).toBe(true);
+  });
+
+  it("archives an old Lead that started a turn during the handoff only once that turn ends (Human D24)", async () => {
+    const { host, coordination, secretOf, idOf, group } = await setup();
+    const oldLead = idOf("lead");
+    host.duringCreate = () => {
+      host.agents.get(oldLead)!.status = "running";
+      host.duringCreate = null;
+    };
+    const result = await coordination.handoff(host, secretOf("supervisor"), { note: "n" });
+    expect(result.oldLeadArchived).toBe(false);
+    expect(host.agents.get(oldLead)!.archivedAt).toBeNull();
+    expect(group().retiring).toEqual([oldLead]);
+    host.agents.get(oldLead)!.status = "idle";
+    await coordination.onTurnEnded(host, { agentId: oldLead, workspaceId: "ws", outcome: { kind: "completed" }, lastReply: "late" });
+    expect(host.agents.get(oldLead)!.archivedAt).not.toBeNull();
+    expect(group().retiring).toEqual([]);
+  });
+
+  it("archives a waiting old Lead at reconcile when its turn-end event was missed", async () => {
+    const { host, coordination, secretOf, idOf, group } = await setup();
+    const oldLead = idOf("lead");
+    host.duringCreate = () => {
+      host.agents.get(oldLead)!.status = "running";
+      host.duringCreate = null;
+    };
+    await coordination.handoff(host, secretOf("supervisor"), { note: "n" });
+    host.agents.get(oldLead)!.status = "idle";
+    await coordination.reconcile(host);
+    expect(host.agents.get(oldLead)!.archivedAt).not.toBeNull();
+    expect(group().retiring).toEqual([]);
+  });
+
+  it("drops a held notice when the busy Peer hands back before it is delivered (review A4)", async () => {
+    const { host, coordination, secretOf, idOf, group } = await setup();
+    const { peerAgentId } = await coordination.delegate(host, secretOf("lead"), delegateInput);
+    host.agents.get(peerAgentId!)!.status = "running";
+    await coordination.handoff(host, secretOf("supervisor"), { note: "n" });
+    expect(group().held.map((m) => m.toAgentId)).toEqual([peerAgentId]);
+    host.agents.get(peerAgentId!)!.status = "idle";
+    host.sends.length = 0;
+    await coordination.onTurnEnded(host, { agentId: peerAgentId!, workspaceId: "ws", outcome: { kind: "completed" }, lastReply: "Done" });
+    expect(host.sends.map((s) => s.agentId)).toEqual([idOf("lead")]);
+    expect(group().held).toHaveLength(0);
+    expect(group().events.some((e) => e.kind === "held-dropped" && e.data.reason === "handed back")).toBe(true);
+  });
+
+  it("does not wake a Peer whose work waits for acceptance", async () => {
+    const { host, coordination, secretOf } = await setup();
+    const { peerAgentId } = await coordination.delegate(host, secretOf("lead"), delegateInput);
+    await coordination.onTurnEnded(host, { agentId: peerAgentId!, workspaceId: "ws", outcome: { kind: "completed" }, lastReply: "Done" });
+    host.sends.length = 0;
+    const result = await coordination.handoff(host, secretOf("supervisor"), { note: "n" });
+    expect(result.peersTold).toEqual([]);
+    expect(host.sends.some((s) => s.agentId === peerAgentId)).toBe(false);
+  });
+
+  it("gives the new Lead the auto-compact window set for the Lead", async () => {
+    const { host, coordination, secretOf, deps } = await setup();
+    deps.settings = async () => ({ ...SETTINGS, lead: { ...SETTINGS.lead, autoCompactWindow: 600_000 } });
+    await coordination.handoff(host, secretOf("supervisor"), { note: "n" });
+    expect(host.created.at(-1)!.providerOptions).toEqual({
+      disallowedTools: ["Agent", "Task", "AskUserQuestion"],
+      extraArgs: { autocompact: "600000" },
     });
   });
 });

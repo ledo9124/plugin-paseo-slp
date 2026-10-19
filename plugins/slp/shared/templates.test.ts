@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
-import { DEFAULT_TEMPLATES, LEGACY_COUNCIL_TEXTS } from "./default-templates";
+import { DEFAULT_TEMPLATES, LEGACY_COUNCIL_TEXTS, LEGACY_DUAL_LANE_V037 } from "./default-templates";
 import { parseSkill, toTemplateView } from "./templates";
 
 const text = (front: string, body = "Body\n") => `---\n${front}\n---\n${body}`;
@@ -42,11 +42,20 @@ describe("default templates", () => {
     expect(views[0].whenToUse).toMatch(/Human cannot answer yet/);
   });
 
-  it("carry the approved dual-lane SKILL.md byte for byte (5,299 bytes, LF; the D14 text with the D16 changes)", () => {
+  it("carry dual-lane with the Review mode Human chose (R1, ledger D20; decision 0012) byte for byte (6,809 bytes, LF)", () => {
     const text = DEFAULT_TEMPLATES[0];
-    expect(Buffer.byteLength(text, "utf8")).toBe(5299);
+    expect(Buffer.byteLength(text, "utf8")).toBe(6809);
     expect(text).not.toContain("\r");
     expect(createHash("sha256").update(text, "utf8").digest("hex")).toBe(
+      "21db678563046ad59100b67359b8c841e220cacace8d553dd297f57ffc7ee60f",
+    );
+    expect(text).toContain("## Review mode (a change to review)");
+    expect(toTemplateView(text).whenToUse).toMatch(/Or a substantial change to review/);
+  });
+
+  it("keep the v0.3.7 dual-lane text unchanged, only to migrate it (5,299 bytes; decisions 0011, 0012)", () => {
+    expect(Buffer.byteLength(LEGACY_DUAL_LANE_V037, "utf8")).toBe(5299);
+    expect(createHash("sha256").update(LEGACY_DUAL_LANE_V037, "utf8").digest("hex")).toBe(
       "aa971b3a6d20d51600b82ab3c886b660b9bfe4b0ebadccbd94dfcaa1ef283dcf",
     );
   });

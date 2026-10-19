@@ -21,9 +21,22 @@ Claude and Codex. The steps were adapted from the sibling repository
 
   - npm 11 reports that it skipped install scripts (node-pty, esbuild).
     The daemon still ran.
-  - Upstream main reports version 0.10.0, because 0.10.x releases are cut
-    on a separate branch. A daemon built from main rejects this plugin's
-    `requirements.paseo` (`>=0.10.2`).
+  - Upstream main reported version 0.10.0 while 0.10.x releases were cut
+    on a separate branch, so a daemon built from it rejected this plugin's
+    `requirements.paseo` (`>=0.10.2`). Since the 0.12.0 release
+    (2026-10-19) main reports 0.12.0.
+- **Scratch daemon for live checks (Human, ledger D26, 2026-10-19).** Tests
+  of unreleased code run on a separate daemon with its own home and port,
+  never on 6767, and write none of Human's global config files. The D19
+  batch ran the installed 0.12.0 CLI
+  (`resources/app.asar/node_modules/@getpaseo/cli/dist/index.js` through
+  `Paseo.exe` and `app.asar.unpacked/dist/daemon/node-entrypoint-runner.js
+  node-script`, as `bin/paseo.cmd` does, with `ELECTRON_RUN_AS_NODE=1` and
+  `PASEO_NODE_ENV=production`, but without `PASEO_DESKTOP_MANAGED`) with `--home %TEMP%/slp-d19-home`,
+  `daemon.listen` `127.0.0.1:6768`, and
+  `SLP_MCP_PORT=6792`; `daemon stop` with the same home ended it. Set
+  `PASEO_AGENT_ID=` empty when an agent runs the CLI, or Paseo sends as
+  that agent (0.12.0) and labels the message with it.
 - **Shared checkout.** `C:\code\my-project\paseo` is shared with the sibling
   `paseo-plugin` repository.
   - It may sit on the fork branch `per-agent-paseo-tools`, which patches

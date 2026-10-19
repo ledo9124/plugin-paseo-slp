@@ -10,6 +10,7 @@ import {
   ROLE_LABEL,
   SlpError,
   applySetup,
+  createRoleAgent,
   memberSetup,
   resolveEffort,
   slpMcpServers,
@@ -229,6 +230,7 @@ export class Coordination {
       caller.group.members.push(member);
       caller.group.ledger.assignments.push(assignment);
       this.save(caller);
+      let created: string | null = null;
       try {
         const agent = await host.createAgent({
           workspaceId: caller.record.workspaceId,
@@ -242,14 +244,21 @@ export class Coordination {
           preapprovedTools: setup.preapprovedTools,
           providerOptions: setup.providerOptions,
           labels: { [GROUP_LABEL]: caller.group.id, [ROLE_LABEL]: "peer" },
-          idempotencyKey: `slp:${caller.group.id}:peer:${assignment.id}`,
-          prompt: renderBrief(assignment),
+          idempotencyKey: `slp:${caller.group.id}:peer:${assignment.id}:${member.secret.slice(0, 8)}`,
+        });
+        created = agent.id;
+        // The brief goes as the Lead's message, not as the create prompt:
+        // Paseo 0.12 shows a create prompt as sent by the parent, the
+        // Supervisor (D18).
+        await host.sendPrompt(agent.id, renderBrief(assignment), {
+          activeTurnBehavior: "steer",
+          sourceAgentId: caller.member.agentId ?? undefined,
         });
         member.agentId = agent.id;
         assignment.peerAgentId = agent.id;
-        // The brief is the new Peer's initial prompt.
         assignment.briefDeliveredAt = this.deps.now();
       } catch (error) {
+        if (created) await host.archiveAgent(created).catch(() => undefined);
         caller.group.members = caller.group.members.filter((m) => m !== member);
         caller.group.ledger.assignments = caller.group.ledger.assignments.filter((a) => a !== assignment);
         this.save(caller);
@@ -523,6 +532,135 @@ export class Coordination {
     });
   }
 
+  /**
+   * The Supervisor hands the Lead role to a new Lead agent (Human D11-D12).
+   * The Peers, their assignments, and the ledger stay; messages held for the
+   * old Lead and the Supervisor's open request move to the new one, and the
+   * old Lead is archived. Only between the old Lead's turns, so no running
+   * work is cut off.
+   */
+  handoff(host: PaseoHost, secret: string, input: { note: string }) {
+    return this.withCaller(secret, async (caller) => {
+      this.requireRole(caller, ["supervisor"], "slp_handoff");
+      const { group } = caller;
+      const lead = group.members.find((m) => m.role === "lead");
+      if (!lead?.agentId) throw new SlpError("invalid", "This group has no Lead to hand off.");
+      const oldId = lead.agentId;
+      const old = await host.getAgent(oldId);
+      if (old && !old.archivedAt && BUSY_STATUSES.has(old.status)) {
+        throw new SlpError(
+          "invalid",
+          "The Lead is in a turn. Hand off after it ends; archiving it now would cut off its work and its background processes.",
+        );
+      }
+      const settings = await this.deps.settings();
+      const setup = memberSetup("lead", settings.lead.provider, settings, this.deps.templates.list());
+      const previous = { secret: lead.secret, tools: lead.tools, instructionsHash: lead.instructionsHash, customInstructions: lead.customInstructions };
+      // A new secret: the old Lead's MCP URL stops working with the handoff.
+      lead.secret = this.deps.newSecret();
+      applySetup(lead, setup);
+      this.save(caller);
+      let agent;
+      try {
+        agent = await createRoleAgent(host, {
+          workspaceId: caller.record.workspaceId,
+          group,
+          member: lead,
+          settings,
+          setup,
+          mcpUrl: this.deps.mcpUrl(lead.secret),
+          // Unique per attempt: Paseo refuses a reused key with a different request.
+          idempotencyKey: `slp:${group.id}:lead:${this.deps.newId()}`,
+          now: this.deps.now,
+        });
+      } catch (error) {
+        Object.assign(lead, previous);
+        this.save(caller);
+        throw error;
+      }
+      lead.previousAgentIds = [...(lead.previousAgentIds ?? []), oldId];
+      lead.agentId = agent.id;
+      lead.owesSupervisor = false;
+      lead.compactions = 0;
+      for (const message of group.held) if (message.toAgentId === oldId) message.toAgentId = agent.id;
+      // The handoff goes first, then what was held for the old Lead.
+      group.held.unshift({
+        id: this.deps.newId(),
+        at: this.deps.now(),
+        fromAgentId: caller.member.agentId,
+        fromRole: "supervisor",
+        toAgentId: agent.id,
+        kind: "message",
+        text: renderHandoff(oldId, input.note),
+      });
+      group.retiring = [...(group.retiring ?? []), oldId];
+      this.event(group, "handoff", { from: oldId, to: agent.id, by: caller.member.agentId });
+      this.save(caller);
+
+      // The role has moved. What follows only delivers: a failure is reported,
+      // and what stays held is delivered by reconcile.
+      const oldLeadArchived = await this.retireIfIdle(host, group, oldId);
+      const problems: string[] = [];
+      try {
+        await this.flush(host, group, agent.id);
+      } catch (error) {
+        problems.push(`The handoff message to the new Lead is held for redelivery: ${String(error)}`);
+      }
+      // Only Peers still working learn who the Lead is; one waiting for
+      // acceptance is not woken, now or when a held notice would reach it.
+      const peersTold: string[] = [];
+      for (const peer of group.members) {
+        if (peer.role !== "peer" || !peer.agentId) continue;
+        const open = this.openAssignmentOf(group.ledger, peer.agentId);
+        if (open?.status !== "assigned") continue;
+        const live = await host.getAgent(peer.agentId).catch(() => null);
+        if (!live || live.archivedAt) continue;
+        try {
+          await this.deliver(
+            host,
+            group,
+            {
+              fromAgentId: caller.member.agentId,
+              fromRole: "supervisor",
+              toAgentId: peer.agentId,
+              kind: "notice",
+              text: `The Lead changed: ${agent.id} replaces ${oldId}. Your assignment and brief are unchanged; your handback reaches the new Lead. Address the Lead as "lead".`,
+              whileAssigned: open.id,
+            },
+            "after-turn",
+          );
+          peersTold.push(peer.agentId);
+        } catch (error) {
+          problems.push(`Peer ${peer.agentId} was not told: ${String(error)}`);
+        }
+      }
+      if (problems.length) this.event(group, "handoff-problems", { problems });
+      this.save(caller);
+      return { previousLead: oldId, lead: agent.id, oldLeadArchived, peersTold, ...(problems.length ? { problems } : {}) };
+    });
+  }
+
+  /**
+   * Archives an old Lead once it is idle (Human D24): now, at its turn end, or
+   * at reconcile. True once it is archived or gone.
+   */
+  private async retireIfIdle(host: PaseoHost, group: GroupRecord, agentId: string): Promise<boolean> {
+    const agent = await host.getAgent(agentId).catch(() => undefined);
+    if (agent === undefined) return false;
+    if (agent && !agent.archivedAt) {
+      if (BUSY_STATUSES.has(agent.status)) return false;
+      try {
+        await host.archiveAgent(agentId);
+      } catch (error) {
+        this.event(group, "lead-archive-failed", { agentId, error: String(error) });
+        return false;
+      }
+      this.event(group, "lead-archived", { agentId });
+    }
+    group.retiring = (group.retiring ?? []).filter((id) => id !== agentId);
+    return true;
+  }
+
   // ---- Human panel (slice 4) ------------------------------------------------
 
   /**
@@ -620,6 +758,11 @@ export class Coordination {
       const record = this.deps.store.get(event.workspaceId!);
       const group = record?.group;
       if (!record || !group || group.endedAt) return;
+      if (group.retiring?.includes(event.agentId)) {
+        await this.retireIfIdle(host, group, event.agentId);
+        this.deps.store.put(record);
+        return;
+      }
       const member = group.members.find((m) => m.agentId === event.agentId);
       if (!member) return;
 
@@ -704,7 +847,9 @@ export class Coordination {
       await this.deps.queue.run(workspaceId, async () => {
         const record = this.deps.store.get(workspaceId);
         const group = record?.group;
-        if (!record || !group || group.endedAt || group.held.length === 0) return;
+        if (!record || !group || group.endedAt) return;
+        for (const agentId of [...(group.retiring ?? [])]) await this.retireIfIdle(host, group, agentId);
+        if (group.held.length === 0) return this.deps.store.put(record);
         for (const agentId of new Set(group.held.map((m) => m.toAgentId))) {
           const agent = await host.getAgent(agentId).catch(() => null);
           if (agent?.archivedAt) {
@@ -808,6 +953,8 @@ export class Coordination {
         cachedInputTokens: usage.cachedInputTokens ?? null,
         outputTokens: usage.outputTokens ?? null,
         totalCostUsd: usage.totalCostUsd ?? null,
+        contextWindowUsedTokens: usage.contextWindowUsedTokens ?? null,
+        contextWindowMaxTokens: usage.contextWindowMaxTokens ?? null,
       });
     }
   }
@@ -897,9 +1044,18 @@ export class Coordination {
   }
 
   private async flush(host: PaseoHost, group: GroupRecord, agentId: string): Promise<number> {
-    const pending = group.held.filter((m) => m.toAgentId === agentId);
+    let pending = group.held.filter((m) => m.toAgentId === agentId);
     if (pending.length === 0) return 0;
     group.held = group.held.filter((m) => m.toAgentId !== agentId);
+    // A handoff notice for work the Peer has since handed back would only wake it.
+    const stale = pending.filter(
+      (m) => m.whileAssigned && group.ledger.assignments.find((a) => a.id === m.whileAssigned)?.status !== "assigned",
+    );
+    if (stale.length) {
+      pending = pending.filter((m) => !stale.includes(m));
+      this.event(group, "held-dropped", { to: agentId, count: stale.length, reason: "handed back" });
+      if (pending.length === 0) return 0;
+    }
     try {
       await host.sendPrompt(agentId, renderMessages(pending), { activeTurnBehavior: "steer" });
     } catch (error) {
@@ -1103,6 +1259,20 @@ export function renderBrief(assignment: Assignment): string {
     "End your turn with a handback: what you did, the evidence, the records and constraints your change",
     "touches with the evidence that each still holds, what is unresolved, and anything that should change",
     "the plan. If the premise looks wrong, record slp_finding (kind reopen) with evidence.",
+  ].join("\n");
+}
+
+function renderHandoff(previousLead: string, note: string): string {
+  return [
+    `Handoff: you are now this SLP group's Lead, replacing ${previousLead}, which is archived.`,
+    "The Peers, their assignments, the findings, and the decisions are unchanged; Peers now hand back to you.",
+    "Before you act, read the project's entry file and its workflow, and slp_ledger.",
+    "Restart any background process the note lists that the work still needs: it ended with the previous Lead.",
+    "",
+    "The previous Lead's handoff note (it decided what you need):",
+    note,
+    "",
+    "In your reply at the end of this turn, say what you took over and what comes next.",
   ].join("\n");
 }
 

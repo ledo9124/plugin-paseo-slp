@@ -1,7 +1,7 @@
 {
   "name": "paseo-slp-plugin",
   "private": true,
-  "version": "0.3.7",
+  "version": "0.4.0",
   "license": "MIT",
   "files": [
     "paseo-plugin.json",
@@ -16,7 +16,7 @@
     "test": "vitest run --passWithNoTests"
   },
   "devDependencies": {
-    "@getpaseo/plugin": "0.10.2",
+    "@getpaseo/plugin": "0.12.0",
     "@types/node": "^22.0.0",
     "@types/react": "~19.2.0",
     "react": "^19.1.0",

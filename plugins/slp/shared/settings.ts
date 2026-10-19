@@ -13,19 +13,31 @@ export const SLP_TOOLS = [
   "slp_decide",
   "slp_revise_decision",
   "slp_template",
+  "slp_handoff",
 ] as const;
 export type SlpTool = (typeof SLP_TOOLS)[number];
 
 /** Default SLP tools per role (decision 0008, plan slice 2). */
 export const DEFAULT_ROLE_TOOLS: Record<Role, readonly SlpTool[]> = {
-  supervisor: ["slp_group", "slp_ledger", "slp_send", "slp_finding", "slp_decide", "slp_revise_decision"],
-  lead: SLP_TOOLS,
+  supervisor: ["slp_group", "slp_ledger", "slp_send", "slp_finding", "slp_decide", "slp_revise_decision", "slp_handoff"],
+  lead: SLP_TOOLS.filter((tool) => tool !== "slp_handoff"),
   peer: ["slp_ledger", "slp_send", "slp_finding"],
 };
 
+/** Claude Code's auto-compact window bounds, in tokens (its `--autocompact` flag). */
+export const AUTO_COMPACT_MIN = 100_000;
+export const AUTO_COMPACT_MAX = 1_000_000;
+
 // Human's per-role overrides (decision 0008). Absent means the default, so
 // "reset to default" removes the field and earlier settings stay valid.
+
 const RoleOverrides = {
+  /**
+   * Claude members only: the context size at which Claude Code compacts the
+   * member, passed as `--autocompact` at creation (Human D11-D13, D22).
+   * Absent means Claude Code's default.
+   */
+  autoCompactWindow: z.number().int().min(AUTO_COMPACT_MIN).max(AUTO_COMPACT_MAX).optional(),
   /** Replaces the role's whole default instruction text. */
   instructions: z.string().trim().min(1).optional(),
   /** The SLP tools the role is offered; a call to any other is refused. */

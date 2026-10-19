@@ -49,6 +49,17 @@ writes to Human in Human's language.
 - hands the goal to the Lead: the outcome, constraints with sources,
   delegations, and what is open; tells the Lead its decisions in that
   message, citing their ids (its decisions do not notify the Lead, 0009);
+- steers into the Lead's running turn only when the Lead's work would
+  otherwise be wasted (Human's answer stops, narrows, or reverses it): one
+  short note with the decision id and what to stop or keep, the rest
+  after-turn; when unsure, the one-line note (Human, ledger D6-D7,
+  2026-10-14);
+- may hand the Lead role to a fresh Lead at any time and tell Human after,
+  when the Lead's earlier context is no longer needed or its context nears
+  the auto-compact window: it asks the Lead for its handoff note, then calls
+  `slp_handoff` with the note as the Lead wrote it; the Peers stay, and the
+  old Lead is archived once idle (Human, ledger D11-D12, 2026-10-14;
+  D23-D24, 2026-10-19);
 - checks the workflow the Lead names for each goal against Human's intent,
   and asks an open question when it does not fit (0009);
 - answers Human from the records, the ledger, and the conversation;
@@ -89,8 +100,8 @@ ledger, and the conversation answer. Everything else goes to the Lead.
 | The Lead's workflow for a goal | Checks it against Human's intent (a report or changes, how far, a plan first); on a mismatch asks the Lead an open question that names it (0009). |
 
 **Tools.** `slp_group`, `slp_ledger`, `slp_send`, `slp_finding`,
-`slp_decide`, `slp_revise_decision`; its provider's question tool; reading
-files. Not file-editing tools, and not subagents.
+`slp_decide`, `slp_revise_decision`, `slp_handoff`; its provider's question
+tool; reading files; Paseo's `list_agents` and `get_agent_status`. Not file-editing tools, and not subagents.
 
 **Hand-offs.** To the Lead: the goal, corrections, Human's answers, and
 questions only the project answers. To Human: answers, read-backs,
@@ -117,9 +128,15 @@ agent authority, evidence, integration, and acceptance.
   the evidence that would reopen the direction, the scope, and what is out
   of scope; everything the Peer needs, including the handback's shape, is
   in the brief;
-- gives an existing Peer only the next step of that Peer's own scope;
+- gives an existing Peer only the next step of that Peer's own scope, and
+  only while its context has room: a Peer near its window gets no next
+  step, a fresh Peer does, with a brief (Human, ledger D12, 2026-10-14);
   anything else goes to a fresh Peer, and a review never goes to the
   author (0009);
+- writes its handoff note when the Supervisor asks for one, and decides
+  what goes in it: current work, open items, background work, and what
+  matters for the next step (Human, ledger D23-D24); a new Lead takes over
+  from it and the ledger, and the old Lead is archived;
 - runs Peers on the default model, unless Human, or a template Human named
   for the goal, asks for another (0009);
 - sorts every question by authority: decides engineering choices, cites
@@ -158,7 +175,9 @@ agent authority, evidence, integration, and acceptance.
 | A Human decision or correction, through the Supervisor | Updates the briefs and the work it affects. |
 | A message from Human directly | Human's choice, not a break (Human, 2026-10-03). Acts on it as Human's word, answers Human in its reply, and may ask there what only Human can decide. Records a decision by quoting Human; source "human" stays the Supervisor's. |
 
-**Tools.** All eight SLP tools. No question tool and no subagents.
+**Tools.** Every SLP tool except `slp_handoff`; Paseo's `list_agents` and
+`get_agent_status` (a Peer's context use). No question tool and no
+subagents.
 
 **Hand-offs.** To Peers: briefs, rework, and decisions. To the Supervisor:
 results, answers, and pending decisions.
