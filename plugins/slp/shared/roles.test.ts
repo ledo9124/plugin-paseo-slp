@@ -80,11 +80,20 @@ describe("role instructions", () => {
     expect(text).toContain("the old Lead is archived once its turn has ended.");
   });
 
+  it("names the auto-compact windows set in Settings, or how to read the default (review A3)", () => {
+    const set = flat(roleInstructions("supervisor", { ...facts, contextWindows: { lead: 600_000 } }));
+    expect(set).toContain("compacts it on its own near its auto-compact window: 600,000 tokens.");
+    const unset = flat(roleInstructions("lead", facts));
+    expect(unset).toContain("nears its auto-compact window (Claude Code's default, at most lastUsage.contextWindowMaxTokens)");
+    expect(flat(roleInstructions("lead", { ...facts, contextWindows: { peers: 300_000 } }))).toContain("(300,000 tokens)");
+  });
+
   it("gives a Peer near its context window no next step, and has the Lead decide its handoff note (Human D12, D23-D24)", () => {
     const text = flat(roleInstructions("lead", facts));
     expect(text).toContain(
       "only when it is the next step of that Peer's own last scope and its context has room. " +
-        "When its context use (Paseo's get_agent_status, lastUsage.contextWindowUsedTokens) nears its window, " +
+        "When its context use (Paseo's get_agent_status, lastUsage.contextWindowUsedTokens) nears its auto-compact window " +
+        "(Claude Code's default, at most lastUsage.contextWindowMaxTokens), " +
         "the next step goes to a fresh Peer, with a brief that carries what the step needs.",
     );
     expect(text).toContain(

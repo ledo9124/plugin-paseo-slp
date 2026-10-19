@@ -71,7 +71,12 @@ export function memberSetup(
   const tools = [...(config.tools ?? DEFAULT_ROLE_TOOLS[role])];
   const text =
     config.instructions ??
-    roleInstructions(role, { provider: providerId(provider), maxActivePeers: settings.peers.maxActive, tools });
+    roleInstructions(role, {
+      provider: providerId(provider),
+      maxActivePeers: settings.peers.maxActive,
+      tools,
+      contextWindows: { lead: settings.lead.autoCompactWindow, peers: settings.peers.autoCompactWindow },
+    });
   // The catalog is data after the text, default or custom; Peers get none.
   const allowed = role === "peer" ? [] : (settings[role].templates ?? templates.map((t) => t.name));
   const catalog = catalogSection(

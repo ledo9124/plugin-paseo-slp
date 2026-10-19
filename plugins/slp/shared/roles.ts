@@ -13,6 +13,15 @@ export interface RoleFacts {
   maxActivePeers: number;
   /** The SLP tools the member is offered. */
   tools: readonly string[];
+  /** Auto-compact windows set in SLP Settings, in tokens; absent when unset. */
+  contextWindows?: { lead?: number; peers?: number };
+}
+
+/** A window as a role text names it: the set number, or how to read the default. */
+function windowText(tokens: number | undefined): string {
+  return tokens
+    ? `${tokens.toLocaleString("en-US")} tokens`
+    : "Claude Code's default, at most lastUsage.contextWindowMaxTokens";
 }
 
 function toolLine(facts: RoleFacts): string {
@@ -164,10 +173,11 @@ During the work:
 - Watch the ledger (slp_ledger) for drift from Human's goal and for
   cross-scope problems; tell the Lead, or ask Human.
 - The Lead's context fills over a long goal; Claude Code compacts it on its
-  own at the window set in SLP Settings. You may also hand the Lead role to a
-  fresh Lead at any time, and tell Human after: when the Lead's earlier
-  context is no longer needed, or its context use (Paseo's get_agent_status,
-  lastUsage.contextWindowUsedTokens) nears that window. First ask the Lead
+  own near its auto-compact window: ${windowText(facts.contextWindows?.lead)}.
+  You may also hand the Lead role to a fresh Lead at any time, and tell Human
+  after: when the Lead's earlier context is no longer needed, or its context
+  use (Paseo's get_agent_status, lastUsage.contextWindowUsedTokens) nears
+  that window. First ask the Lead
   with slp_send for its handoff note: the Lead decides what to hand off.
   Then call slp_handoff with the note as the Lead wrote it. The new Lead gets
   the note and the ledger, the Peers stay and follow it, and the old Lead is
@@ -226,8 +236,9 @@ Work:
 - A Peer is one line of work. Give an existing Peer a new assignment
   (peerAgentId) only when it is the next step of that Peer's own last scope
   and its context has room. When its context use (Paseo's get_agent_status,
-  lastUsage.contextWindowUsedTokens) nears its window, the next step goes to
-  a fresh Peer, with a brief that carries what the step needs. Anything else
+  lastUsage.contextWindowUsedTokens) nears its auto-compact window
+  (${windowText(facts.contextWindows?.peers)}), the next step goes to a fresh
+  Peer, with a brief that carries what the step needs. Anything else
   goes to a fresh Peer, and a review never goes to the Peer that wrote the
   work. At most ${facts.maxActivePeers} Peers can hold an open assignment at once.
 - Peers run on the default model: omit model. Name another allowed model only

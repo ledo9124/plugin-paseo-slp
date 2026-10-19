@@ -9,7 +9,9 @@ export function parseAutoCompact(text: string): { value: number | null } | { err
   const trimmed = text.trim().toLowerCase().replace(/[,_\s]/g, "");
   if (!trimmed) return { value: null };
   const match = /^(\d+(?:\.\d+)?)([km]?)$/.exec(trimmed);
-  const tokens = match ? Number(match[1]) * (match[2] === "m" ? 1_000_000 : match[2] === "k" ? 1_000 : 1) : NaN;
+  const raw = match ? Number(match[1]) * (match[2] === "m" ? 1_000_000 : match[2] === "k" ? 1_000 : 1) : NaN;
+  // 128.3k is 128300.00000000001 in floating point: round what is a whole number.
+  const tokens = Math.abs(raw - Math.round(raw)) < 1e-6 ? Math.round(raw) : NaN;
   if (!Number.isInteger(tokens) || tokens < AUTO_COMPACT_MIN || tokens > AUTO_COMPACT_MAX) {
     return { error: "Use 100k to 1M tokens, for example 600k, or leave it empty." };
   }

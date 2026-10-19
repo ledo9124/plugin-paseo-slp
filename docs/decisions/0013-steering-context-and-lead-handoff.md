@@ -45,7 +45,9 @@ used) and adds to 0009 (Peers as one line of work).
    in Settings, 100k-1M tokens. A Claude member gets it as
    `extraArgs.autocompact` when it is created; nothing writes Human's
    settings files. The plugin sends no other signal: the Supervisor and the
-   Lead decide on their own reading of `lastUsage.contextWindowUsedTokens`.
+   Lead decide on their own reading of `lastUsage.contextWindowUsedTokens`
+   against the window their role text names (the set value, or Claude
+   Code's default bounded by `contextWindowMaxTokens`).
    A changed value applies to members created after it.
 5. **Lead handoff (D11, D12, D23, D24).** The Supervisor may hand the Lead
    role to a new Lead at any time and tell Human after. It first asks the

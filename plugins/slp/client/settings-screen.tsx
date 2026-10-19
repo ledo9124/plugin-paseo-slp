@@ -143,7 +143,16 @@ function RoleModelFields({
 
 // Claude Code's auto-compact window for the role's Claude members (Human
 // D11-D13), passed as --autocompact when a member is created (D22).
-function AutoCompactField({ value, onChange }: { value?: number; onChange(next: number | undefined): void }) {
+function AutoCompactField({
+  value,
+  onChange,
+  onValidity,
+}: {
+  value?: number;
+  onChange(next: number | undefined): void;
+  /** False while the typed text is not a window; Save waits for it. */
+  onValidity(valid: boolean): void;
+}) {
   const [error, setError] = useState<string | null>(null);
   return (
     <SettingsSection title="Context">
@@ -155,8 +164,13 @@ function AutoCompactField({ value, onChange }: { value?: number; onChange(next: 
           initialValue={formatAutoCompact(value)}
           onChangeText={(text) => {
             const parsed = parseAutoCompact(text);
-            if ("error" in parsed) return setError(parsed.error);
+            if ("error" in parsed) {
+              setError(parsed.error);
+              onValidity(false);
+              return;
+            }
             setError(null);
+            onValidity(true);
             onChange(parsed.value ?? undefined);
           }}
           testID="slp-settings-auto-compact"
@@ -363,6 +377,7 @@ function RoleOverrides({
     provider: provider.split("/")[0],
     maxActivePeers: draft.peers.maxActive,
     tools,
+    contextWindows: { lead: draft.lead.autoCompactWindow, peers: draft.peers.autoCompactWindow },
   });
   const custom = value.instructions !== undefined;
   const setTools = (next: SlpTool[]) =>
@@ -510,6 +525,10 @@ export function SlpSettingsScreen({ theme }: PluginSurfaceProps) {
   const [view, setView] = useState<DraftView | null>(null);
   const [tab, setTab] = useState<TabKey>("supervisor");
   const [confirmReset, setConfirmReset] = useState(false);
+  // Roles whose auto-compact text is not a valid window: Save waits for them.
+  const [badWindows, setBadWindows] = useState<string[]>([]);
+  const windowValidity = (key: string) => (valid: boolean) =>
+    setBadWindows((current) => (valid ? current.filter((k) => k !== key) : [...new Set([...current, key])]));
   const stored = useTemplates();
   const catalog = useProviderCatalog();
 
@@ -529,6 +548,8 @@ export function SlpSettingsScreen({ theme }: PluginSurfaceProps) {
       };
     });
   }, [settings.status, settings.status === "ready" ? settings.revision : null]);
+  // A remount (a merge or Load saved settings) clears every field's own error.
+  useEffect(() => setBadWindows([]), [view?.version]);
 
   // Nothing was ever loaded: there is no editor to keep.
   if (settings.status === "error" && !view) {
@@ -617,6 +638,7 @@ export function SlpSettingsScreen({ theme }: PluginSurfaceProps) {
       <AutoCompactField
         value={draft[key].autoCompactWindow}
         onChange={(autoCompactWindow) => setDraft({ ...draft, [key]: { ...draft[key], autoCompactWindow } })}
+        onValidity={windowValidity(key)}
       />
       <RoleOverrides
         role={key}
@@ -671,6 +693,7 @@ export function SlpSettingsScreen({ theme }: PluginSurfaceProps) {
           <AutoCompactField
             value={draft.peers.autoCompactWindow}
             onChange={(autoCompactWindow) => setDraft({ ...draft, peers: { ...draft.peers, autoCompactWindow } })}
+            onValidity={windowValidity("peers")}
           />
           <RoleOverrides
             role="peer"
@@ -693,13 +716,14 @@ export function SlpSettingsScreen({ theme }: PluginSurfaceProps) {
               label="Save"
               hint={[
                 dirty ? "Unsaved changes on the tabs marked with a dot; Save covers all of them" : null,
+                badWindows.length ? "Fix the auto-compact window first; it is not a valid number of tokens" : null,
                 "Used when SLP creates a member. Members already running keep what they were created with.",
               ]
                 .filter(Boolean)
                 .join("\n")}
               error={settings.saveError ?? (settings.status === "invalid" ? settings.error : null)}
               actionLabel={settings.saving ? "Saving..." : "Save"}
-              disabled={settings.saving || readFailed !== null}
+              disabled={settings.saving || readFailed !== null || badWindows.length > 0}
               onPress={save}
             />
           </Card>

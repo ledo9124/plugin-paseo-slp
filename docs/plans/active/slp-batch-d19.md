@@ -49,7 +49,7 @@ Out of scope (D19): D5-B, UI improvements, test cleanup.
    prompt with `source = parent`. Create the Peer without a prompt, then send
    the brief with the Lead as source (fallback: plain send).
 5. Handoff: Supervisor tool `slp_handoff`; new Lead with the Lead role's
-   current setup; held messages, `owesSupervisor`, and the Lead secret move;
+   current setup; held messages move; the Lead member gets a new secret;
    old Lead archived when idle; handoff note in the new Lead's first prompt.
    Role texts (Supervisor, Lead, Peer-context rule).
 6. Threshold setting per role (`autoCompactWindow`), Claude only, applied as
@@ -64,8 +64,8 @@ Out of scope (D19): D5-B, UI improvements, test cleanup.
   processes die with it: the handoff note lists them, and the old Lead is
   archived only after its turn ends; (b) held messages and `owesSupervisor`
   move to the new Lead; Peer handbacks already resolve the Lead by role;
-  (c) the new Lead gets the role's setup, labels, and the Lead member's MCP
-  secret; (d) the Supervisor's text allows the handoff tool; (e) the note
+  (c) the new Lead gets the role's setup, labels, and a new MCP secret on
+  the Lead member (the old Lead's URL stops working); (d) the Supervisor's text allows the handoff tool; (e) the note
   plus `slp_ledger`.
 - A dev build on 6767 affects Human's running groups during the live check:
   check `slp.workspace.list`, back up settings, switch back after.

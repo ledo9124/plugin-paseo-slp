@@ -175,7 +175,8 @@ agent authority, evidence, integration, and acceptance.
 | A Human decision or correction, through the Supervisor | Updates the briefs and the work it affects. |
 | A message from Human directly | Human's choice, not a break (Human, 2026-10-03). Acts on it as Human's word, answers Human in its reply, and may ask there what only Human can decide. Records a decision by quoting Human; source "human" stays the Supervisor's. |
 
-**Tools.** Every SLP tool except `slp_handoff`. No question tool and no
+**Tools.** Every SLP tool except `slp_handoff`; Paseo's `list_agents` and
+`get_agent_status` (a Peer's context use). No question tool and no
 subagents.
 
 **Hand-offs.** To Peers: briefs, rework, and decisions. To the Supervisor:

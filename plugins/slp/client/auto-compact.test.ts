@@ -8,6 +8,7 @@ describe("auto-compact window input", () => {
     expect(parseAutoCompact("1M")).toEqual({ value: 1_000_000 });
     expect(parseAutoCompact("0.5m")).toEqual({ value: 500_000 });
     expect(parseAutoCompact("600,000")).toEqual({ value: 600_000 });
+    expect(parseAutoCompact("128.3k")).toEqual({ value: 128_300 });
     expect(parseAutoCompact("")).toEqual({ value: null });
   });
 
