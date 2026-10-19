@@ -40,6 +40,8 @@ export interface HeldMessage {
   text: string;
   /** Set when the message carries an assignment's brief or rework request. */
   assignmentId?: string;
+  /** Dropped instead of delivered once this assignment is no longer `assigned` (a handoff notice). */
+  whileAssigned?: string;
   at: string;
 }
 

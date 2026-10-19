@@ -607,11 +607,12 @@ export class Coordination {
         problems.push(`The handoff message to the new Lead is held for redelivery: ${String(error)}`);
       }
       // Only Peers still working learn who the Lead is; one waiting for
-      // acceptance is not woken.
+      // acceptance is not woken, now or when a held notice would reach it.
       const peersTold: string[] = [];
       for (const peer of group.members) {
         if (peer.role !== "peer" || !peer.agentId) continue;
-        if (this.openAssignmentOf(group.ledger, peer.agentId)?.status !== "assigned") continue;
+        const open = this.openAssignmentOf(group.ledger, peer.agentId);
+        if (open?.status !== "assigned") continue;
         const live = await host.getAgent(peer.agentId).catch(() => null);
         if (!live || live.archivedAt) continue;
         try {
@@ -624,6 +625,7 @@ export class Coordination {
               toAgentId: peer.agentId,
               kind: "notice",
               text: `The Lead changed: ${agent.id} replaces ${oldId}. Your assignment and brief are unchanged; your handback reaches the new Lead. Address the Lead as "lead".`,
+              whileAssigned: open.id,
             },
             "after-turn",
           );
@@ -1042,9 +1044,18 @@ export class Coordination {
   }
 
   private async flush(host: PaseoHost, group: GroupRecord, agentId: string): Promise<number> {
-    const pending = group.held.filter((m) => m.toAgentId === agentId);
+    let pending = group.held.filter((m) => m.toAgentId === agentId);
     if (pending.length === 0) return 0;
     group.held = group.held.filter((m) => m.toAgentId !== agentId);
+    // A handoff notice for work the Peer has since handed back would only wake it.
+    const stale = pending.filter(
+      (m) => m.whileAssigned && group.ledger.assignments.find((a) => a.id === m.whileAssigned)?.status !== "assigned",
+    );
+    if (stale.length) {
+      pending = pending.filter((m) => !stale.includes(m));
+      this.event(group, "held-dropped", { to: agentId, count: stale.length, reason: "handed back" });
+      if (pending.length === 0) return 0;
+    }
     try {
       await host.sendPrompt(agentId, renderMessages(pending), { activeTurnBehavior: "steer" });
     } catch (error) {

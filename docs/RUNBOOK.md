@@ -28,10 +28,11 @@ Claude and Codex. The steps were adapted from the sibling repository
 - **Scratch daemon for live checks (Human, ledger D26, 2026-10-19).** Tests
   of unreleased code run on a separate daemon with its own home and port,
   never on 6767, and write none of Human's global config files. The D19
-  batch ran the installed 0.12.0 CLI (`resourcesapp.asar
-ode_modules  @getpaseoclidistindex.js` through `Paseo.exe` with
-  `ELECTRON_RUN_AS_NODE=1`, without `PASEO_DESKTOP_MANAGED`) with
-  `--home %TEMP%slp-d19-home`, `daemon.listen` `127.0.0.1:6768`, and
+  batch ran the installed 0.12.0 CLI
+  (`resources/app.asar/node_modules/@getpaseo/cli/dist/index.js` through
+  `Paseo.exe`, as `bin/paseo.cmd` does, with `ELECTRON_RUN_AS_NODE=1` and
+  without `PASEO_DESKTOP_MANAGED`) with `--home %TEMP%/slp-d19-home`,
+  `daemon.listen` `127.0.0.1:6768`, and
   `SLP_MCP_PORT=6792`; `daemon stop` with the same home ended it. Set
   `PASEO_AGENT_ID=` empty when an agent runs the CLI, or Paseo sends as
   that agent (0.12.0) and labels the message with it.

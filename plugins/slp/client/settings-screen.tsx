@@ -154,6 +154,8 @@ function AutoCompactField({
   onValidity(valid: boolean): void;
 }) {
   const [error, setError] = useState<string | null>(null);
+  // Leaving the tab drops the typed text, so it no longer holds Save back.
+  useEffect(() => () => onValidity(true), []);
   return (
     <SettingsSection title="Context">
       <Card>

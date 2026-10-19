@@ -1125,6 +1125,20 @@ describe("slp_handoff (Human D11-D12)", () => {
     expect(group().retiring).toEqual([]);
   });
 
+  it("drops a held notice when the busy Peer hands back before it is delivered (review A4)", async () => {
+    const { host, coordination, secretOf, idOf, group } = await setup();
+    const { peerAgentId } = await coordination.delegate(host, secretOf("lead"), delegateInput);
+    host.agents.get(peerAgentId!)!.status = "running";
+    await coordination.handoff(host, secretOf("supervisor"), { note: "n" });
+    expect(group().held.map((m) => m.toAgentId)).toEqual([peerAgentId]);
+    host.agents.get(peerAgentId!)!.status = "idle";
+    host.sends.length = 0;
+    await coordination.onTurnEnded(host, { agentId: peerAgentId!, workspaceId: "ws", outcome: { kind: "completed" }, lastReply: "Done" });
+    expect(host.sends.map((s) => s.agentId)).toEqual([idOf("lead")]);
+    expect(group().held).toHaveLength(0);
+    expect(group().events.some((e) => e.kind === "held-dropped" && e.data.reason === "handed back")).toBe(true);
+  });
+
   it("does not wake a Peer whose work waits for acceptance", async () => {
     const { host, coordination, secretOf } = await setup();
     const { peerAgentId } = await coordination.delegate(host, secretOf("lead"), delegateInput);
