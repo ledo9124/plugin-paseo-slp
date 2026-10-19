@@ -1,14 +1,15 @@
 import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, renameSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { TemplateView } from "../shared/contracts";
-import { DEFAULT_TEMPLATES, LEGACY_COUNCIL_TEXTS } from "../shared/default-templates";
+import { DEFAULT_TEMPLATES, LEGACY_COUNCIL_TEXTS, LEGACY_DUAL_LANE_V037 } from "../shared/default-templates";
 import { parseSkill, toTemplateView } from "../shared/templates";
 import { SlpError } from "./slp-service";
 
 // Templates in plugin data (decision 0008, plan slice 5): one SKILL.md text
 // each in templates.json. The first read seeds the defaults, so a default
-// Human removes stays removed. The one exception is a one-time migration of an
-// unmodified shipped council to dual-lane (decision 0011).
+// Human removes stays removed. The exceptions are one-time migrations of an
+// unmodified shipped text: the council to dual-lane (decision 0011), and the
+// v0.3.7 dual-lane to the one with the Review mode (decision 0012).
 
 interface TemplateFile {
   version: 1;
@@ -25,6 +26,7 @@ export class TemplateStore {
     if (existsSync(this.path)) {
       this.entries = (JSON.parse(readFileSync(this.path, "utf8")) as TemplateFile).templates;
       this.replaceShippedCouncil();
+      this.replaceShippedDualLane();
     } else {
       this.entries = defaults.map((text) => ({ name: parseSkill(text).name, text }));
       this.write();
@@ -48,6 +50,21 @@ export class TemplateStore {
     } else {
       this.entries.splice(at, 1);
     }
+    this.write();
+  }
+
+  /**
+   * Decision 0012: a dual-lane that is still the v0.3.7 text gets the current
+   * one, after a backup of the file. An edited or removed dual-lane stays as
+   * it is.
+   */
+  private replaceShippedDualLane(): void {
+    const at = this.entries.findIndex((entry) => entry.name === "dual-lane" && entry.text === LEGACY_DUAL_LANE_V037);
+    const current = DEFAULT_TEMPLATES.find((text) => parseSkill(text).name === "dual-lane");
+    if (at < 0 || !current) return;
+    const backup = `${this.path}.bak-v0.3.7`;
+    if (!existsSync(backup)) copyFileSync(this.path, backup);
+    this.entries[at] = { name: "dual-lane", text: current };
     this.write();
   }
 

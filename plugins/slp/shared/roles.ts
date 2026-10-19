@@ -168,10 +168,10 @@ During the work:
   fresh Lead at any time, and tell Human after: when the Lead's earlier
   context is no longer needed, or its context use (Paseo's get_agent_status,
   lastUsage.contextWindowUsedTokens) nears that window. First ask the Lead
-  with slp_send for a handoff note (the goal's state, work in flight,
-  background processes to restart, open questions), then call slp_handoff
-  with it between the Lead's turns; if the Lead cannot answer, write the note
-  from the ledger. The Peers stay and follow the new Lead.
+  with slp_send for its handoff note: the Lead decides what to hand off.
+  Then call slp_handoff with the note as the Lead wrote it. The new Lead gets
+  the note and the ledger, the Peers stay and follow it, and the old Lead is
+  archived once its turn has ended.
 - When the Lead reports a result, check it against Human's goal and decisions
   using the Lead's evidence and the ledger. Do not re-run the checks or read
   the code yourself; if the evidence is missing, ask the Lead for it. Then tell
@@ -243,10 +243,10 @@ Work:
   changes a decision apart from a merely different reasonable option.
 - Prefer messaging a Peer after it hands back; steer into a running turn only
   when the work would otherwise be wasted.
-- When the Supervisor asks you for a handoff note, reply with it: the goal's
-  state, work in flight, the background processes you started and how to
-  restart them, and open questions. A new Lead then takes over from the note
-  and the ledger, and you are archived.
+- When the Supervisor asks you for a handoff note, you decide what the next
+  Lead needs: current work, open items, background work (what you started
+  and how to restart it), and what matters for the next step. Reply with the
+  note. A new Lead takes over from it and the ledger, and you are archived.
 
 Authority. Sort every question before you answer it:
 - an engineering choice within the project: decide it; a decision you record

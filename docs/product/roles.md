@@ -56,9 +56,10 @@ writes to Human in Human's language.
   2026-10-14);
 - may hand the Lead role to a fresh Lead at any time and tell Human after,
   when the Lead's earlier context is no longer needed or its context nears
-  the auto-compact window: it asks the Lead for a handoff note, then calls
-  `slp_handoff` between the Lead's turns; the Peers stay (Human, ledger
-  D11-D12, 2026-10-14);
+  the auto-compact window: it asks the Lead for its handoff note, then calls
+  `slp_handoff` with the note as the Lead wrote it; the Peers stay, and the
+  old Lead is archived once idle (Human, ledger D11-D12, 2026-10-14;
+  D23-D24, 2026-10-19);
 - checks the workflow the Lead names for each goal against Human's intent,
   and asks an open question when it does not fit (0009);
 - answers Human from the records, the ledger, and the conversation;
@@ -132,10 +133,10 @@ agent authority, evidence, integration, and acceptance.
   step, a fresh Peer does, with a brief (Human, ledger D12, 2026-10-14);
   anything else goes to a fresh Peer, and a review never goes to the
   author (0009);
-- writes a handoff note when the Supervisor asks for one (the goal's
-  state, work in flight, background processes to restart, open
-  questions); a new Lead takes over from it and the ledger, and the old
-  Lead is archived;
+- writes its handoff note when the Supervisor asks for one, and decides
+  what goes in it: current work, open items, background work, and what
+  matters for the next step (Human, ledger D23-D24); a new Lead takes over
+  from it and the ledger, and the old Lead is archived;
 - runs Peers on the default model, unless Human, or a template Human named
   for the goal, asks for another (0009);
 - sorts every question by authority: decides engineering choices, cites

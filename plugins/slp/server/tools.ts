@@ -37,7 +37,7 @@ const HandoffInput = z.object({
     .string()
     .min(1)
     .describe(
-      "What the new Lead needs beyond the ledger: the goal's state, work in flight, background processes to restart, open questions. Ask the Lead for it first; if it cannot answer, write it from the ledger.",
+      "The Lead's own handoff note, as it wrote it: the Lead decides what the new Lead needs (current work, open items, background work, what matters for the next step). Ask the Lead for it with slp_send first.",
     ),
 });
 const AcceptInput = z.object({

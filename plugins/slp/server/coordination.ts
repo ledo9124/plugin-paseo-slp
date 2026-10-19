@@ -1212,7 +1212,7 @@ function renderHandoff(previousLead: string, note: string): string {
     "Before you act, read the project's entry file and its workflow, and slp_ledger.",
     "Restart any background process the note lists that the work still needs: it ended with the previous Lead.",
     "",
-    "The handoff note:",
+    "The previous Lead's handoff note (it decided what you need):",
     note,
     "",
     "In your reply at the end of this turn, say what you took over and what comes next.",

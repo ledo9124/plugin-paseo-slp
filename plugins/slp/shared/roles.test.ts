@@ -72,22 +72,25 @@ describe("role instructions", () => {
     );
   });
 
-  it("lets the Supervisor hand off the Lead any time, note first, and report after (Human D11-D12)", () => {
+  it("lets the Supervisor hand off the Lead any time with the Lead's own note, and report after (Human D11-D12, D23-D24)", () => {
     const text = flat(roleInstructions("supervisor", facts));
     expect(text).toContain("You may also hand the Lead role to a fresh Lead at any time, and tell Human after");
-    expect(text).toContain("First ask the Lead with slp_send for a handoff note");
-    expect(text).toContain("call slp_handoff with it between the Lead's turns");
-    expect(text).toContain("The Peers stay and follow the new Lead.");
+    expect(text).toContain("First ask the Lead with slp_send for its handoff note: the Lead decides what to hand off.");
+    expect(text).toContain("Then call slp_handoff with the note as the Lead wrote it.");
+    expect(text).toContain("the old Lead is archived once its turn has ended.");
   });
 
-  it("gives a Peer near its context window no next step, and has the Lead write a handoff note (Human D12)", () => {
+  it("gives a Peer near its context window no next step, and has the Lead decide its handoff note (Human D12, D23-D24)", () => {
     const text = flat(roleInstructions("lead", facts));
     expect(text).toContain(
       "only when it is the next step of that Peer's own last scope and its context has room. " +
         "When its context use (Paseo's get_agent_status, lastUsage.contextWindowUsedTokens) nears its window, " +
         "the next step goes to a fresh Peer, with a brief that carries what the step needs.",
     );
-    expect(text).toContain("When the Supervisor asks you for a handoff note, reply with it");
+    expect(text).toContain(
+      "When the Supervisor asks you for a handoff note, you decide what the next Lead needs: current work, open items, " +
+        "background work (what you started and how to restart it), and what matters for the next step.",
+    );
   });
 
   it("has a Peer raise a choice it cannot settle with options, consequences, and a recommendation", () => {

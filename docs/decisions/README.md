@@ -62,3 +62,14 @@ documents here as real choices are accepted, then index them in this file.
   council in an existing install is replaced once, after a backup of
   `templates.json`. Shipped on a two-use smoke test: Human's exception to
   0007 item 3.4. Amends 0008 for the defaults.
+- [0012 Dual-Lane Gains A Review Mode](0012-dual-lane-review-mode.md):
+  Accepted. Dual-lane adds a Review mode per Human's reference: two blind
+  Opus lenses (intent, claims), the Lead decides conflicts, one lens per fix
+  round. An unmodified v0.3.7 dual-lane is replaced once, after a backup.
+  Amends 0011 item 1.
+- [0013 Steering, Context Windows, And The Lead Handoff](0013-steering-context-and-lead-handoff.md):
+  Accepted. The Supervisor steers only when the Lead's work would be wasted;
+  built-in sends stay banned for what they bypass; a Peer's brief comes
+  from the Lead; an auto-compact window per role as Claude Code's
+  `--autocompact`; `slp_handoff` to a new Lead with the Lead's own note,
+  Peers kept, old Lead archived once idle. Amends 0004's reason.

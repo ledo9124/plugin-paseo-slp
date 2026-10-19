@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { DEFAULT_TEMPLATES, LEGACY_COUNCIL_TEXTS } from "../shared/default-templates";
+import { DEFAULT_TEMPLATES, LEGACY_COUNCIL_TEXTS, LEGACY_DUAL_LANE_V037 } from "../shared/default-templates";
 import { TemplateStore } from "./template-store";
 
 const skill = (name: string) =>
@@ -49,6 +49,49 @@ describe("TemplateStore", () => {
     expect(result.errors[0].file).toContain("bad");
     expect(() => store.importFolder(join(root, "missing"))).toThrow(/Cannot read folder/);
     expect(store.importFolder(join(root, "empty")).errors[0].error).toMatch(/No SKILL.md/);
+  });
+
+  describe("one-time v0.3.7 dual-lane to Review-mode dual-lane migration (decision 0012)", () => {
+    const backup = (where: string) => join(where, "templates.json.bak-v0.3.7");
+    const seed = (where: string, templates: Array<{ name: string; text: string }>) => {
+      const raw = JSON.stringify({ version: 1, templates }, null, 2);
+      writeFileSync(join(where, "templates.json"), raw);
+      return raw;
+    };
+
+    it("replaces an unmodified v0.3.7 dual-lane in place, once, after backing up the original bytes", () => {
+      const where = dir();
+      const original = seed(where, [
+        { name: "first", text: skill("first") },
+        { name: "dual-lane", text: LEGACY_DUAL_LANE_V037 },
+      ]);
+      const store = new TemplateStore(where);
+      expect(store.names()).toEqual(["first", "dual-lane"]);
+      expect(store.list()[1].text).toBe(DEFAULT_TEMPLATES[0]);
+      expect(readFileSync(backup(where), "utf8")).toBe(original);
+      writeFileSync(backup(where), "kept");
+      expect(new TemplateStore(where).list()[1].text).toBe(DEFAULT_TEMPLATES[0]);
+      expect(readFileSync(backup(where), "utf8")).toBe("kept");
+    });
+
+    it("leaves an edited dual-lane and a store without dual-lane alone, with no backup", () => {
+      for (const templates of [
+        [{ name: "dual-lane", text: LEGACY_DUAL_LANE_V037.replace("Dual Lane", "Dual Lane (mine)") }],
+        [{ name: "a", text: skill("a") }],
+      ]) {
+        const where = dir();
+        const original = seed(where, templates);
+        new TemplateStore(where);
+        expect(readFileSync(join(where, "templates.json"), "utf8")).toBe(original);
+        expect(existsSync(backup(where))).toBe(false);
+      }
+    });
+
+    it("takes a shipped council straight to the current dual-lane", () => {
+      const where = dir();
+      seed(where, [{ name: "council", text: LEGACY_COUNCIL_TEXTS[0] }]);
+      expect(new TemplateStore(where).list().map((t) => t.text)).toEqual([DEFAULT_TEMPLATES[0]]);
+    });
   });
 
   describe("one-time council to dual-lane migration (decision 0011)", () => {
