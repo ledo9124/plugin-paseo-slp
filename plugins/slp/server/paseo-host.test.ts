@@ -33,28 +33,81 @@ describe("createPaseoHost sendPrompt", () => {
   });
 });
 
-describe("createPaseoHost lastReply", () => {
-  const page = (entries: unknown[]) => ({ entries });
-  const apiWithTimeline = (refetch: (options: unknown) => Promise<unknown>) =>
-    ({ agents: { ref: () => ({ timeline: { refetch } }) } }) as unknown as PaseoApi;
-
-  it("reads the final assistant message from the tail of the agent's timeline when the event carries none (Paseo 0.13+)", async () => {
+describe("createPaseoHost turnEntries", () => {
+  type Row = { item: { type: string; text?: string }; turnId?: string; seqStart: number };
+  const row = (seqStart: number, turnId: string | undefined, type = "tool_call", text?: string): Row => ({
+    item: { type, ...(text ? { text } : {}) },
+    turnId,
+    seqStart,
+  });
+  const pageOf = (entries: Row[], older: boolean) => ({
+    entries,
+    epoch: "e1",
+    hasOlder: older,
+    startCursor: older ? { epoch: "e1", seq: entries[0].seqStart } : null,
+  });
+  const apiWithPages = (pages: Row[][]) => {
     const asked: unknown[] = [];
-    const host = createPaseoHost(
-      apiWithTimeline(async (options) => {
-        asked.push(options);
-        return page([
-          { item: { type: "tool_call", callId: "c1" }, turnId: "t1" },
-          { item: { type: "assistant_message", text: "Handback: done." }, turnId: "t1" },
-        ]);
-      }),
-    );
-    expect(await host.lastReply("a1", "t1")).toBe("Handback: done.");
-    expect(asked).toEqual([{ direction: "tail", limit: 20, projection: "projected" }]);
+    const api = {
+      agents: {
+        ref: () => ({
+          timeline: {
+            refetch: async (options: unknown) => {
+              asked.push(options);
+              const index = asked.length - 1;
+              return pageOf(pages[index], index < pages.length - 1);
+            },
+          },
+        }),
+      },
+    } as unknown as PaseoApi;
+    return { api, asked };
+  };
+
+  it("reads the tail of the agent's timeline in one call when the page shows the turn's start", async () => {
+    const { api, asked } = apiWithPages([[row(1, "t0"), row(2, "t1", "user_message", "go"), row(3, "t1", "assistant_message", "Done.")]]);
+    const entries = await createPaseoHost(api).turnEntries("a1", "t1");
+    expect(asked).toEqual([{ direction: "tail", limit: 50, projection: "projected" }]);
+    expect(entries.map((entry) => [entry.seq, entry.turnId, entry.epoch])).toEqual([
+      [1, "t0", "e1"],
+      [2, "t1", "e1"],
+      [3, "t1", "e1"],
+    ]);
   });
 
-  it("answers null when the timeline has no assistant message", async () => {
-    const host = createPaseoHost(apiWithTimeline(async () => page([{ item: { type: "tool_call" } }])));
-    expect(await host.lastReply("a1", null)).toBeNull();
+  it("pages back, oldest first, until a row of an earlier turn shows the turn's start", async () => {
+    const { api, asked } = apiWithPages([
+      [row(5, "t1"), row(6, "t1"), row(7, "t1", "assistant_message", "Done.")],
+      [row(2, "t1"), row(3, "t1"), row(4, "t1")],
+      [row(0, "t0"), row(1, undefined, "user_message", "go"), row(1.5, "t1")],
+      [row(-1, "tX")],
+    ]);
+    const entries = await createPaseoHost(api).turnEntries("a1", "t1");
+    expect(asked).toEqual([
+      { direction: "tail", limit: 50, projection: "projected" },
+      { direction: "before", cursor: { epoch: "e1", seq: 5 }, limit: 50, projection: "projected" },
+      { direction: "before", cursor: { epoch: "e1", seq: 2 }, limit: 50, projection: "projected" },
+    ]);
+    expect(entries.map((entry) => entry.seq)).toEqual([0, 1, 1.5, 2, 3, 4, 5, 6, 7]);
+  });
+
+  it("stops at the start of the timeline, at a cap of pages, and when the turn has no rows", async () => {
+    const start = apiWithPages([[row(3, "t1")], [row(1, "t1"), row(2, "t1")]]);
+    await createPaseoHost(start.api).turnEntries("a1", "t1");
+    expect(start.asked).toHaveLength(2);
+
+    const endless = apiWithPages(Array.from({ length: 30 }, (_, i) => [row(100 - i, "t1")]));
+    expect((await createPaseoHost(endless.api).turnEntries("a1", "t1")).length).toBe(10);
+    expect(endless.asked).toHaveLength(10);
+
+    const empty = apiWithPages([[row(9, "t7")], [row(8, "t7")]]);
+    await createPaseoHost(empty.api).turnEntries("a1", "t1");
+    expect(empty.asked).toHaveLength(1);
+  });
+
+  it("reads one page when the event names no turn", async () => {
+    const { api, asked } = apiWithPages([[row(3, "t1")], [row(2, "t1")]]);
+    await createPaseoHost(api).turnEntries("a1", null);
+    expect(asked).toHaveLength(1);
   });
 });

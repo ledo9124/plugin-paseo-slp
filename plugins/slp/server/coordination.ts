@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import type { Assignment, Brief, Decision, Finding, Ledger, NativeQuestion, Role } from "../shared/contracts";
 import { waitingForHuman } from "../shared/format";
 import type { SlpSettings } from "../shared/settings";
-import type { PaseoHost } from "./paseo-host";
+import type { HostTimelineEntry, PaseoHost } from "./paseo-host";
 import type { WorkspaceQueue } from "./queue";
 import type { TemplateStore } from "./template-store";
 import {
@@ -16,6 +16,7 @@ import {
   slpMcpServers,
   supervisorOf,
 } from "./slp-service";
+import { replyOfTurn } from "./timeline";
 import type { GroupRecord, HeldMessage, MemberRecord, SlpStore, WorkspaceRecord } from "./store";
 
 // Group coordination: messaging (decision 0004), delegation, handback,
@@ -768,9 +769,11 @@ export class Coordination {
       const member = group.members.find((m) => m.agentId === event.agentId);
       if (!member) return;
 
-      await this.observeTurn(host, group, member, event.outcome.kind, event.timeline ?? []);
+      // One read of the turn serves every observation and the reply.
+      const rows = await this.turnRows(host, event);
+      await this.observeTurn(host, group, member, event.outcome.kind, rows);
       if (member.role === "peer" && event.outcome.kind !== "canceled") {
-        const lastReply = event.outcome.kind === "failed" ? event.lastReply : await this.replyOf(host, event);
+        const lastReply = event.outcome.kind === "failed" ? event.lastReply : replyText(rows, event);
         await this.relayPeerReply(host, group, member, { ...event, lastReply });
       }
       if (member.role === "lead" && event.outcome.kind === "completed") {
@@ -778,7 +781,7 @@ export class Coordination {
         // work; not the Lead's turns between Peer handbacks (0009).
         const workOpen = group.ledger.assignments.some((a) => a.status === "assigned" || a.status === "handed-back");
         if (member.owesSupervisor || !workOpen) {
-          const lastReply = await this.replyOf(host, event);
+          const lastReply = replyText(rows, event);
           if (lastReply?.trim()) await this.relayLeadReply(host, group, member, lastReply);
         }
         member.owesSupervisor = false;
@@ -789,20 +792,22 @@ export class Coordination {
   }
 
   /**
-   * The reply text of an ended turn: the event's own when it has one, else the
-   * final message read from the agent's timeline. A failed read leaves the
-   * reply empty rather than losing the handback.
+   * The rows of the turn that ended: the event's own timeline on a host that
+   * sends one (it can repeat earlier turns), else the turn read from the agent
+   * (Paseo 0.13+ sends an empty timeline). A failed read leaves no rows: the
+   * turn is not observed, and its reply stays empty rather than losing the
+   * handback.
    */
-  private async replyOf(
+  private async turnRows(
     host: PaseoHost,
-    event: { agentId: string; lastReply: string | null; turnId?: string | null },
-  ): Promise<string | null> {
-    if (event.lastReply?.trim()) return event.lastReply;
+    event: { agentId: string; turnId?: string | null; timeline?: readonly TimelineEntry[] },
+  ): Promise<HostTimelineEntry[]> {
+    if (event.timeline?.length) return event.timeline.map((item) => ({ item: item as HostTimelineEntry["item"] }));
     try {
-      return (await host.lastReply(event.agentId, event.turnId ?? null)) ?? event.lastReply;
+      return await host.turnEntries(event.agentId, event.turnId ?? null);
     } catch (error) {
-      console.error(`[slp] could not read the reply of ${event.agentId}: ${String(error)}`);
-      return event.lastReply;
+      console.error(`[slp] could not read the turn of ${event.agentId}: ${String(error)}`);
+      return [];
     }
   }
 
@@ -916,7 +921,7 @@ export class Coordination {
     group: GroupRecord,
     member: MemberRecord,
     outcome: string,
-    timeline: readonly TimelineEntry[],
+    rows: readonly HostTimelineEntry[],
   ): Promise<void> {
     const seen = new Set(group.seen);
     const first = (key: string) => {
@@ -926,22 +931,25 @@ export class Coordination {
       return true;
     };
     const by = { role: member.role, agentId: member.agentId };
-    // The timeline holds the agent's earlier turns too, and compactions carry
-    // no id: record each one past the count already seen (0009).
-    const compactions = timeline.filter((entry) => {
-      const item = entry as unknown as Record<string, unknown>;
-      return item.type === "compaction" && item.status === "completed";
-    }) as unknown as Array<{ trigger?: unknown; preTokens?: unknown }>;
-    for (const item of compactions.slice(member.compactions ?? 0)) {
+    // Compactions carry no id. A row read from the agent has its place in the
+    // timeline (seq): record each place once. A row from an event timeline has
+    // none, and the timeline holds the agent's earlier turns too: record each
+    // one past the count already seen (0009).
+    const compactions = rows.filter((row) => row.item.type === "compaction" && row.item.status === "completed");
+    const record = (item: Record<string, unknown>) =>
       this.event(group, "compaction", {
         ...by,
         trigger: typeof item.trigger === "string" ? item.trigger : null,
         preTokens: typeof item.preTokens === "number" ? item.preTokens : null,
       });
+    for (const row of compactions.filter((r) => r.seq !== undefined)) {
+      if (first(`compaction:${member.agentId}:${row.epoch ?? ""}:${row.seq}`)) record(row.item);
     }
-    member.compactions = Math.max(member.compactions ?? 0, compactions.length);
-    for (const entry of timeline) {
-      const item = entry as unknown as Record<string, unknown>;
+    const unplaced = compactions.filter((r) => r.seq === undefined);
+    for (const row of unplaced.slice(member.compactions ?? 0)) record(row.item);
+    member.compactions = Math.max(member.compactions ?? 0, unplaced.length);
+    for (const row of rows) {
+      const item = row.item as Record<string, unknown>;
       if (item.type === "tool_call" && typeof item.name === "string" && typeof item.callId === "string") {
         const work = member.role === "supervisor" ? supervisorWork(item.detail) : null;
         if (work && first(`tool:${item.callId}`)) this.event(group, "supervisor-work", { ...by, ...work });
@@ -1215,6 +1223,15 @@ function questionText(request: PermissionRequest): string {
 }
 
 /** A Supervisor tool call that works on the project: a shell command or a file change. */
+/** The reply text of an ended turn: the event's own, else the turn's final message from its rows. */
+function replyText(
+  rows: readonly HostTimelineEntry[],
+  event: { lastReply: string | null; turnId?: string | null },
+): string | null {
+  if (event.lastReply?.trim()) return event.lastReply;
+  return replyOfTurn(rows, event.turnId ?? null) ?? event.lastReply;
+}
+
 function supervisorWork(detail: unknown): { kind: "shell" | "file-change"; what: string } | null {
   const d = (detail ?? {}) as Record<string, unknown>;
   if (d.type === "shell" && typeof d.command === "string") return { kind: "shell", what: d.command.slice(0, 200) };

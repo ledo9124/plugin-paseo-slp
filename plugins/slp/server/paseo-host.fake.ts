@@ -1,4 +1,11 @@
-import type { ActiveTurnBehavior, CreateAgentInput, HostAgent, PaseoHost, SendPromptOptions } from "./paseo-host";
+import type {
+  ActiveTurnBehavior,
+  CreateAgentInput,
+  HostAgent,
+  HostTimelineEntry,
+  PaseoHost,
+  SendPromptOptions,
+} from "./paseo-host";
 
 export interface FakeSend {
   agentId: string;
@@ -26,12 +33,12 @@ export class FakePaseoHost implements PaseoHost {
   duringCreate: (() => void) | null = null;
   /** Makes the next createAgent call whose title matches fail. */
   failCreateFor: string | null = null;
-  /** The final message per agent that lastReply answers (the turn event carries none since Paseo 0.13). */
-  readonly replies = new Map<string, string>();
-  /** Every lastReply request. */
-  readonly replyReads: Array<{ agentId: string; turnId: string | null }> = [];
-  /** Makes lastReply fail. */
-  failReplyRead = false;
+  /** The timeline rows per agent that turnEntries answers (the turn event carries none since Paseo 0.13). */
+  readonly turns = new Map<string, HostTimelineEntry[]>();
+  /** Every turnEntries request. */
+  readonly turnReads: Array<{ agentId: string; turnId: string | null }> = [];
+  /** Makes turnEntries fail. */
+  failTurnRead = false;
   private readonly byKey = new Map<string, string>();
   private nextId = 1;
 
@@ -106,10 +113,10 @@ export class FakePaseoHost implements PaseoHost {
     });
   }
 
-  async lastReply(agentId: string, turnId: string | null): Promise<string | null> {
-    this.replyReads.push({ agentId, turnId });
-    if (this.failReplyRead) throw new Error("timeline read failed");
-    return this.replies.get(agentId) ?? null;
+  async turnEntries(agentId: string, turnId: string | null): Promise<HostTimelineEntry[]> {
+    this.turnReads.push({ agentId, turnId });
+    if (this.failTurnRead) throw new Error("timeline read failed");
+    return this.turns.get(agentId) ?? [];
   }
 
   async archiveAgent(agentId: string): Promise<void> {
