@@ -31,6 +31,8 @@ export class FakePaseoHost implements PaseoHost {
   readonly attempts: CreateAgentInput[] = [];
   /** Runs inside createAgent, before it returns: lets a test change the world mid-call. */
   duringCreate: (() => void) | null = null;
+  /** Providers (the part before the slash) that refuse a create carrying preapproved tools, as Paseo does for Devin. */
+  readonly rejectToolPolicyFor = new Set<string>();
   /** Makes the next createAgent call whose title matches fail. */
   failCreateFor: string | null = null;
   /** The timeline rows per agent that turnEntries answers (the turn event carries none since Paseo 0.13). */
@@ -40,6 +42,7 @@ export class FakePaseoHost implements PaseoHost {
   /** Makes turnEntries fail. */
   failTurnRead = false;
   private readonly byKey = new Map<string, string>();
+  private readonly requestOfKey = new Map<string, string>();
   private nextId = 1;
 
   async createAgent(input: CreateAgentInput): Promise<HostAgent> {
@@ -48,6 +51,18 @@ export class FakePaseoHost implements PaseoHost {
     if (this.failCreateFor && input.title === this.failCreateFor) {
       this.failCreateFor = null;
       throw new Error(`create failed: ${input.title}`);
+    }
+    // Paseo records the key and request first, even for a create it then refuses, and
+    // refuses a known key whose request changed (agent_request_key_conflict).
+    if (input.idempotencyKey) {
+      const request = JSON.stringify(input);
+      const known = this.requestOfKey.get(input.idempotencyKey);
+      if (known !== undefined && known !== request) throw new Error("agent_request_key_conflict");
+      this.requestOfKey.set(input.idempotencyKey, request);
+    }
+    if (input.preapprovedTools && this.rejectToolPolicyFor.has(input.provider.split("/")[0])) {
+      // Paseo's text, raised before any agent exists.
+      throw new Error(`Provider '${input.provider.split("/")[0]}' cannot preapprove exact MCP tools for unattended execution`);
     }
     const existing = input.idempotencyKey ? this.byKey.get(input.idempotencyKey) : undefined;
     if (existing) return this.agents.get(existing)!;

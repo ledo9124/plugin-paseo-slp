@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import type { Assignment, Brief, Decision, Finding, Ledger, NativeQuestion, Role } from "../shared/contracts";
 import { waitingForHuman } from "../shared/format";
 import type { SlpSettings } from "../shared/settings";
-import type { HostTimelineEntry, PaseoHost } from "./paseo-host";
+import type { CreateAgentInput, HostTimelineEntry, PaseoHost } from "./paseo-host";
 import type { WorkspaceQueue } from "./queue";
 import type { TemplateStore } from "./template-store";
 import {
@@ -25,6 +25,11 @@ import type { GroupRecord, HeldMessage, MemberRecord, SlpStore, WorkspaceRecord 
 export type Delivery = "after-turn" | "steer";
 
 const BUSY_STATUSES = new Set(["running", "initializing"]);
+/**
+ * Paseo's refusal of a tool policy for a provider without a policy hook. The
+ * plugin client carries the message, not the `tool_policy_unsupported` code.
+ */
+const TOOL_POLICY_UNSUPPORTED = /cannot preapprove exact MCP tools|tool_policy_unsupported/i;
 
 /** A turn timeline item; only the fields telemetry reads. */
 export interface TimelineEntry {
@@ -233,7 +238,7 @@ export class Coordination {
       this.save(caller);
       let created: string | null = null;
       try {
-        const agent = await host.createAgent({
+        const agent = await this.createPeerAgent(host, caller.group, model, {
           workspaceId: caller.record.workspaceId,
           provider: model,
           modeId,
@@ -269,6 +274,25 @@ export class Coordination {
       this.save(caller);
       return { assignmentId: assignment.id, peerAgentId: member.agentId, created: true };
     });
+  }
+
+  /**
+   * Creates a Peer with its SLP tools preapproved. A provider Paseo cannot
+   * apply a tool policy to (Devin) refuses that create before it registers
+   * an agent; the Peer is then created once more without the policy and runs
+   * on its configured mode (D505). Only that refusal is retried, and under a
+   * key of its own: Paseo rejects a known key whose request changed.
+   */
+  private async createPeerAgent(host: PaseoHost, group: GroupRecord, model: string, input: CreateAgentInput) {
+    try {
+      return await host.createAgent(input);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (!input.preapprovedTools || !TOOL_POLICY_UNSUPPORTED.test(message)) throw error;
+      this.event(group, "tool-policy-dropped", { role: "peer", provider: model });
+      const { preapprovedTools: _dropped, ...rest } = input;
+      return host.createAgent({ ...rest, idempotencyKey: input.idempotencyKey && `${input.idempotencyKey}:no-policy` });
+    }
   }
 
   /** The body of a stored template; the load is an event. */

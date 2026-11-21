@@ -279,6 +279,106 @@ describe("slp_delegate", () => {
     expect(group().events.find((e) => e.kind === "effort-dropped")?.data).toMatchObject({ thinkingOptionId: "max" });
   });
 
+  describe("a provider that cannot apply a tool policy (D505)", () => {
+    const devinSettings = {
+      ...SETTINGS,
+      peers: {
+        ...SETTINGS.peers,
+        models: [...SETTINGS.peers.models, "devin/devin-x"],
+        modes: { ...SETTINGS.peers.modes, devin: "bypass" },
+      },
+    };
+
+    it("creates the Peer without preapproved tools, on its mode, and records an event", async () => {
+      const { host, coordination, secretOf, deps, group } = await setup();
+      deps.settings = async () => devinSettings;
+      host.rejectToolPolicyFor.add("devin");
+      const result = await coordination.delegate(host, secretOf("lead"), { ...delegateInput, model: "devin/devin-x" });
+
+      expect(result).toMatchObject({ created: true });
+      expect(host.created).toHaveLength(3);
+      const created = host.created.at(-1)!;
+      expect(created).toMatchObject({ provider: "devin/devin-x", modeId: "bypass", title: "SLP Peer 1", parent: expect.any(String) });
+      expect(created.preapprovedTools).toBeUndefined();
+      // The Peer still has its MCP server and role text; only the preapproval is gone.
+      expect(created.mcpServers).toBeDefined();
+      expect(created.systemPrompt).toContain("Your role: Peer");
+      expect(group().events.filter((e) => e.kind === "tool-policy-dropped").map((e) => e.data)).toEqual([
+        { role: "peer", provider: "devin/devin-x" },
+      ]);
+      // The brief reaches the Peer.
+      expect(host.sends.at(-1)).toMatchObject({ agentId: result.peerAgentId, text: expect.stringContaining("SLP assignment A1") });
+    });
+
+    it("retries once, under a key of its own, so Paseo does not see a changed request under the old key", async () => {
+      const { host, coordination, secretOf, deps } = await setup();
+      deps.settings = async () => devinSettings;
+      host.rejectToolPolicyFor.add("devin");
+      await coordination.delegate(host, secretOf("lead"), { ...delegateInput, model: "devin/devin-x" });
+
+      const [first, second] = host.attempts.slice(-2);
+      expect(host.attempts.filter((a) => a.provider === "devin/devin-x")).toHaveLength(2);
+      expect(first.preapprovedTools).toBeDefined();
+      expect(second.preapprovedTools).toBeUndefined();
+      expect(second.idempotencyKey).toBe(`${first.idempotencyKey}:no-policy`);
+      expect([...host.agents.values()].filter((a) => a.title === "SLP Peer 1")).toHaveLength(1);
+    });
+
+    it("keeps preapproved tools for Claude and Codex Peers, with no retry and no event", async () => {
+      const { host, coordination, secretOf, deps, group } = await setup();
+      deps.settings = async () => ({ ...devinSettings, peers: { ...devinSettings.peers, maxActive: 4 } });
+      host.rejectToolPolicyFor.add("devin");
+      const before = host.attempts.length;
+      await coordination.delegate(host, secretOf("lead"), delegateInput);
+      await coordination.delegate(host, secretOf("lead"), { ...delegateInput, model: "codex/gpt-6-luna" });
+
+      expect(host.attempts.length - before).toBe(2);
+      for (const created of host.created.slice(-2)) {
+        expect(created.preapprovedTools?.map((t) => t.tool)).toEqual(["slp_ledger", "slp_send", "slp_finding"]);
+      }
+      expect(group().events.some((e) => e.kind === "tool-policy-dropped")).toBe(false);
+    });
+
+    it("does not retry any other create error: the delegation fails and leaves no Peer behind", async () => {
+      const { host, coordination, secretOf, deps, group } = await setup();
+      deps.settings = async () => devinSettings;
+      host.failCreateFor = "SLP Peer 1";
+      const before = host.attempts.length;
+      await expect(
+        coordination.delegate(host, secretOf("lead"), { ...delegateInput, model: "devin/devin-x" }),
+      ).rejects.toThrow("create failed: SLP Peer 1");
+
+      expect(host.attempts.length - before).toBe(1);
+      expect(group().members.filter((m) => m.role === "peer")).toHaveLength(0);
+      expect(group().events.some((e) => e.kind === "tool-policy-dropped")).toBe(false);
+    });
+
+    it("fails when the retry itself fails, with no second retry and no Peer left behind", async () => {
+      const { host, coordination, secretOf, deps, group } = await setup();
+      deps.settings = async () => devinSettings;
+      host.rejectToolPolicyFor.add("devin");
+      let calls = 0;
+      host.duringCreate = () => {
+        if (++calls === 2) throw new Error("retry failed");
+      };
+      await expect(
+        coordination.delegate(host, secretOf("lead"), { ...delegateInput, model: "devin/devin-x" }),
+      ).rejects.toThrow("retry failed");
+      expect(calls).toBe(2);
+      expect(host.attempts.filter((a) => a.provider === "devin/devin-x")).toHaveLength(2);
+      expect(group().members.filter((m) => m.role === "peer")).toHaveLength(0);
+      expect(group().ledger.assignments).toHaveLength(0);
+    });
+
+    it("leaves the Supervisor and Lead creation as it was: their tools stay preapproved", async () => {
+      const { host } = await setup();
+      for (const created of host.created) {
+        expect(created.preapprovedTools?.length).toBeGreaterThan(0);
+      }
+      expect(host.created.map((c) => c.title)).toEqual(["SLP Supervisor", "SLP Lead"]);
+    });
+  });
+
   it("refuses to reassign a Peer that still holds an open assignment", async () => {
     const { host, coordination, secretOf } = await setup();
     const first = await coordination.delegate(host, secretOf("lead"), delegateInput);

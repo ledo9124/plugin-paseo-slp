@@ -209,6 +209,10 @@ workspace.
 - SLP members default to each provider's bypass mode: Claude
   `bypassPermissions`, Codex `full-access`. Change it in Settings, Plugins,
   `slp` (Supervisor, Lead, and Peer modes per provider).
+- A provider Paseo cannot apply a tool policy to (Devin) can be a Peer: its
+  create is retried once without preapproved SLP tools, with a
+  `tool-policy-dropped` event, and the Peer relies on its Peer mode (set it to
+  the provider's bypass mode).
 - Codex on this machine reaches its model through `cli-proxy-api` in WSL
   Ubuntu.
   - Windows reaches that proxy only on IPv6 loopback, so `base_url` in
