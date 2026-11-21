@@ -134,11 +134,13 @@ export default function contribute(server: PluginServerContext) {
       bind(paseo);
       return service.onTurnStarted(agent);
     }),
-    server.on("agent.turn_ended", ({ agent, outcome, timeline }, { paseo }) =>
+    server.on("agent.turn_ended", ({ agent, turnId, outcome, timeline }, { paseo }) =>
       coordination.onTurnEnded(bind(paseo), {
         agentId: agent.id,
         workspaceId: agent.workspaceId,
         outcome,
+        turnId,
+        // Paseo 0.13+ sends an empty timeline; the reply is then read from the agent.
         lastReply: lastAssistantText(timeline),
         timeline,
       }),

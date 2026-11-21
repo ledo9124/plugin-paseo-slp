@@ -749,7 +749,9 @@ export class Coordination {
       agentId: string;
       workspaceId: string | null;
       outcome: { kind: string; error?: { message: string } };
+      /** The reply text the event carried; null when it had none (Paseo 0.13+ sends an empty timeline). */
       lastReply: string | null;
+      turnId?: string | null;
       timeline?: readonly TimelineEntry[];
     },
   ): Promise<void> {
@@ -768,20 +770,40 @@ export class Coordination {
 
       await this.observeTurn(host, group, member, event.outcome.kind, event.timeline ?? []);
       if (member.role === "peer" && event.outcome.kind !== "canceled") {
-        await this.relayPeerReply(host, group, member, event);
+        const lastReply = event.outcome.kind === "failed" ? event.lastReply : await this.replyOf(host, event);
+        await this.relayPeerReply(host, group, member, { ...event, lastReply });
       }
       if (member.role === "lead" && event.outcome.kind === "completed") {
         // Relay what the Supervisor or Human asked for, and the end of the
         // work; not the Lead's turns between Peer handbacks (0009).
         const workOpen = group.ledger.assignments.some((a) => a.status === "assigned" || a.status === "handed-back");
-        if (event.lastReply?.trim() && (member.owesSupervisor || !workOpen)) {
-          await this.relayLeadReply(host, group, member, event.lastReply);
+        if (member.owesSupervisor || !workOpen) {
+          const lastReply = await this.replyOf(host, event);
+          if (lastReply?.trim()) await this.relayLeadReply(host, group, member, lastReply);
         }
         member.owesSupervisor = false;
       }
       await this.flush(host, group, event.agentId);
       this.deps.store.put(record);
     });
+  }
+
+  /**
+   * The reply text of an ended turn: the event's own when it has one, else the
+   * final message read from the agent's timeline. A failed read leaves the
+   * reply empty rather than losing the handback.
+   */
+  private async replyOf(
+    host: PaseoHost,
+    event: { agentId: string; lastReply: string | null; turnId?: string | null },
+  ): Promise<string | null> {
+    if (event.lastReply?.trim()) return event.lastReply;
+    try {
+      return (await host.lastReply(event.agentId, event.turnId ?? null)) ?? event.lastReply;
+    } catch (error) {
+      console.error(`[slp] could not read the reply of ${event.agentId}: ${String(error)}`);
+      return event.lastReply;
+    }
   }
 
   /** Records an agent created in a running SLP workspace without the group's label (slice 5). */
