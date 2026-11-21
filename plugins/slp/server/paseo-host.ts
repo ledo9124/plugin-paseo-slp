@@ -1,5 +1,4 @@
 import type { PluginHandlerContext } from "@getpaseo/plugin/server";
-import { replyOfTurn } from "./timeline";
 
 // A plugin installed from Git is built without node_modules, so only the
 // plugin SDK resolves: the Paseo API and its types come from the context the
@@ -71,6 +70,16 @@ export interface SendPromptOptions {
   sourceAgentId?: string;
 }
 
+/** One row of an agent's timeline, as the plugin reads it. */
+export interface HostTimelineEntry {
+  item: { type: string; text?: string; [field: string]: unknown };
+  /** The turn the row belongs to; user messages may carry none. */
+  turnId?: string;
+  /** Position in the agent's timeline, stable within an epoch. */
+  seq?: number;
+  epoch?: string;
+}
+
 export interface PaseoHost {
   createAgent(input: CreateAgentInput): Promise<HostAgent>;
   listAgents(filter?: { labels?: Record<string, string>; includeArchived?: boolean }): Promise<HostAgent[]>;
@@ -78,11 +87,12 @@ export interface PaseoHost {
   sendPrompt(agentId: string, text: string, options?: SendPromptOptions): Promise<void>;
   archiveAgent(agentId: string): Promise<void>;
   /**
-   * The text of the agent's final message in the turn that ended, read from
-   * its timeline; null when it said nothing. Paseo 0.13+ sends `agent.turn_ended`
-   * with an empty timeline, so the event cannot carry it.
+   * The timeline rows of the turn that ended, oldest first, read from the
+   * agent: Paseo 0.13+ sends `agent.turn_ended` with an empty timeline. The
+   * rows may reach a little before the turn (its user message can carry no
+   * turn id); callers dedupe by call, message and seq.
    */
-  lastReply(agentId: string, turnId: string | null): Promise<string | null>;
+  turnEntries(agentId: string, turnId: string | null): Promise<HostTimelineEntry[]>;
   /** Effort ids a `provider/model` lists, or null when the daemon cannot say. */
   thinkingOptions(providerModel: string): Promise<string[] | null>;
   /** Whether the daemon injects Paseo's own tools into agents. */
@@ -117,6 +127,24 @@ function toHostAgent(snapshot: Snapshot): HostAgent {
     lastUserMessageAt: snapshot.lastUserMessageAt ?? null,
     lastUsage: snapshot.lastUsage ?? null,
   };
+}
+
+const TURN_PAGE = 50;
+const TURN_MAX_PAGES = 10;
+
+function toHostEntry(entry: { item: unknown; turnId?: string; seqStart: number }, epoch: string): HostTimelineEntry {
+  return { item: entry.item as HostTimelineEntry["item"], turnId: entry.turnId, seq: entry.seqStart, epoch };
+}
+
+/**
+ * Whether the rows show where the turn starts: a row of another turn lies
+ * before the turn's first row. Null when none of the rows is the turn's (a
+ * turn with no rows, or already pushed out by a newer one): not worth paging.
+ */
+function startsBefore(entries: readonly HostTimelineEntry[], turnId: string): boolean | null {
+  const first = entries.findIndex((entry) => entry.turnId === turnId);
+  if (first < 0) return null;
+  return entries.slice(0, first).some((entry) => entry.turnId !== undefined);
 }
 
 export function createPaseoHost(paseo: PaseoApi): PaseoHost {
@@ -180,11 +208,23 @@ export function createPaseoHost(paseo: PaseoApi): PaseoHost {
       }
     },
 
-    async lastReply(agentId, turnId) {
-      // The tail holds the end of the turn however many tool calls it made;
-      // "projected" merges streamed chunks into whole messages.
-      const page = await paseo.agents.ref(agentId).timeline.refetch({ direction: "tail", limit: 20, projection: "projected" });
-      return replyOfTurn(page.entries, turnId);
+    async turnEntries(agentId, turnId) {
+      // The tail is the end of the turn. "projected" merges streamed chunks and
+      // tool lifecycles, so a page is a count of messages and calls. A turn
+      // longer than a page is read back, page by page, until a row of an
+      // earlier turn shows its start (or the cap).
+      const timeline = paseo.agents.ref(agentId).timeline;
+      let page = await timeline.refetch({ direction: "tail", limit: TURN_PAGE, projection: "projected" });
+      let entries = page.entries.map((entry) => toHostEntry(entry, page.epoch));
+      for (let pages = 1; turnId && startsBefore(entries, turnId) === false && page.hasOlder && page.startCursor; pages += 1) {
+        if (pages >= TURN_MAX_PAGES) {
+          console.error(`[slp] the turn of ${agentId} is longer than ${pages} pages; its start is not read`);
+          break;
+        }
+        page = await timeline.refetch({ direction: "before", cursor: page.startCursor, limit: TURN_PAGE, projection: "projected" });
+        entries = [...page.entries.map((entry) => toHostEntry(entry, page.epoch)), ...entries];
+      }
+      return entries;
     },
 
     async archiveAgent(agentId) {

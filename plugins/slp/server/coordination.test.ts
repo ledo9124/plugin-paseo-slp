@@ -11,6 +11,15 @@ import { SlpService } from "./slp-service";
 import { SlpStore } from "./store";
 import { TemplateStore } from "./template-store";
 
+/** A timeline row as the host reads it from Paseo (the turn event carries none since Paseo 0.13). */
+const row = (item: Record<string, unknown>, seq: number, turnId = "t1") => ({
+  item: item as { type: string },
+  turnId,
+  seq,
+  epoch: "e1",
+});
+const assistant = (text: string, turnId?: string) => ({ item: { type: "assistant_message", text }, turnId });
+
 const SETTINGS = {
   supervisor: { provider: "claude/claude-opus-5-5", modeId: "auto" },
   lead: { provider: "claude/claude-sonnet-5-5", modeId: "auto" },
@@ -351,7 +360,7 @@ describe("handback and acceptance", () => {
     const { host, coordination, secretOf, idOf, group } = await setup();
     const { peerAgentId } = await coordination.delegate(host, secretOf("lead"), delegateInput);
     host.sends.length = 0;
-    host.replies.set(peerAgentId!, "Implemented; all 40 tests pass.");
+    host.turns.set(peerAgentId!, [assistant("Implemented; all 40 tests pass.", "t1")]);
 
     await coordination.onTurnEnded(host, {
       agentId: peerAgentId!,
@@ -361,7 +370,7 @@ describe("handback and acceptance", () => {
       turnId: "t1",
       timeline: [],
     });
-    expect(host.replyReads).toEqual([{ agentId: peerAgentId, turnId: "t1" }]);
+    expect(host.turnReads).toEqual([{ agentId: peerAgentId, turnId: "t1" }]);
     const handback = host.sends.find((s) => s.agentId === idOf("lead"))!.text;
     expect(handback).toContain("Implemented; all 40 tests pass.");
     expect(handback).not.toContain("(no reply text)");
@@ -375,7 +384,7 @@ describe("handback and acceptance", () => {
       coordination.onTurnEnded(host, { agentId: peerAgentId!, workspaceId: "ws", outcome: { kind: "completed" }, lastReply });
     await peerTurn("Done.");
     host.sends.length = 0;
-    host.replies.set(peerAgentId!, "The answer is 42.");
+    host.turns.set(peerAgentId!, [assistant("The answer is 42.")]);
     await peerTurn(null);
     const reply = host.sends.find((s) => s.agentId === idOf("lead"))!.text;
     expect(reply).toContain("Reply from");
@@ -383,21 +392,27 @@ describe("handback and acceptance", () => {
 
     host.sends.length = 0;
     await coordination.accept(host, secretOf("lead"), { assignmentId: "A1", outcome: "accepted", reason: "ok" });
-    host.replies.set(idOf("lead"), "Done: A1 accepted.");
+    host.turns.set(idOf("lead"), [assistant("Done: A1 accepted.")]);
     await coordination.onTurnEnded(host, { agentId: idOf("lead"), workspaceId: "ws", outcome: { kind: "completed" }, lastReply: null });
     expect(host.sends.find((s) => s.agentId === idOf("supervisor"))!.text).toContain("Done: A1 accepted.");
   });
 
-  it("does not read the timeline when the event already carries the reply, and keeps the placeholder when the read fails", async () => {
+  it("does not read the agent when the event carries a timeline, and keeps the placeholder when the read fails", async () => {
     const { host, coordination, secretOf, idOf } = await setup();
     const { peerAgentId } = await coordination.delegate(host, secretOf("lead"), delegateInput);
-    const peerTurn = (lastReply: string | null) =>
-      coordination.onTurnEnded(host, { agentId: peerAgentId!, workspaceId: "ws", outcome: { kind: "completed" }, lastReply });
-    await peerTurn("Done.");
-    expect(host.replyReads).toEqual([]);
+    const peerTurn = (lastReply: string | null, timeline: unknown[] = []) =>
+      coordination.onTurnEnded(host, {
+        agentId: peerAgentId!,
+        workspaceId: "ws",
+        outcome: { kind: "completed" },
+        lastReply,
+        timeline: timeline as never,
+      });
+    await peerTurn("Done.", [{ type: "assistant_message", text: "Done." }]);
+    expect(host.turnReads).toEqual([]);
 
     host.sends.length = 0;
-    host.failReplyRead = true;
+    host.failTurnRead = true;
     await peerTurn(null);
     expect(host.sends.find((s) => s.agentId === idOf("lead"))!.text).toContain("(no reply text)");
   });
@@ -795,6 +810,97 @@ describe("telemetry", () => {
     expect(group().events.filter((e) => e.kind === "usage")).toEqual([
       expect.objectContaining({ data: expect.objectContaining({ role: "lead", inputTokens: 100, totalCostUsd: 0.01, contextWindowUsedTokens: 420_000, contextWindowMaxTokens: 1_000_000 }) }),
     ]);
+  });
+
+  describe("on Paseo 0.13+, where the turn event carries no timeline", () => {
+    const ended = (agentId: string, turnId = "t1", kind = "completed") => ({
+      agentId,
+      workspaceId: "ws",
+      outcome: { kind },
+      lastReply: null,
+      turnId,
+      timeline: [],
+    });
+
+    it("reads each observation from the agent: built-in sends and creates, Human messages, usage, compactions", async () => {
+      const { host, coordination, idOf, group } = await setup();
+      const lead = idOf("lead");
+      host.agents.get(lead)!.lastUsage = { inputTokens: 100, outputTokens: 20 };
+      host.turns.set(lead, [
+        row({ type: "user_message", text: "Please also check the README", messageId: "m1" }, 1),
+        row({ type: "user_message", text: "SLP message:\n\n<slp-message ...>", messageId: "m2" }, 2),
+        row({ type: "tool_call", callId: "c1", name: "mcp__paseo__send_agent_prompt", status: "completed" }, 3),
+        row({ type: "tool_call", callId: "c2", name: "paseo.create_agent", status: "completed" }, 4),
+        row({ type: "tool_call", callId: "c3", name: "mcp__slp__slp_send", status: "completed" }, 5),
+        row({ type: "compaction", status: "completed", trigger: "auto", preTokens: 219120 }, 6),
+      ]);
+      await coordination.onTurnEnded(host, ended(lead));
+
+      const kinds = group().events.map((e) => e.kind);
+      expect(kinds.filter((k) => k === "human-message")).toHaveLength(1);
+      expect(kinds.filter((k) => k === "builtin-send")).toHaveLength(1);
+      expect(kinds.filter((k) => k === "builtin-create")).toHaveLength(1);
+      expect(group().events.filter((e) => e.kind === "compaction")).toEqual([
+        expect.objectContaining({ data: expect.objectContaining({ role: "lead", trigger: "auto", preTokens: 219120 }) }),
+      ]);
+      expect(kinds.filter((k) => k === "usage")).toHaveLength(1);
+      expect(host.turnReads).toEqual([{ agentId: lead, turnId: "t1" }]);
+    });
+
+    it("counts a row once when the read repeats it, and each new compaction by its place in the timeline", async () => {
+      const { host, coordination, idOf, group } = await setup();
+      const lead = idOf("lead");
+      const call = row({ type: "tool_call", callId: "c1", name: "mcp__paseo__send_agent_prompt" }, 1);
+      const compaction = row({ type: "compaction", status: "completed", trigger: "auto", preTokens: 10 }, 2);
+      host.turns.set(lead, [call, compaction]);
+      await coordination.onTurnEnded(host, ended(lead, "t1"));
+      host.turns.set(lead, [call, compaction, { ...compaction, seq: 9, turnId: "t2" }]);
+      await coordination.onTurnEnded(host, ended(lead, "t2"));
+      // The same compaction again, from a later read of the same turn.
+      await coordination.onTurnEnded(host, ended(lead, "t2"));
+
+      const kinds = group().events.map((e) => e.kind);
+      expect(kinds.filter((k) => k === "builtin-send")).toHaveLength(1);
+      expect(kinds.filter((k) => k === "compaction")).toHaveLength(2);
+    });
+
+    it("counts the Supervisor's shell commands and file changes on the project", async () => {
+      const { host, coordination, idOf, group } = await setup();
+      host.turns.set(idOf("supervisor"), [
+        row({ type: "tool_call", callId: "s1", name: "Bash", detail: { type: "shell", command: "git pull" } }, 1),
+        row({ type: "tool_call", callId: "s2", name: "Write", detail: { type: "write", filePath: "notes.py" } }, 2),
+        row({ type: "tool_call", callId: "s3", name: "Read", detail: { type: "read", filePath: "docs/plan.md" } }, 3),
+      ]);
+      await coordination.onTurnEnded(host, ended(idOf("supervisor")));
+      expect(buildReport(group()).supervisorWork).toEqual({ shellCommands: 1, fileChanges: 1 });
+    });
+
+    it("relays the Lead's reply to the Supervisor after a Human message, and reads the turn once", async () => {
+      const { host, coordination, secretOf, idOf } = await setup();
+      const lead = idOf("lead");
+      await coordination.delegate(host, secretOf("lead"), delegateInput);
+      host.sends.length = 0;
+      host.turns.set(lead, [
+        row({ type: "user_message", text: "Lead, status?", messageId: "h1" }, 1),
+        row({ type: "assistant_message", text: "Answered Human." }, 2),
+      ]);
+      await coordination.onTurnEnded(host, ended(lead));
+
+      expect(host.sends.filter((s) => s.agentId === idOf("supervisor")).map((s) => s.text)).toEqual([
+        expect.stringContaining("Answered Human."),
+      ]);
+      expect(host.turnReads).toHaveLength(1);
+    });
+
+    it("keeps going when the read fails: no observation for that turn, the handback still goes", async () => {
+      const { host, coordination, secretOf, idOf, group } = await setup();
+      const { peerAgentId } = await coordination.delegate(host, secretOf("lead"), delegateInput);
+      host.sends.length = 0;
+      host.failTurnRead = true;
+      await coordination.onTurnEnded(host, ended(peerAgentId!));
+      expect(group().ledger.assignments[0]).toMatchObject({ status: "handed-back" });
+      expect(host.sends.find((s) => s.agentId === idOf("lead"))!.text).toContain("(no reply text)");
+    });
   });
 
   it("does not report built-in sends or Paseo notices as Human messages, and counts cumulative cost once", async () => {
