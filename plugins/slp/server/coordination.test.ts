@@ -345,6 +345,63 @@ describe("templates", () => {
 });
 
 describe("handback and acceptance", () => {
+  // Paseo 0.13+ sends agent.turn_ended with an empty timeline: the reply text
+  // is read from the agent's own timeline, through host.lastReply (D488 F10).
+  it("carries the Peer's final message in the handback when the turn event holds no timeline", async () => {
+    const { host, coordination, secretOf, idOf, group } = await setup();
+    const { peerAgentId } = await coordination.delegate(host, secretOf("lead"), delegateInput);
+    host.sends.length = 0;
+    host.replies.set(peerAgentId!, "Implemented; all 40 tests pass.");
+
+    await coordination.onTurnEnded(host, {
+      agentId: peerAgentId!,
+      workspaceId: "ws",
+      outcome: { kind: "completed" },
+      lastReply: null,
+      turnId: "t1",
+      timeline: [],
+    });
+    expect(host.replyReads).toEqual([{ agentId: peerAgentId, turnId: "t1" }]);
+    const handback = host.sends.find((s) => s.agentId === idOf("lead"))!.text;
+    expect(handback).toContain("Implemented; all 40 tests pass.");
+    expect(handback).not.toContain("(no reply text)");
+    expect(group().ledger.assignments[0]).toMatchObject({ status: "handed-back" });
+  });
+
+  it("carries a Peer's plain reply, and the Lead's end-of-turn reply, from the agent's timeline too", async () => {
+    const { host, coordination, secretOf, idOf } = await setup();
+    const { peerAgentId } = await coordination.delegate(host, secretOf("lead"), delegateInput);
+    const peerTurn = (lastReply: string | null) =>
+      coordination.onTurnEnded(host, { agentId: peerAgentId!, workspaceId: "ws", outcome: { kind: "completed" }, lastReply });
+    await peerTurn("Done.");
+    host.sends.length = 0;
+    host.replies.set(peerAgentId!, "The answer is 42.");
+    await peerTurn(null);
+    const reply = host.sends.find((s) => s.agentId === idOf("lead"))!.text;
+    expect(reply).toContain("Reply from");
+    expect(reply).toContain("The answer is 42.");
+
+    host.sends.length = 0;
+    await coordination.accept(host, secretOf("lead"), { assignmentId: "A1", outcome: "accepted", reason: "ok" });
+    host.replies.set(idOf("lead"), "Done: A1 accepted.");
+    await coordination.onTurnEnded(host, { agentId: idOf("lead"), workspaceId: "ws", outcome: { kind: "completed" }, lastReply: null });
+    expect(host.sends.find((s) => s.agentId === idOf("supervisor"))!.text).toContain("Done: A1 accepted.");
+  });
+
+  it("does not read the timeline when the event already carries the reply, and keeps the placeholder when the read fails", async () => {
+    const { host, coordination, secretOf, idOf } = await setup();
+    const { peerAgentId } = await coordination.delegate(host, secretOf("lead"), delegateInput);
+    const peerTurn = (lastReply: string | null) =>
+      coordination.onTurnEnded(host, { agentId: peerAgentId!, workspaceId: "ws", outcome: { kind: "completed" }, lastReply });
+    await peerTurn("Done.");
+    expect(host.replyReads).toEqual([]);
+
+    host.sends.length = 0;
+    host.failReplyRead = true;
+    await peerTurn(null);
+    expect(host.sends.find((s) => s.agentId === idOf("lead"))!.text).toContain("(no reply text)");
+  });
+
   it("hands a Peer's reply back to the Lead after the Lead's turn, then accepts it", async () => {
     const { host, coordination, secretOf, idOf, group } = await setup();
     const { peerAgentId } = await coordination.delegate(host, secretOf("lead"), delegateInput);

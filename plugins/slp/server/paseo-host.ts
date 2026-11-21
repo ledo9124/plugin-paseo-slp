@@ -1,4 +1,5 @@
 import type { PluginHandlerContext } from "@getpaseo/plugin/server";
+import { replyOfTurn } from "./timeline";
 
 // A plugin installed from Git is built without node_modules, so only the
 // plugin SDK resolves: the Paseo API and its types come from the context the
@@ -76,6 +77,12 @@ export interface PaseoHost {
   getAgent(agentId: string): Promise<HostAgent | null>;
   sendPrompt(agentId: string, text: string, options?: SendPromptOptions): Promise<void>;
   archiveAgent(agentId: string): Promise<void>;
+  /**
+   * The text of the agent's final message in the turn that ended, read from
+   * its timeline; null when it said nothing. Paseo 0.13+ sends `agent.turn_ended`
+   * with an empty timeline, so the event cannot carry it.
+   */
+  lastReply(agentId: string, turnId: string | null): Promise<string | null>;
   /** Effort ids a `provider/model` lists, or null when the daemon cannot say. */
   thinkingOptions(providerModel: string): Promise<string[] | null>;
   /** Whether the daemon injects Paseo's own tools into agents. */
@@ -171,6 +178,13 @@ export function createPaseoHost(paseo: PaseoApi): PaseoHost {
         if (!options?.sourceAgentId || !/provenance/i.test(String(error))) throw error;
         await handle.send(text, { activeTurnBehavior: options.activeTurnBehavior });
       }
+    },
+
+    async lastReply(agentId, turnId) {
+      // The tail holds the end of the turn however many tool calls it made;
+      // "projected" merges streamed chunks into whole messages.
+      const page = await paseo.agents.ref(agentId).timeline.refetch({ direction: "tail", limit: 20, projection: "projected" });
+      return replyOfTurn(page.entries, turnId);
     },
 
     async archiveAgent(agentId) {

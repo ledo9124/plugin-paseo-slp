@@ -32,3 +32,29 @@ describe("createPaseoHost sendPrompt", () => {
     await expect(host.sendPrompt("a1", "hi", { sourceAgentId: "lead" })).rejects.toThrow(/not found/);
   });
 });
+
+describe("createPaseoHost lastReply", () => {
+  const page = (entries: unknown[]) => ({ entries });
+  const apiWithTimeline = (refetch: (options: unknown) => Promise<unknown>) =>
+    ({ agents: { ref: () => ({ timeline: { refetch } }) } }) as unknown as PaseoApi;
+
+  it("reads the final assistant message from the tail of the agent's timeline when the event carries none (Paseo 0.13+)", async () => {
+    const asked: unknown[] = [];
+    const host = createPaseoHost(
+      apiWithTimeline(async (options) => {
+        asked.push(options);
+        return page([
+          { item: { type: "tool_call", callId: "c1" }, turnId: "t1" },
+          { item: { type: "assistant_message", text: "Handback: done." }, turnId: "t1" },
+        ]);
+      }),
+    );
+    expect(await host.lastReply("a1", "t1")).toBe("Handback: done.");
+    expect(asked).toEqual([{ direction: "tail", limit: 20, projection: "projected" }]);
+  });
+
+  it("answers null when the timeline has no assistant message", async () => {
+    const host = createPaseoHost(apiWithTimeline(async () => page([{ item: { type: "tool_call" } }])));
+    expect(await host.lastReply("a1", null)).toBeNull();
+  });
+});
