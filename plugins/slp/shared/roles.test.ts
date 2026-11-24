@@ -52,6 +52,17 @@ describe("role instructions", () => {
     );
   });
 
+  it("has the Lead check facts and count losses before a pending decision (Human, D118)", () => {
+    const text = flat(roleInstructions("lead", facts));
+    expect(text).toContain(
+      "Before you record it, check the facts its options rest on yourself or through a Peer (code, records, a small probe). " +
+        "When an option removes, replaces, or routes around existing behavior, the options say what each keeps, degrades, and loses, with evidence.",
+    );
+    for (const role of ["supervisor", "peer"] as const) {
+      expect(flat(roleInstructions(role, facts)), role).not.toContain("what each keeps, degrades, and loses");
+    }
+  });
+
   it("bans send_agent_prompt for what it bypasses, not a stale cause (Human, D17)", () => {
     for (const role of ROLES) {
       const text = flat(roleInstructions(role, facts));
