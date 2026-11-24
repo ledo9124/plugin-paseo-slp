@@ -141,7 +141,11 @@ agent authority, evidence, integration, and acceptance.
   for the goal, asks for another (0009);
 - sorts every question by authority: decides engineering choices, cites
   the record or delegation that settles a choice, and records a pending
-  decision for anything else;
+  decision for anything else; before it records one, it checks the facts
+  the options rest on itself or through a Peer, and when an option removes,
+  replaces, or routes around existing behavior, the options say what each
+  keeps, degrades, and loses, with evidence (Human, ledger D118, from the
+  D115 report);
 - judges each handback against the goal, the workflow, and the brief's
   constraints, with its own check of the real change, before
   `slp_accept`; with a concrete doubt it asks the Peer an open question
