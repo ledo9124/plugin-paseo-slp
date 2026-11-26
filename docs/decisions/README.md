@@ -51,7 +51,8 @@ documents here as real choices are accepted, then index them in this file.
   message; only the Supervisor notifies Human (members are its children);
   Peers are one line of work on the default model; the Lead names the
   workflow per goal and briefs carry it; checks ask open questions with
-  evidence; effort per role, settings as selects.
+  evidence; effort per role, settings as selects. Item 4 (the Peer model)
+  amended by 0014.
 - [0010 Conduct, Attribution, And First-Person Role Texts](0010-conduct-attribution-and-first-person-texts.md):
   Accepted. Every role carries Human's conduct paragraph (a Peer adds
   options and a recommendation), attribution rules (only Human's quoted
@@ -75,9 +76,11 @@ documents here as real choices are accepted, then index them in this file.
   `--autocompact`; `slp_handoff` to a new Lead with the Lead's own note,
   Peers kept, old Lead archived once idle. Amends 0004's reason.
 - [0014 Dual-Lane After Its Own Dual-Lane Review](0014-dual-lane-after-its-own-dual-lane-review.md):
-  Accepted (Human D221, items 3-6 and 7(b); item 1 pending). A frame
-  finding is recorded and the other lane stays blind; the outcome has a
-  line for each step; the arbiter opens the records the packet cites; a
+  Accepted (Human D221 and D223: items 1, 3-6 and 7(b)). The Lead chooses
+  the lane, arbiter and Review-lens models from the Peer models, on
+  different providers when it can, in every dual-lane run (amends 0009
+  item 4); a frame finding is recorded and the other lane stays blind; the
+  outcome has a line for each step; the arbiter opens the records the packet cites; a
   new decision document after the arbiter is reviewed; when the lanes
   agree, a fresh reader of the Lead's synthesis may replace the arbiter
   (Human's change to 0011 D16 on that path). An unmodified v0.4.0

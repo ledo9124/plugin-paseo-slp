@@ -6,9 +6,14 @@ Date: 2026-11-26
 
 Accepted by Human on 2026-11-26 (SLP ledger D221, relayed by the
 Supervisor): items 3, 4, 5, 6 and 7(b) approved; item 2 not approved;
-item 1 pending (D222). Amends decision 0012 item 1 (the shipped text) and,
-on Human's authority, one clause of 0011 (D16, "no Lead view") on one path.
-Adds a third one-time migration beside 0011 item 2 and 0012 item 2.
+item 1 approved as (b) under D221, D222 and D223. On Human's authority it
+amends:
+- decision 0012 item 1 (the shipped text, including the Review lenses'
+  model);
+- decision 0009 item 4 (the Peer-model rule);
+- two of 0011's D16 clauses: the named models, and "no Lead view" on one
+  path.
+It adds a third one-time migration beside 0011 item 2 and 0012 item 2.
 
 ## Context
 
@@ -50,15 +55,39 @@ Adds a third one-time migration beside 0011 item 2 and 0012 item 2.
     now), not the trial.
   - Item 2, the model on each assignment record (a ledger change): not
     approved.
-  - Item 1, the lane models (the conflict between the template's named
-    models and the role text's per-goal rule, decision 0009 item 4):
-    pending under D222. Step 2's model sentence is unchanged here.
+  - Item 1, the models. The conflict was between the template's named
+    models and the role text's per-goal rule (decision 0009 item 4).
+    Human's D221 words: "dựa theo các provider đang có hiện tại rồi lead
+    tự đánh giá ưu tiên dùng của các provider khác nhau" (choose from the
+    providers available now, and the Lead weighs which to prefer). The
+    Supervisor's reading (D222): no hard-coded Opus or Fable. Human's
+    D223 answer, option (b): "Mọi lần chạy dual-lane" (every dual-lane
+    run). The choice applies to every dual-lane run, Review mode
+    included, whether or not Human named the template.
 
 ## Decision
 
 1. **The shipped dual-lane text** keeps the v0.4.0 text (0012) and changes
-   only what items 3-7(b) need. A test pins its length (8,593 bytes) and
-   hash.
+   only what items 1 and 3-7(b) need. A test pins its length (8,943 bytes)
+   and hash, and checks that it names no model.
+   - **Item 1, the models (steps 2 and 4, Review mode).**
+     - The lanes: the Lead chooses their models from `slp_ledger`
+       peerModels, the models available now. The two lanes go on different
+       providers, or on different model families when only one provider is
+       available. The Lead weighs each model's fit for the task and its
+       cost. It names the model in `slp_delegate` and gives the models and
+       the reason in the outcome's step line.
+     - The arbiter runs on a model from peerModels that neither lane
+       used, preferably from another provider. The shadow arbiter sentence
+       is unchanged.
+     - Review mode: the two lenses run on models from peerModels, on
+       different providers (or different model families when only one
+       provider is available), and neither runs on the model that wrote
+       the change. The fix-round lens runs on a model from peerModels.
+       Everything else in Review mode is unchanged.
+     - No model is named in the text any more (before: lanes on Opus 5.5
+       and Fable 5.1, the arbiter on Sonnet 5.5, the Review lenses and
+       the fix-round lens on Opus 5.5).
    - **Item 3, a frame finding (step 1).** The Lead records with
      `slp_decide` what it did about the finding, and why; a change to
      Human's goal goes to Human. The other lane is not told before the
@@ -68,8 +97,8 @@ Adds a third one-time migration beside 0011 item 2 and 0012 item 2.
    - **Item 4, a step line (steps 2, 3, 5).** The outcome holds one line
      for each step (frame, models, test, round, independent reader): done,
      or departed from, with the reason and a record id. It replaces "say so
-     in the packet" (a model fallback) and "say which in the packet" (a
-     skipped round). The text says that skipping the round never skips the
+     in the packet" (a model fallback, now gone with item 1) and "say which
+     in the packet" (a skipped round). The text says that skipping the round never skips the
      independent reader. 0011's D16 clause that the round is skipped only
      with a stated reason still holds; the reason now goes in the outcome,
      which exists even when no packet does.
@@ -99,7 +128,16 @@ Adds a third one-time migration beside 0011 item 2 and 0012 item 2.
    reads the Lead's synthesis by design. Human made that trade in D221
    knowing it; an agent could not. The clause still holds on the arbiter
    path.
-3. **One-time migration.** When the template store loads an existing
+3. **The model rule changes, on Human's authority (D223).**
+   - Decision 0009 item 4 said Peers run on the default model unless
+     Human names another or a template Human named for the goal requires
+     it. It gains a third case: a template the Lead uses asks it to choose
+     models. Dual-lane does, in every run.
+   - The Lead's role text (`roles.ts`) says so.
+   - 0011's D16 clause naming the lane and arbiter models, and 0012's
+     Opus lenses, are replaced by the Lead's choice in item 1.
+   - The shipped Peer models (`settings.ts`) are unchanged.
+4. **One-time migration.** When the template store loads an existing
    `templates.json`, a template named `dual-lane` whose text equals a
    shipped text byte for byte (v0.3.7 or v0.4.0) is replaced in place by
    the current text, after the file is copied to
@@ -122,13 +160,40 @@ Adds a third one-time migration beside 0011 item 2 and 0012 item 2.
 3. **Not proposed to ship** (both verdicts): a head block listing Human's
    clauses, a conformance report, an ordering guard for the reader of the
    synthesis (write the frame judgment before opening the synthesis), a
-   change to Unframed mode, and any change to Review mode.
+   change to Unframed mode, and any change to Review mode other than its
+   models.
+4. **Item 1, other options.**
+   - (a) The named models only when Human names dual-lane for the goal.
+     This was recommended by both verdicts, which assumed the named
+     models stayed.
+   - Keeping the named models in every run, at 2 to 4 times the Peer
+     cost.
+   Human chose instead to have the Lead choose from the available
+   providers in every run (D221, D223).
 
 ## Consequences
 
 What each change keeps, degrades, and loses (from the decision packet and
 the verdicts):
 
+- **Item 1** ends the conflict between the template and the role text,
+  and the unrecorded model departures (six of nine runs), because no
+  fixed model is left to depart from. The step line records the choice
+  and its reason.
+  - The lanes keep their diversity as different providers or model
+    families, not as two named models.
+  - It loses the fixed models Human named in 0011 D16 and 0012. Review
+    mode's reference data (Human's 15 lens pairs) came from Opus lenses.
+    No record shows the named models doing better (R8, on Opus and Fable,
+    was refused; R9, on Sonnet, was approved), but n=9 cannot show they
+    make no difference.
+  - Cost now follows the Lead's weighing. The named runs cost $10-22
+    against $2-5 for default runs, on different tasks.
+  - With the shipped Peer models (Sonnet 5.5, Haiku 4.5 and one Codex
+    model, two providers), the lanes take two of the three models. The
+    arbiter then gets the third, which may be the smallest, and no model
+    is left for a shadow arbiter.
+  - With item 2 not approved, the models line is a self-report.
 - **Item 3** keeps the other lane's blindness, which the runs split on,
   and gives the refined frame a record and a reader. It adds one record per
   frame finding. It is safe only with the reader's "judges the frame
@@ -162,9 +227,11 @@ the verdicts):
 
 ## Follow-Up
 
-- Item 1 (the lane models, step 2) is pending under D222. When Human
-  answers, the model sentence changes in a later text with its own pin and
-  migration.
+- `slp_delegate`'s model-parameter description (`server/tools.ts`) still
+  states only the two older cases. It was left outside this change and
+  recorded as SLP finding F98.
+- What would reopen item 1: a record showing that runs on particular
+  models hold better, or a Human statement that named models apply.
 - What would reopen 7(b): an agreeing run where a blind arbiter catches a
   material error a scope-matched reader of the synthesis missed (restore
   the arbiter on that path); a reader of the synthesis that misses a wrong

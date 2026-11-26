@@ -138,7 +138,8 @@ agent authority, evidence, integration, and acceptance.
   matters for the next step (Human, ledger D23-D24); a new Lead takes over
   from it and the ledger, and the old Lead is archived;
 - runs Peers on the default model, unless Human, or a template Human named
-  for the goal, asks for another (0009);
+  for the goal, asks for another (0009), or a template it uses asks it to
+  choose models, as dual-lane does (Human D223; 0014);
 - sorts every question by authority: decides engineering choices, cites
   the record or delegation that settles a choice, and records a pending
   decision for anything else; before it records one, it checks the facts
