@@ -62,8 +62,8 @@ documents here as real choices are accepted, then index them in this file.
   Accepted. Dual-lane is the only default template; an unmodified shipped
   council in an existing install is replaced once, after a backup of
   `templates.json`. Shipped on a two-use smoke test: Human's exception to
-  0007 item 3.4. Amends 0008 for the defaults. The "no Lead view" clause
-  amended by 0014 on one path.
+  0007 item 3.4. Amends 0008 for the defaults. Two D16 clauses amended by
+  0014: the named models, and "no Lead view" on one path.
 - [0012 Dual-Lane Gains A Review Mode](0012-dual-lane-review-mode.md):
   Accepted. Dual-lane adds a Review mode per Human's reference: two blind
   Opus lenses (intent, claims), the Lead decides conflicts, one lens per fix
@@ -76,15 +76,17 @@ documents here as real choices are accepted, then index them in this file.
   `--autocompact`; `slp_handoff` to a new Lead with the Lead's own note,
   Peers kept, old Lead archived once idle. Amends 0004's reason.
 - [0014 Dual-Lane After Its Own Dual-Lane Review](0014-dual-lane-after-its-own-dual-lane-review.md):
-  Accepted (Human D221-D224, D226-D227: items 1, 3-6 and 7(b), Review
-  mode). The Lead chooses the lane, arbiter and reader models from the Peer
-  models, on different providers when it can, in every dual-lane run
-  (amends 0009 item 4); Review mode's lenses are chosen by the change's
-  risks and run on strong models; a frame finding is recorded and the
-  other lane stays blind, not notified; the outcome has a line for each
-  step; the arbiter opens the records the packet cites; a new decision
-  document after the arbiter is reviewed; when the lanes agree, a fresh
-  reader of the Lead's synthesis may replace the arbiter (Human's change
-  to 0011 D16 on that path). An unmodified v0.4.0 dual-lane is replaced
-  once, after a backup; a start that cannot write keeps the old text.
-  Amends 0012 item 1.
+  Accepted (Human D221, D223, D224, D226, D227, D229; D222 is the
+  Supervisor's reading: items 1, 3-6 and 7(b), Review mode). The Lead
+  chooses the lane, arbiter and reader models from the Peer models, on
+  different providers when it can, in every dual-lane run, and checks for
+  a third model for the reader before the lanes (amends 0009 item 4);
+  the arbiter runs unless both lanes agree on the deciding point and the
+  frame; Review mode's lenses are chosen by the change's risks and run on
+  strong models; a frame finding is recorded and the other lane stays
+  blind, not notified; the outcome has a line for each step; the arbiter
+  opens the records the packet cites; a new decision document after the
+  arbiter is reviewed; when the lanes agree, a fresh reader of the Lead's
+  synthesis may replace the arbiter (Human's change to 0011 D16 on that
+  path). An unmodified v0.4.0 dual-lane is replaced once, after a backup;
+  a start that cannot write keeps the old text. Amends 0012 item 1.

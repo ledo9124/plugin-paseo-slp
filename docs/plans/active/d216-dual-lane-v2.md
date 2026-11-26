@@ -1,12 +1,12 @@
-# Execution Plan: Dual-Lane Text From Its Own Dual-Lane Review (D216, D221-D227)
+# Execution Plan: Dual-Lane Text From Its Own Dual-Lane Review (D216, D221-D231)
 
 Date: 2026-11-26
 
 ## Status
 
-Active. Every approved item and the review's fix round are on branch
-`d216-dual-lane-v2`. The pre-merge review, the merge, the release and the
-plugin update are not done.
+Active. Every approved item and both review fix rounds are on branch
+`d216-dual-lane-v2`. The merge (Human D229), the release and the plugin
+update are not done.
 
 ## Outcome
 
@@ -22,10 +22,11 @@ agree with the model choice dual-lane asks for. See decision 0014.
   0011 (D16's clauses and the first migration), 0009 item 4 (the Peer
   model rule, amended).
 - Evidence outside the repository with the SLP run: the D216 decision
-  packet, the arbiter and shadow verdicts, and the branch review (lens A
-  M1-M5, lens B 1-7).
-- Assignments A158 (implementation) and A161 (fix round) from the SLP
-  Lead.
+  packet, the arbiter and shadow verdicts, the branch review (lens A
+  M1-M5, lens B 1-7), and the pre-merge review (reader, intent F1-F2,
+  claims C1-C9).
+- Assignments A158 (implementation), A161 (fix round) and A165 (fix
+  round 2) from the SLP Lead; Lead decisions D230 and D231.
 
 ## Scope
 
@@ -61,6 +62,13 @@ Out of scope:
    `slp_delegate` description, the docs, 0014.
 5. Fix round (A161): the D227 Review-mode wording; the template and role
    text fixes; the migration hardening; the Settings hint; the docs.
+6. Fix round 2 (A165): D230/D231 and the reader's clarifications in the
+   template; no ledger ids in shipped text (C1); the `slp_decide` notify
+   exception (C2); the fallback re-read (F1); 0014's attributions (F2, C8);
+   Status pointers in 0009, 0011 and 0012 (C6).
+7. Release, after the merge: bump the version in
+   `plugins/slp/package.json`, the install line's `--ref` in `README.md`,
+   and the README Status paragraph (C5); not before.
 
 ## Risks And Recovery
 
@@ -73,7 +81,7 @@ Out of scope:
 
 ## Progress
 
-- [x] Template text and `LEGACY_DUAL_LANE_V040` (pinned: 9,988 and 6,809
+- [x] Template text and `LEGACY_DUAL_LANE_V040` (pinned: 11,291 and 6,809
   bytes).
 - [x] Migration of a v0.3.7 or v0.4.0 dual-lane; tests for replaced,
   edited, removed.
@@ -81,9 +89,10 @@ Out of scope:
 - [x] Item 1 (D223, D224): template models (lanes, arbiter, 7(b) reader,
   Review lenses), `roles.ts`, `server/tools.ts` (D225), docs, 0014.
 - [x] Fix round (A161): D226/D227 Review mode, lens A M1-M5, lens B 1-7.
-- [ ] Pre-merge review, merge, release, plugin update (Human: "Sửa,
-  review, merge luôn"; the release and the update each need their own
-  approval, D217).
+- [x] Pre-merge review (reader, intent, claims) and fix round 2 (A165).
+- [ ] Merge (Human D229: "Sửa, review, merge luôn").
+- [ ] Release: version bump, README `--ref` and Status (C5); plugin
+  update. Each needs its own approval (D217).
 
 ## Decisions
 
@@ -94,15 +103,16 @@ Out of scope:
   the pin changed; the migration still matches v0.3.7 and v0.4.0 only.
 - 2026-11-26: the rename retry covers EPERM, EBUSY and EACCES, with five
   attempts 50 ms apart. A migration that still fails is skipped for that
-  start, not fatal (review M1).
+  start, not fatal (review M1). If the re-read then fails too, the store
+  starts on what it loaded (F1).
 
 ## Validation
 
 - Focused proof, in `plugins/slp`:
   - `npx vitest run server/template-store.test.ts shared/templates.test.ts
-    shared/roles.test.ts`;
-  - the new replacement test and the three new rename tests fail against
-    the previous `template-store.ts`;
+    shared/roles.test.ts server/tools.test.ts`;
+  - the new replacement test, the three rename tests and the re-read test
+    fail against the `template-store.ts` before each fix;
   - a bundled probe on Windows, with `templates.json` held open, starts
     with the old text and migrates on the next start.
 - Repository-required checks: `npm test` at the root; `tsc --noEmit` in

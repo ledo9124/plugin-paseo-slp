@@ -6,10 +6,16 @@ Date: 2026-11-26
 
 Accepted by Human on 2026-11-26 (SLP ledger, relayed by the Supervisor):
 - items 3, 4, 5, 6 and 7(b) approved in D221; item 2 not approved;
-- item 1 approved as (b) under D221, D222, D223 and D224;
+- item 1 approved as (b) in D221, D223 and D224 (D222 is the
+  Supervisor's reading of D221, not Human's approval);
 - Review mode's lenses and models in the wording of D226 and D227;
-- the review's fix round under Human's "Sửa, review, merge luôn" (fix,
-  review, merge), which lifted the D228 hold.
+- the review's fix rounds under Human's D229, "Sửa, review, merge luôn"
+  (fix, review, merge), which lifted the D228 hold and ranked the strength
+  rule above the writer's-model clause.
+
+Two clarifications are the Lead's decisions inside items 4 and 7(b): D230
+(check for a model for the independent reader before the lanes) and D231
+(the routing to the arbiter or the reader).
 
 On Human's authority it amends:
 - decision 0012 item 1 (the shipped text, including Review mode's lenses
@@ -74,19 +80,25 @@ It adds a third one-time migration beside 0011 item 2 and 0012 item 2.
   wording: lenses chosen from the change and its risks, and models strong
   enough for analysis and review. It does not apply to the decision
   mode's lanes or arbiter (Human: "Không áp", it does not apply).
-- **The branch review.** Two lenses reviewed the branch: lens A (intent,
-  findings M1-M5) and lens B (claims, findings 1-7, paused after D226).
-  Their findings are fixed on the branch or answered here. Human ranked
-  the strength rule above "none on the model that wrote the change" (M3,
-  relayed by the Supervisor).
+- **The branch reviews.**
+  - The first review: lens A (intent, findings M1-M5) and lens B (claims,
+    findings 1-7, paused after D226).
+  - The pre-merge review of the final diff: a reader lens (a cold Lead
+    walking through the text), an intent and migration-safety lens (F1,
+    F2), and a claims lens (C1-C9).
+  - Their findings are fixed on the branch or answered here.
+  - Human ranked the strength rule above "none on the model that wrote the
+    change" (D229, relayed by the Supervisor).
+  - From the reader's findings, the Lead settled two clarifications inside
+    items 4 and 7(b) (D230, D231).
 
 ## Decision
 
 1. **The shipped dual-lane text** keeps the v0.4.0 text (0012). It changes
    only what items 1, 3-7(b), the Review-mode wording and the review
-   findings need. A test pins its length (9,988 bytes) and hash, and checks
-   that it names no model. The description names the reader path when the
-   lanes agree (review M5, lens B 4).
+   findings need. A test pins its length (11,291 bytes) and hash, and
+   checks that it names no model and cites no ledger id. The description
+   names the reader path when the lanes agree (review M5, lens B 4).
    - **Item 1, the models (steps 2 and 4).**
      - The lanes: the Lead chooses their models from `slp_ledger`
        peerModels, the allowed models. That is the allowlist in settings,
@@ -95,13 +107,16 @@ It adds a third one-time migration beside 0011 item 2 and 0012 item 2.
        - The two lanes go on different providers, or on different model
          families when only one provider is available.
        - The Lead weighs each model's fit for the task and its cost.
-       - If no pair that meets this can be delegated, the Lead reports it
-         as a blocker.
+       - Before delegating the lanes, the Lead checks that peerModels also
+         holds a third eligible model for the independent reader (D230).
+       - If the pair or that reader cannot be delegated, the Lead reports
+         a blocker before spending lane work.
        - The Lead names the model in `slp_delegate`, and gives the models
          and the reason in the outcome's step line.
      - The arbiter runs on a model from peerModels that neither lane
        used, preferably from another provider. The 7(b) reader follows the
-       same rule. The shadow arbiter sentence is unchanged.
+       same rule. The shadow arbiter keeps its rule; it runs only on the
+       arbiter path, on a listed model that starts.
      - No model is named in the text any more. Before: lanes on Opus 5.5
        and Fable 5.1, the arbiter on Sonnet 5.5, the Review lenses and the
        fix-round lens on Opus 5.5.
@@ -121,30 +136,53 @@ It adds a third one-time migration beside 0011 item 2 and 0012 item 2.
        strong model is available there. The outcome names the models and
        why each is strong enough.
      - **The writer's model.** "None runs on the model that wrote the
-       change" was the Lead's addition under D224. Human ranked it below
-       the strength rule (M3). If honouring it would leave only a weaker
-       model, the strength rule wins and the outcome says so.
-     - **Fix round and merge.** The fix round is one fresh lens, on a
-       strong model from peerModels. Before merge, the lenses run again,
-       chosen the same way.
+       change" went through three steps:
+       1. it began as the Lead's addition under D224 (A158);
+       2. it was in the wording Human approved in D227;
+       3. D229 ranked it below the strength rule.
+
+       So if honouring it would leave only a weaker model, the strength
+       rule wins and the outcome says so. The text reads it for every
+       model that wrote part of the change, and diversity never brings
+       back a writer's model while another strong model is free. The order
+       is: strength, then the writer's model, then diversity.
+     - **Fix round and merge.**
+       - The fix round is one fresh lens, on a strong model from
+         peerModels chosen by the same rules.
+       - Before merge, the lenses run again, chosen the same way: fresh
+         Peers, for the final diff's risks.
+       - Each verdict names the commit it covers, and a later change needs
+         its own.
+     - **Entry.** Review mode is for a substantial change, including its
+       small final diff. It gives a verdict on a change; whether to adopt
+       a candidate is Vet.
      - **The outcome** records the lenses and their models with the
        reasons, which lens found what, what more than one found, and how
-       each conflict was decided (review M2). Findings with severity, the
-       one unnamed exchange on a conflict, and "no arbiter" are unchanged.
+       each conflict was decided (review M2).
+       - A finding only one lens raised is checked on its evidence and
+         disposed of too.
+       - Findings with severity, the one unnamed exchange on a conflict,
+         and "no arbiter" are unchanged.
    - **Item 3, a frame finding (step 1).** The Lead records with
      `slp_decide` what it did about the finding, and why, without the
      other lane in `notify`. A change to Human's goal goes to Human. The
      other lane is not told before the challenge round, by message or by
      decision. The packet carries the original frame, the finding and what
      was done. The arbiter, or the reader that replaces it, checks whether
-     each answer still addresses the revised question. The Lead's role
-     text gives the same exception for a Peer a template keeps blind
-     (review, lens B 1): a notified decision reaches the Peer and shows in
-     its ledger.
+     each answer still addresses the revised question.
+     - The round gives both lanes the revised frame and asks whether each
+       answer holds on it. A lane that never saw a revised frame has not
+       agreed on it.
+     - The Lead's role text and the `slp_decide` description give the same
+       exception for a Peer a template keeps blind (review, lens B 1; C2).
+       A notified decision reaches the Peer and shows in its ledger.
    - **Item 4, a step line (steps 2, 3, 5).**
      - The outcome holds one line for each step (frame, models, test,
        round, independent reader): done, or departed from, with the reason
        and a record id.
+     - The record id is an assignment, a finding or a decision. For a step
+       the Lead did itself (a test, a skipped round), it is where the
+       evidence is.
      - It replaces "say so in the packet" (a model fallback, now gone with
        item 1) and "say which in the packet" (a skipped round).
      - The text says that skipping the round never skips the independent
@@ -154,8 +192,12 @@ It adds a third one-time migration beside 0011 item 2 and 0012 item 2.
        even when no packet does.
    - **Item 5, the arbiter's reading scope (step 4).**
      - The Lead tells the arbiter to open the records the packet cites, to
-       check them. The packet still holds no Lead view, and the arbiter
-       reads no lane folder.
+       check them. The arbiter reads no lane folder.
+     - The packet holds nothing beyond its list, the frame record (item 3)
+       and the quoted ledger records, and never the Lead's view of the
+       answer (C3).
+     - On a skipped round, the packet carries the original positions and
+       no replies (D231).
      - A Peer's `slp_ledger` shows only its own work. So the Lead quotes in
        the packet each other ledger record the arbiter or the reader must
        check, with its id and without naming a lane's author.
@@ -167,17 +209,23 @@ It adds a third one-time migration beside 0011 item 2 and 0012 item 2.
      the records it cites before Human sees it. Not needed when the verdict
      itself is the deliverable.
    - **Item 7(b), two paths to the independent reader (step 4).**
-     - When the lanes still disagree on the deciding point after the round,
-       or the frame is contested and the lanes did not converge on a
-       revised frame, the arbiter runs as written.
-     - When the lanes agree on the deciding point and the frame, the Lead
-       may instead write the synthesis and give it to a reader instead:
+     - The arbiter runs unless both lanes' last handbacks agree on the
+       deciding point and the frame, whether or not the round ran (D231).
+       This covers Human's wording: lanes that still disagree after the
+       round, or a contested frame on which they did not converge.
+     - When both agree, the Lead may keep the arbiter, or write the
+       synthesis and give it to a reader instead, and records which and
+       why:
        - one fresh Peer (kind `review`) who wrote no position, on a model
          chosen as for the arbiter (item 1);
        - it gets the packet's contents, the synthesis, and leave to open
          every record the lanes, the comparison and the synthesis cite;
        - it judges the frame first, then the premises the lanes share
-         against those records, then the synthesis.
+         against those records, then the synthesis;
+       - a synthesis the Lead then changes materially goes back to it.
+     - When the active-Peer limit is short, the Lead accepts the lanes'
+       assignments before delegating the arbiter or the reader. The round
+       goes by `slp_send`, because a rework is for redoing work.
      - Skipping both is not a path, even with a recorded reason; nor is a
        reader limited to the lane files. The outcome names the path taken
        and why (item 4).
@@ -192,7 +240,8 @@ It adds a third one-time migration beside 0011 item 2 and 0012 item 2.
      Human names another, or a template Human named for the goal requires
      it. It gains a third case: a template the Lead uses asks it to choose
      models. Dual-lane does, in every run.
-   - The texts that state the rule now agree:
+   - The texts that state the rule now agree. None cites a ledger id,
+     because ids are numbered per group (C1).
      - the Lead's role text (`roles.ts`);
      - the `slp_delegate` model description (`server/tools.ts`; Lead
        decision D225, resolving finding F98);
@@ -213,11 +262,14 @@ It adds a third one-time migration beside 0011 item 2 and 0012 item 2.
    - The v0.4.0 text stays in `default-templates.ts` as
      `LEGACY_DUAL_LANE_V040` only for this match, pinned by its own test.
    - A rename Windows refuses because another process holds the file open
-     (EPERM, EBUSY or EACCES) is retried up to five times, 50 ms apart.
+     (EPERM, EBUSY or EACCES) is tried up to five times in all, 50 ms
+     apart.
    - If a migration still cannot write, the store keeps what is stored and
      logs "[slp] template migration skipped until the next start". The
      plugin starts with the old text, and the next start migrates (review
      M1).
+   - If the file cannot be read again at that point, the store starts on
+     what it loaded (F1).
 
 ## Alternatives Considered
 
@@ -284,11 +336,16 @@ verdicts and the branch review):
   - It loses the fixed intent-and-claims pair. Human's reference data
     (0012: 15 lens pairs, 37% of the findings found by both) came from
     that pair on Opus.
-  - With the shipped Peer models, Haiku 4.5 is a small, fast-tier model
-    and is never a lens. If the change was written on Sonnet 5.5, a lens
-    off the writer's model must run on the Codex model, if that model is
-    strong enough. A second lens may run on Sonnet 5.5 under the strength
-    rule, and the outcome says so.
+  - The shipped Peer models are Sonnet 5.5, Haiku 4.5 and
+    `codex/gpt-6-luna`. Human named the strong families as astra, neon,
+    opus, fable and sonnet (relayed by the Supervisor). Among the shipped
+    models, only Sonnet 5.5 is in those families. Haiku 4.5 is a small,
+    fast-tier model, and luna is not on the list.
+    - So with the shipped defaults, every Review lens runs on Sonnet 5.5,
+      even when Sonnet wrote the change. The strength rule wins (D229),
+      and the outcome says so.
+    - Provider diversity in Review mode needs a strong model from another
+      family in peerModels.
 - **Item 3** keeps the other lane's blindness, which the runs split on.
   It gives the refined frame a record and a reader, and adds one record
   per frame finding. It is safe only with the reader's "judges the frame
@@ -323,7 +380,11 @@ verdicts and the branch review):
   counterfactual).
 - **Migration.**
   - The text reaches a later session only after the store migrates.
-  - A running group keeps the catalog it was created with.
+  - A running group keeps the catalog and the role text it was created
+    with, but loads the new body through `slp_template` from then on
+    (C4). The live tool descriptions (`slp_delegate`'s model,
+    `slp_decide`'s notify exception) cover the rules the old role text
+    lacks.
   - An installed dual-lane Human edited is left alone and keeps the old
     text.
   - A start that cannot write keeps the old text until the next start.

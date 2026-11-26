@@ -152,7 +152,7 @@ agent authority, evidence, integration, and acceptance.
   `slp_accept`; with a concrete doubt it asks the Peer an open question
   and asks for evidence, and a redo goes only through rework (0009);
 - decides on findings with evidence, and makes sure the affected owners
-  are told;
+  are told, except a Peer a template keeps blind (0014);
 - answers the Supervisor's questions about the project from the code and
   the project's state;
 - records lasting decisions in the project's own records.

@@ -11,6 +11,9 @@ Accepted by Human on 2026-10-03. It amends the following:
   2026-10-01, marked "Human may revisit");
 - decision 0008 item 1, which adds effort to a role's settings.
 
+Item 4 (the Peer model) is amended by 0014: a template the Lead uses may
+ask it to choose models, as dual-lane does.
+
 ## Context
 
 The first real run took place in `my-plugin` (workspace
