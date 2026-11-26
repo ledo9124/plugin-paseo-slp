@@ -96,7 +96,7 @@ It adds a third one-time migration beside 0011 item 2 and 0012 item 2.
 
 1. **The shipped dual-lane text** keeps the v0.4.0 text (0012). It changes
    only what items 1, 3-7(b), the Review-mode wording and the review
-   findings need. A test pins its length (11,291 bytes) and hash, and
+   findings need. A test pins its length (11,300 bytes) and hash, and
    checks that it names no model and cites no ledger id. The description
    names the reader path when the lanes agree (review M5, lens B 4).
    - **Item 1, the models (steps 2 and 4).**
@@ -144,7 +144,7 @@ It adds a third one-time migration beside 0011 item 2 and 0012 item 2.
        So if honouring it would leave only a weaker model, the strength
        rule wins and the outcome says so. The text reads it for every
        model that wrote part of the change, and diversity never brings
-       back a writer's model while another strong model is free. The order
+       back a writer's model while another strong model is in peerModels (A166 N1). The order
        is: strength, then the writer's model, then diversity.
      - **Fix round and merge.**
        - The fix round is one fresh lens, on a strong model from

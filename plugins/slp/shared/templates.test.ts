@@ -42,12 +42,12 @@ describe("default templates", () => {
     expect(views[0].whenToUse).toMatch(/Human cannot answer yet/);
   });
 
-  it("carry dual-lane with the items Human approved in D221-D224 and D226-D227 (decision 0014) byte for byte (11,291 bytes, LF)", () => {
+  it("carry dual-lane with the items Human approved in D221-D224 and D226-D227 (decision 0014) byte for byte (11,300 bytes, LF)", () => {
     const text = DEFAULT_TEMPLATES[0];
-    expect(Buffer.byteLength(text, "utf8")).toBe(11291);
+    expect(Buffer.byteLength(text, "utf8")).toBe(11300);
     expect(text).not.toContain("\r");
     expect(createHash("sha256").update(text, "utf8").digest("hex")).toBe(
-      "438d945e768280a17b1ed82242853642676e7b72be9d71baacfb8f2479678810",
+      "8cede9bc8966b3ad8695c2c09e55c219713d456aa58a2233faae04af0b79a891",
     );
     expect(text).toContain("Use the arbiter unless both lanes' last handbacks agree on the deciding point and the frame");
     expect(text).toContain("a third eligible model for the independent reader");

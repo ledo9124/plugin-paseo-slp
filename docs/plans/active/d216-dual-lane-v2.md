@@ -39,9 +39,11 @@ In scope:
 - `plugins/slp/shared/roles.ts`: the Lead's Peer-model rule and the notify
   exception for a blind Peer, with their tests.
 - `plugins/slp/server/tools.ts`: the `slp_delegate` model description
-  (Lead decision D225, resolving finding F98).
+  (Lead decision D225, resolving finding F98), and the `slp_decide`
+  notify exception for a blind Peer (finding C2).
 - `plugins/slp/client/settings-screen.tsx`: the default-model hint only.
-- Decision 0014, the decisions index, and the README and product roles
+- Decision 0014, its Status pointers in 0009, 0011 and 0012, the decisions
+  index, and the README and product roles
   lines that quoted the old rules.
 
 Out of scope:
@@ -81,7 +83,7 @@ Out of scope:
 
 ## Progress
 
-- [x] Template text and `LEGACY_DUAL_LANE_V040` (pinned: 11,291 and 6,809
+- [x] Template text and `LEGACY_DUAL_LANE_V040` (pinned: 11,300 and 6,809
   bytes).
 - [x] Migration of a v0.3.7 or v0.4.0 dual-lane; tests for replaced,
   edited, removed.
