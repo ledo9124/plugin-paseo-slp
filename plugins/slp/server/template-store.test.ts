@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { DEFAULT_TEMPLATES, LEGACY_COUNCIL_TEXTS, LEGACY_DUAL_LANE_V037 } from "../shared/default-templates";
+import { DEFAULT_TEMPLATES, LEGACY_COUNCIL_TEXTS, LEGACY_DUAL_LANE_V037, LEGACY_DUAL_LANE_V040 } from "../shared/default-templates";
 import { TemplateStore } from "./template-store";
 
 const skill = (name: string) =>
@@ -91,6 +91,61 @@ describe("TemplateStore", () => {
       const where = dir();
       seed(where, [{ name: "council", text: LEGACY_COUNCIL_TEXTS[0] }]);
       expect(new TemplateStore(where).list().map((t) => t.text)).toEqual([DEFAULT_TEMPLATES[0]]);
+    });
+  });
+
+  describe("one-time v0.4.0 dual-lane to D221 dual-lane migration (decision 0014)", () => {
+    const backup = (where: string, release = "v0.4.0") => join(where, `templates.json.bak-${release}`);
+    const seed = (where: string, templates: Array<{ name: string; text: string }>) => {
+      const raw = JSON.stringify({ version: 1, templates }, null, 2);
+      writeFileSync(join(where, "templates.json"), raw);
+      return raw;
+    };
+    const stored = (where: string) => readFileSync(join(where, "templates.json"), "utf8");
+
+    it("replaces an unmodified v0.4.0 dual-lane in place, once, after backing up the original bytes", () => {
+      const where = dir();
+      const original = seed(where, [
+        { name: "first", text: skill("first") },
+        { name: "dual-lane", text: LEGACY_DUAL_LANE_V040 },
+        { name: "last", text: skill("last") },
+      ]);
+      const store = new TemplateStore(where);
+      expect(store.names()).toEqual(["first", "dual-lane", "last"]);
+      expect(store.list()[1].text).toBe(DEFAULT_TEMPLATES[0]);
+      expect(store.list()[1].text).not.toBe(LEGACY_DUAL_LANE_V040);
+      expect(readFileSync(backup(where), "utf8")).toBe(original);
+      expect(existsSync(backup(where, "v0.3.7"))).toBe(false);
+      const migrated = stored(where);
+      writeFileSync(backup(where), "kept");
+      expect(new TemplateStore(where).list()[1].text).toBe(DEFAULT_TEMPLATES[0]);
+      expect(stored(where)).toBe(migrated);
+      expect(readFileSync(backup(where), "utf8")).toBe("kept");
+    });
+
+    it("leaves an edited v0.4.0 dual-lane alone, with no backup", () => {
+      for (const edited of [
+        LEGACY_DUAL_LANE_V040.replace("Dual Lane", "Dual Lane (mine)"),
+        `${LEGACY_DUAL_LANE_V040}\n`,
+        LEGACY_DUAL_LANE_V040.replace(/\n/g, "\r\n"),
+      ]) {
+        const where = dir();
+        const original = seed(where, [{ name: "dual-lane", text: edited }]);
+        const store = new TemplateStore(where);
+        expect(store.list()[0].text).toBe(edited);
+        expect(stored(where)).toBe(original);
+        expect(existsSync(backup(where))).toBe(false);
+      }
+    });
+
+    it("does not recreate a dual-lane Human removed", () => {
+      const where = dir();
+      const store = new TemplateStore(where);
+      expect(store.remove("dual-lane")).toBe(true);
+      const afterRemove = stored(where);
+      expect(new TemplateStore(where).names()).toEqual([]);
+      expect(stored(where)).toBe(afterRemove);
+      expect(existsSync(backup(where))).toBe(false);
     });
   });
 

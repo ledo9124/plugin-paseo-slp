@@ -1,15 +1,15 @@
 import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, renameSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { TemplateView } from "../shared/contracts";
-import { DEFAULT_TEMPLATES, LEGACY_COUNCIL_TEXTS, LEGACY_DUAL_LANE_V037 } from "../shared/default-templates";
+import { DEFAULT_TEMPLATES, LEGACY_COUNCIL_TEXTS, LEGACY_DUAL_LANE_V037, LEGACY_DUAL_LANE_V040 } from "../shared/default-templates";
 import { parseSkill, toTemplateView } from "../shared/templates";
 import { SlpError } from "./slp-service";
 
 // Templates in plugin data (decision 0008, plan slice 5): one SKILL.md text
 // each in templates.json. The first read seeds the defaults, so a default
 // Human removes stays removed. The exceptions are one-time migrations of an
-// unmodified shipped text: the council to dual-lane (decision 0011), and the
-// v0.3.7 dual-lane to the one with the Review mode (decision 0012).
+// unmodified shipped text: the council to dual-lane (decision 0011), and a
+// v0.3.7 or v0.4.0 dual-lane to the current one (decisions 0012, 0014).
 
 interface TemplateFile {
   version: 1;
@@ -54,15 +54,20 @@ export class TemplateStore {
   }
 
   /**
-   * Decision 0012: a dual-lane that is still the v0.3.7 text gets the current
-   * one, after a backup of the file. An edited or removed dual-lane stays as
-   * it is.
+   * Decisions 0012 and 0014: a dual-lane that is still a shipped text (v0.3.7
+   * or v0.4.0) gets the current one, after a backup of the file named for that
+   * release. An edited or removed dual-lane stays as it is.
    */
   private replaceShippedDualLane(): void {
-    const at = this.entries.findIndex((entry) => entry.name === "dual-lane" && entry.text === LEGACY_DUAL_LANE_V037);
+    const shipped = [
+      { text: LEGACY_DUAL_LANE_V037, release: "v0.3.7" },
+      { text: LEGACY_DUAL_LANE_V040, release: "v0.4.0" },
+    ];
+    const at = this.entries.findIndex((entry) => entry.name === "dual-lane" && shipped.some((known) => known.text === entry.text));
+    const match = at < 0 ? undefined : shipped.find((known) => known.text === this.entries[at].text);
     const current = DEFAULT_TEMPLATES.find((text) => parseSkill(text).name === "dual-lane");
-    if (at < 0 || !current) return;
-    const backup = `${this.path}.bak-v0.3.7`;
+    if (!match || !current) return;
+    const backup = `${this.path}.bak-${match.release}`;
     if (!existsSync(backup)) copyFileSync(this.path, backup);
     this.entries[at] = { name: "dual-lane", text: current };
     this.write();
