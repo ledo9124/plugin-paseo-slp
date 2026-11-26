@@ -270,7 +270,7 @@ function PeerModelFields({
         <Card>
           <SettingsSelect
             label="Default model"
-            hint="Peers run on it unless Human names another"
+            hint="Used when the Lead names no model for a Peer"
             value={value.models[0]}
             options={value.models.map((m) => ({ label: labelOf(m), value: m }))}
             onValueChange={(next) => onChange({ models: [next, ...value.models.filter((m) => m !== next)] })}
