@@ -71,10 +71,12 @@ paseo plugin ls          # slp should be running
     touched;
   - one template, `dual-lane` (`SKILL.md` text): two blind lanes from the
     two sides of the deciding tension (or one case and one check), a test of
-    their deciding disagreement, and an arbiter on an anonymous packet; in
-    its Review mode, two blind lenses (intent, claims) on a change. The Lead
-    chooses the models from the Peer models, on different providers when it
-    can (decision 0014).
+    their deciding disagreement, and an arbiter on an anonymous packet (or,
+    when the lanes agree, a fresh reader of the Lead's synthesis); in its
+    Review mode, blind lenses on a change, chosen by its risks (one for a
+    small, local change) and run on strong models. The Lead chooses the
+    models from the Peer models, on different providers when it can
+    (decision 0014).
     Settings,
     Templates: add, edit, remove, or import a folder of `SKILL.md` files.
     The Supervisor and the Lead see the catalog; the Lead loads a template

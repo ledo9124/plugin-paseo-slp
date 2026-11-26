@@ -76,12 +76,15 @@ documents here as real choices are accepted, then index them in this file.
   `--autocompact`; `slp_handoff` to a new Lead with the Lead's own note,
   Peers kept, old Lead archived once idle. Amends 0004's reason.
 - [0014 Dual-Lane After Its Own Dual-Lane Review](0014-dual-lane-after-its-own-dual-lane-review.md):
-  Accepted (Human D221, D223, D224: items 1, 3-6 and 7(b)). The Lead chooses
-  the lane, arbiter and Review-lens models from the Peer models, on
-  different providers when it can, in every dual-lane run (amends 0009
-  item 4); a frame finding is recorded and the other lane stays blind; the
-  outcome has a line for each step; the arbiter opens the records the packet cites; a
-  new decision document after the arbiter is reviewed; when the lanes
-  agree, a fresh reader of the Lead's synthesis may replace the arbiter
-  (Human's change to 0011 D16 on that path). An unmodified v0.4.0
-  dual-lane is replaced once, after a backup. Amends 0012 item 1.
+  Accepted (Human D221-D224, D226-D227: items 1, 3-6 and 7(b), Review
+  mode). The Lead chooses the lane, arbiter and reader models from the Peer
+  models, on different providers when it can, in every dual-lane run
+  (amends 0009 item 4); Review mode's lenses are chosen by the change's
+  risks and run on strong models; a frame finding is recorded and the
+  other lane stays blind, not notified; the outcome has a line for each
+  step; the arbiter opens the records the packet cites; a new decision
+  document after the arbiter is reviewed; when the lanes agree, a fresh
+  reader of the Lead's synthesis may replace the arbiter (Human's change
+  to 0011 D16 on that path). An unmodified v0.4.0 dual-lane is replaced
+  once, after a backup; a start that cannot write keeps the old text.
+  Amends 0012 item 1.

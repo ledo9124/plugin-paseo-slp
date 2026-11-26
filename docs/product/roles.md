@@ -175,7 +175,7 @@ agent authority, evidence, integration, and acceptance.
 | A goal from the Supervisor | Plans it, and decides on its own judgment whether to do it or delegate it (Human, 2026-10-02). Small work it may do itself. |
 | A question or command from the Supervisor | Answers or runs it itself. Its reply reaches the Supervisor on its own at the end of a turn the Supervisor or Human started, and when no assignment is open; not between Peer handbacks (0009, amending Human's experiment of 2026-10-03). The Lead reports nothing separately; an effect Human has not accepted is a pending decision. |
 | A handback | Checks the result, then accepts, asks for rework with the reason, or drops it. |
-| A finding | Decides on the evidence: changes the plan or keeps it, with `findingId` and the affected owners in `notify`. |
+| A finding | Decides on the evidence: changes the plan or keeps it, with `findingId` and the affected owners in `notify`, but not a Peer a template keeps blind, such as dual-lane's other lane (0014). |
 | A Peer's question | Sorts it by authority, as above. |
 | A Human decision or correction, through the Supervisor | Updates the briefs and the work it affects. |
 | A message from Human directly | Human's choice, not a break (Human, 2026-10-03). Acts on it as Human's word, answers Human in its reply, and may ask there what only Human can decide. Records a decision by quoting Human; source "human" stays the Supervisor's. |
