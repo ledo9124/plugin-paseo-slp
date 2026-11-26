@@ -7,11 +7,19 @@ import { TemplateStore } from "./template-store";
 
 // The store's rename can be made to fail, as Windows fails it while another
 // process holds templates.json open (D216 review, M1). Off by default.
-const refuse = vi.hoisted(() => ({ code: "", times: 0, calls: 0 }));
+// With readBusyAfterRename, a read of templates.json after a refused rename
+// fails too (D216 pre-merge review, F1).
+const refuse = vi.hoisted(() => ({ code: "", times: 0, calls: 0, readBusyAfterRename: false }));
 vi.mock("node:fs", async (importOriginal) => {
   const actual = await importOriginal<typeof import("node:fs")>();
   return {
     ...actual,
+    readFileSync: ((path: string, ...rest: unknown[]) => {
+      if (refuse.readBusyAfterRename && refuse.calls > 0 && String(path).endsWith("templates.json")) {
+        throw Object.assign(new Error("EBUSY: resource busy or locked, open"), { code: "EBUSY" });
+      }
+      return (actual.readFileSync as (...args: unknown[]) => unknown)(path, ...rest);
+    }) as typeof actual.readFileSync,
     renameSync: (from: string, to: string) => {
       refuse.calls++;
       if (refuse.times > 0) {
@@ -158,7 +166,7 @@ describe("TemplateStore", () => {
 
     describe("when Windows refuses the rename (M1)", () => {
       afterEach(() => {
-        Object.assign(refuse, { code: "", times: 0, calls: 0 });
+        Object.assign(refuse, { code: "", times: 0, calls: 0, readBusyAfterRename: false });
         vi.restoreAllMocks();
       });
 
@@ -193,6 +201,18 @@ describe("TemplateStore", () => {
         Object.assign(refuse, { code: "ENOSPC", times: 99, calls: 0 });
         expect(new TemplateStore(where).list()[0].text).toBe(LEGACY_DUAL_LANE_V040);
         expect(refuse.calls).toBe(1);
+      });
+
+      it("still starts on what it loaded when the file cannot be read again after a failed migration (F1)", () => {
+        const where = dir();
+        const original = seed(where, [{ name: "dual-lane", text: LEGACY_DUAL_LANE_V040 }]);
+        const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+        Object.assign(refuse, { code: "EPERM", times: 99, calls: 0, readBusyAfterRename: true });
+        const store = new TemplateStore(where);
+        expect(store.list()[0].text).toBe(LEGACY_DUAL_LANE_V040);
+        expect(logged).toHaveBeenCalledWith(expect.stringMatching(/^\[slp\] template migration skipped/));
+        Object.assign(refuse, { code: "", times: 0, readBusyAfterRename: false });
+        expect(stored(where)).toBe(original);
       });
     });
 

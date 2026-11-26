@@ -44,13 +44,19 @@ export class TemplateStore {
     this.path = join(dir, "templates.json");
     if (existsSync(this.path)) {
       this.entries = this.read();
+      const loaded = this.entries.map((entry) => ({ ...entry }));
       try {
         this.replaceShippedCouncil();
         this.replaceShippedDualLane();
       } catch (error) {
         // A migration that cannot write must not stop the plugin: keep what
-        // is stored, and the next start tries again.
-        this.entries = this.read();
+        // is stored (or, if it cannot be read again, what was loaded), and
+        // the next start tries again.
+        try {
+          this.entries = this.read();
+        } catch {
+          this.entries = loaded;
+        }
         console.error(`[slp] template migration skipped until the next start: ${String(error)}`);
       }
     } else {
