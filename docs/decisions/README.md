@@ -76,7 +76,7 @@ documents here as real choices are accepted, then index them in this file.
   `--autocompact`; `slp_handoff` to a new Lead with the Lead's own note,
   Peers kept, old Lead archived once idle. Amends 0004's reason.
 - [0014 Dual-Lane After Its Own Dual-Lane Review](0014-dual-lane-after-its-own-dual-lane-review.md):
-  Accepted (Human D221 and D223: items 1, 3-6 and 7(b)). The Lead chooses
+  Accepted (Human D221, D223, D224: items 1, 3-6 and 7(b)). The Lead chooses
   the lane, arbiter and Review-lens models from the Peer models, on
   different providers when it can, in every dual-lane run (amends 0009
   item 4); a frame finding is recorded and the other lane stays blind; the

@@ -1,4 +1,4 @@
-# Execution Plan: Dual-Lane Text From Its Own Dual-Lane Review (D216, D221, D223)
+# Execution Plan: Dual-Lane Text From Its Own Dual-Lane Review (D216, D221, D223, D224)
 
 Date: 2026-11-26
 
@@ -10,8 +10,8 @@ The review, merge, release, and plugin update are not done.
 ## Outcome
 
 Later sessions get the dual-lane text with Human's approved items 1, 3, 4,
-5, 6 and 7(b) (SLP ledger D221, D223), through a one-time migration of an
-unmodified stored copy, and the Lead's role text allows the model choice
+5, 6 and 7(b) (SLP ledger D221, D223, D224), through a one-time migration
+of an unmodified stored copy, and the Lead's role text allows the model choice
 dual-lane asks for. See decision 0014.
 
 ## Context
@@ -32,6 +32,8 @@ In scope:
 - `plugins/slp/server/template-store.ts`: the migration; its tests and the
   template pins.
 - `plugins/slp/shared/roles.ts`: the Lead's Peer-model rule, and its test.
+- `plugins/slp/server/tools.ts`: the `slp_delegate` model description
+  (Lead decision D225, resolving finding F98).
 - Decision 0014, the decisions index, and the README and product roles
   lines that quoted the old rule.
 
@@ -40,7 +42,6 @@ Out of scope:
 - Item 2 (the model on each assignment record; not approved):
   `coordination.ts`, the ledger.
 - `settings.ts` (the shipped Peer models).
-- `server/tools.ts` (the `slp_delegate` model description; finding F98).
 - Merge, push, tags, plugin install or update.
 
 ## Approach
@@ -48,7 +49,8 @@ Out of scope:
 1. The template text and the legacy constant, with the pins.
 2. The migration and its tests.
 3. Decision 0014, the index, this plan.
-4. Item 1 (D223): the template's models, the role text, the docs, 0014.
+4. Item 1 (D223, D224): the template's models, the role text, the
+   `slp_delegate` description, the docs, 0014.
 
 ## Risks And Recovery
 
@@ -59,12 +61,13 @@ Out of scope:
 
 ## Progress
 
-- [x] Template text and `LEGACY_DUAL_LANE_V040` (pinned: 8,943 and 6,809
+- [x] Template text and `LEGACY_DUAL_LANE_V040` (pinned: 9,039 and 6,809
   bytes).
 - [x] Migration of a v0.3.7 or v0.4.0 dual-lane; tests for replaced,
   edited, removed.
 - [x] Decision 0014 and the index.
-- [x] Item 1 (D223): template models, `roles.ts`, docs, 0014.
+- [x] Item 1 (D223, D224): template models (lanes, arbiter, 7(b) reader,
+  Review lenses), `roles.ts`, `server/tools.ts` (D225), docs, 0014.
 - [ ] Review, merge, release, plugin update (each needs its own approval,
   D217).
 

@@ -6,7 +6,8 @@ Date: 2026-11-26
 
 Accepted by Human on 2026-11-26 (SLP ledger D221, relayed by the
 Supervisor): items 3, 4, 5, 6 and 7(b) approved; item 2 not approved;
-item 1 approved as (b) under D221, D222 and D223. On Human's authority it
+item 1 approved as (b) under D221, D222, D223 and D224. On Human's
+authority it
 amends:
 - decision 0012 item 1 (the shipped text, including the Review lenses'
   model);
@@ -62,13 +63,14 @@ It adds a third one-time migration beside 0011 item 2 and 0012 item 2.
     providers available now, and the Lead weighs which to prefer). The
     Supervisor's reading (D222): no hard-coded Opus or Fable. Human's
     D223 answer, option (b): "Mọi lần chạy dual-lane" (every dual-lane
-    run). The choice applies to every dual-lane run, Review mode
+    run). Human's D224 answer: "Áp cả cho Review" (apply it to Review
+    too). The choice applies to every dual-lane run, Review mode
     included, whether or not Human named the template.
 
 ## Decision
 
 1. **The shipped dual-lane text** keeps the v0.4.0 text (0012) and changes
-   only what items 1 and 3-7(b) need. A test pins its length (8,943 bytes)
+   only what items 1 and 3-7(b) need. A test pins its length (9,039 bytes)
    and hash, and checks that it names no model.
    - **Item 1, the models (steps 2 and 4, Review mode).**
      - The lanes: the Lead chooses their models from `slp_ledger`
@@ -78,9 +80,9 @@ It adds a third one-time migration beside 0011 item 2 and 0012 item 2.
        cost. It names the model in `slp_delegate` and gives the models and
        the reason in the outcome's step line.
      - The arbiter runs on a model from peerModels that neither lane
-       used, preferably from another provider. The shadow arbiter sentence
-       is unchanged.
-     - Review mode: the two lenses run on models from peerModels, on
+       used, preferably from another provider. The 7(b) reader follows the
+       same rule. The shadow arbiter sentence is unchanged.
+     - Review mode (D224): the two lenses run on models from peerModels, on
        different providers (or different model families when only one
        provider is available), and neither runs on the model that wrote
        the change. The fix-round lens runs on a model from peerModels.
@@ -98,10 +100,10 @@ It adds a third one-time migration beside 0011 item 2 and 0012 item 2.
      for each step (frame, models, test, round, independent reader): done,
      or departed from, with the reason and a record id. It replaces "say so
      in the packet" (a model fallback, now gone with item 1) and "say which
-     in the packet" (a skipped round). The text says that skipping the round never skips the
-     independent reader. 0011's D16 clause that the round is skipped only
-     with a stated reason still holds; the reason now goes in the outcome,
-     which exists even when no packet does.
+     in the packet" (a skipped round). The text says that skipping the
+     round never skips the independent reader. 0011's D16 clause that the
+     round is skipped only with a stated reason still holds; the reason now
+     goes in the outcome, which exists even when no packet does.
    - **Item 5, the arbiter's reading scope (step 4).** The Lead tells the
      arbiter to open the records the packet cites, to check them. The
      packet still holds no Lead view, and the arbiter reads no lane folder.
@@ -116,7 +118,8 @@ It adds a third one-time migration beside 0011 item 2 and 0012 item 2.
        revised frame, the arbiter runs as written.
      - When the lanes agree on the deciding point and the frame, the Lead
        may instead write the synthesis and give it to one fresh Peer (kind
-       `review`) who wrote no position. It gets the packet's contents, the
+       `review`) who wrote no position, on a model chosen as for the
+       arbiter (item 1). It gets the packet's contents, the
        synthesis, and leave to open every record the lanes, the comparison
        and the synthesis cite. It judges the frame first, then the premises
        the lanes share against those records, then the synthesis.
@@ -128,12 +131,14 @@ It adds a third one-time migration beside 0011 item 2 and 0012 item 2.
    reads the Lead's synthesis by design. Human made that trade in D221
    knowing it; an agent could not. The clause still holds on the arbiter
    path.
-3. **The model rule changes, on Human's authority (D223).**
+3. **The model rule changes, on Human's authority (D223, D224).**
    - Decision 0009 item 4 said Peers run on the default model unless
      Human names another or a template Human named for the goal requires
      it. It gains a third case: a template the Lead uses asks it to choose
      models. Dual-lane does, in every run.
-   - The Lead's role text (`roles.ts`) says so.
+   - The Lead's role text (`roles.ts`) says so, and so does the
+     `slp_delegate` model description (`server/tools.ts`; Lead decision
+     D225, resolving finding F98).
    - 0011's D16 clause naming the lane and arbiter models, and 0012's
      Opus lenses, are replaced by the Lead's choice in item 1.
    - The shipped Peer models (`settings.ts`) are unchanged.
@@ -169,7 +174,7 @@ It adds a third one-time migration beside 0011 item 2 and 0012 item 2.
    - Keeping the named models in every run, at 2 to 4 times the Peer
      cost.
    Human chose instead to have the Lead choose from the available
-   providers in every run (D221, D223).
+   providers in every run, Review mode included (D221, D223, D224).
 
 ## Consequences
 
@@ -227,9 +232,6 @@ the verdicts):
 
 ## Follow-Up
 
-- `slp_delegate`'s model-parameter description (`server/tools.ts`) still
-  states only the two older cases. It was left outside this change and
-  recorded as SLP finding F98.
 - What would reopen item 1: a record showing that runs on particular
   models hold better, or a Human statement that named models apply.
 - What would reopen 7(b): an agreeing run where a blind arbiter catches a
