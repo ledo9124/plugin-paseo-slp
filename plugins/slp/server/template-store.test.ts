@@ -1,9 +1,27 @@
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { DEFAULT_TEMPLATES, LEGACY_COUNCIL_TEXTS, LEGACY_DUAL_LANE_V037, LEGACY_DUAL_LANE_V040 } from "../shared/default-templates";
 import { TemplateStore } from "./template-store";
+
+// The store's rename can be made to fail, as Windows fails it while another
+// process holds templates.json open (D216 review, M1). Off by default.
+const refuse = vi.hoisted(() => ({ code: "", times: 0, calls: 0 }));
+vi.mock("node:fs", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("node:fs")>();
+  return {
+    ...actual,
+    renameSync: (from: string, to: string) => {
+      refuse.calls++;
+      if (refuse.times > 0) {
+        refuse.times--;
+        throw Object.assign(new Error(`${refuse.code}: operation not permitted, rename`), { code: refuse.code });
+      }
+      actual.renameSync(from, to);
+    },
+  };
+});
 
 const skill = (name: string) =>
   `---\nname: ${name}\ndescription: The ${name} way\n---\nWhen to use: ${name} time\nBody of ${name}\n`;
@@ -136,6 +154,46 @@ describe("TemplateStore", () => {
         expect(stored(where)).toBe(original);
         expect(existsSync(backup(where))).toBe(false);
       }
+    });
+
+    describe("when Windows refuses the rename (M1)", () => {
+      afterEach(() => {
+        Object.assign(refuse, { code: "", times: 0, calls: 0 });
+        vi.restoreAllMocks();
+      });
+
+      it("retries a refused rename and then migrates", () => {
+        const where = dir();
+        seed(where, [{ name: "dual-lane", text: LEGACY_DUAL_LANE_V040 }]);
+        Object.assign(refuse, { code: "EPERM", times: 2, calls: 0 });
+        expect(new TemplateStore(where).list()[0].text).toBe(DEFAULT_TEMPLATES[0]);
+        expect(refuse.calls).toBe(3);
+        expect(JSON.parse(stored(where)).templates[0].text).toBe(DEFAULT_TEMPLATES[0]);
+      });
+
+      it("still starts with the stored text when the rename keeps failing, and migrates on the next start", () => {
+        const where = dir();
+        const original = seed(where, [{ name: "dual-lane", text: LEGACY_DUAL_LANE_V040 }]);
+        const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+        Object.assign(refuse, { code: "EPERM", times: 99, calls: 0 });
+        const store = new TemplateStore(where);
+        expect(refuse.calls).toBe(5);
+        expect(store.list()[0].text).toBe(LEGACY_DUAL_LANE_V040);
+        expect(stored(where)).toBe(original);
+        expect(logged).toHaveBeenCalledWith(expect.stringMatching(/^\[slp\] template migration skipped until the next start: .*EPERM/));
+        Object.assign(refuse, { code: "", times: 0 });
+        expect(new TemplateStore(where).list()[0].text).toBe(DEFAULT_TEMPLATES[0]);
+        expect(readFileSync(backup(where), "utf8")).toBe(original);
+      });
+
+      it("does not retry an error that is not a busy file", () => {
+        const where = dir();
+        seed(where, [{ name: "dual-lane", text: LEGACY_DUAL_LANE_V040 }]);
+        vi.spyOn(console, "error").mockImplementation(() => {});
+        Object.assign(refuse, { code: "ENOSPC", times: 99, calls: 0 });
+        expect(new TemplateStore(where).list()[0].text).toBe(LEGACY_DUAL_LANE_V040);
+        expect(refuse.calls).toBe(1);
+      });
     });
 
     it("does not recreate a dual-lane Human removed", () => {

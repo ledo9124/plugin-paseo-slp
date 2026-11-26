@@ -16,6 +16,25 @@ interface TemplateFile {
   templates: Array<{ name: string; text: string }>;
 }
 
+// Windows refuses a rename onto a file another process holds open (an
+// overlapping plugin process during an update, an indexer, an editor).
+const BUSY_CODES = new Set(["EPERM", "EBUSY", "EACCES"]);
+const RENAME_ATTEMPTS = 5;
+const RENAME_WAIT_MS = 50;
+
+function renameWithRetry(from: string, to: string): void {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      renameSync(from, to);
+      return;
+    } catch (error) {
+      const code = (error as NodeJS.ErrnoException).code ?? "";
+      if (attempt >= RENAME_ATTEMPTS || !BUSY_CODES.has(code)) throw error;
+      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, RENAME_WAIT_MS);
+    }
+  }
+}
+
 export class TemplateStore {
   private readonly path: string;
   private entries: Array<{ name: string; text: string }>;
@@ -24,9 +43,16 @@ export class TemplateStore {
     mkdirSync(dir, { recursive: true });
     this.path = join(dir, "templates.json");
     if (existsSync(this.path)) {
-      this.entries = (JSON.parse(readFileSync(this.path, "utf8")) as TemplateFile).templates;
-      this.replaceShippedCouncil();
-      this.replaceShippedDualLane();
+      this.entries = this.read();
+      try {
+        this.replaceShippedCouncil();
+        this.replaceShippedDualLane();
+      } catch (error) {
+        // A migration that cannot write must not stop the plugin: keep what
+        // is stored, and the next start tries again.
+        this.entries = this.read();
+        console.error(`[slp] template migration skipped until the next start: ${String(error)}`);
+      }
     } else {
       this.entries = defaults.map((text) => ({ name: parseSkill(text).name, text }));
       this.write();
@@ -140,10 +166,14 @@ export class TemplateStore {
     return { imported, errors };
   }
 
+  private read(): Array<{ name: string; text: string }> {
+    return (JSON.parse(readFileSync(this.path, "utf8")) as TemplateFile).templates;
+  }
+
   private write(): void {
     const temp = `${this.path}.tmp`;
     const file: TemplateFile = { version: 1, templates: this.entries };
     writeFileSync(temp, JSON.stringify(file, null, 2));
-    renameSync(temp, this.path);
+    renameWithRetry(temp, this.path);
   }
 }
