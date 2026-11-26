@@ -42,14 +42,17 @@ describe("default templates", () => {
     expect(views[0].whenToUse).toMatch(/Human cannot answer yet/);
   });
 
-  it("carry dual-lane with the items Human approved in D221, D223 and D224 (decision 0014) byte for byte (9,039 bytes, LF)", () => {
+  it("carry dual-lane with the items Human approved in D221-D224 and D226-D227 (decision 0014) byte for byte (9,477 bytes, LF)", () => {
     const text = DEFAULT_TEMPLATES[0];
-    expect(Buffer.byteLength(text, "utf8")).toBe(9039);
+    expect(Buffer.byteLength(text, "utf8")).toBe(9477);
     expect(text).not.toContain("\r");
     expect(createHash("sha256").update(text, "utf8").digest("hex")).toBe(
-      "a853d79ab3486755ec9ebf0f4519b6bd77cf41003e116eab875d346b2495ba63",
+      "de8ae8d1f4e45806418cf07bc705793eb719b7cbf138fed7259a128d0783d93f",
     );
     expect(text).toContain("## Review mode (a change to review)");
+    expect(text).toContain("One lens is enough for a small, local change.");
+    expect(text).toContain("never a small or fast-tier model");
+    expect(text).not.toContain("Lens A, intent");
     expect(text).toContain("## 4. Arbiter, or a reader of your synthesis");
     expect(text).not.toContain("in the packet.");
     expect(text).not.toMatch(/claude-|opus|fable|sonnet/i);

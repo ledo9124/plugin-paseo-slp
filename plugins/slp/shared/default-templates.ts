@@ -6,7 +6,7 @@
 export const DEFAULT_TEMPLATES: readonly string[] = [
   `---
 name: dual-lane
-description: Name the tension that decides the choice, run two blind lanes from its two sides (or one case and one check), test their deciding disagreement, and synthesize through an arbiter that reads an anonymous packet; for a change to review, two blind lenses with different methods. The disagreement stays visible.
+description: Name the tension that decides the choice, run two blind lanes from its two sides (or one case and one check), test their deciding disagreement, and synthesize through an arbiter that reads an anonymous packet; for a change to review, blind lenses chosen by its risks, each with its own method. The disagreement stays visible.
 ---
 
 # Dual Lane
@@ -66,14 +66,13 @@ Why this shape: one model's first idea anchors everyone; in an open debate the m
 
 ## Review mode (a change to review)
 Use it for the first review of a substantial change and for the verdict before merge; it replaces steps 1-5.
-- Two fresh Peers, kind \`review\`, on models from slp_ledger peerModels, on different providers (or different model families when only one provider is available), with neither on the model that wrote the change, blind to each other; neither wrote the change. Same brief (the intent: goal, constraints, records; the diff; how to run the checks); they differ only in method:
-  - Lens A, intent: reads the change against the intent and the records it touches: does it do what was asked and nothing else (logic, failure paths, concurrency)?
-  - Lens B, claims: lists every claim the intent, docs, comments and names make, then checks every place each must hold, including code the diff did not touch (callers, contracts, docs, config).
+- Choose the lenses from the change and its context. One lens is enough for a small, local change. Add a lens for each kind of risk the change carries, for example: intent (does it do what was asked and nothing else); claims (every place its claims must hold, including code the diff did not touch); data and migration safety; security; the reader who must follow a text it changes. Each lens is a fresh Peer, kind \`review\`, who did not write the change. All lenses get the same brief (the intent: goal, constraints, records; the diff; how to run the checks), work blind to each other, and differ only in method. Name the lenses and the reason in the outcome.
+- Models: from slp_ledger peerModels, each strong enough for analysis and review, never a small or fast-tier model. Put the lenses on different providers or model families when a strong model is available there. None runs on the model that wrote the change, unless that leaves only a weaker model: strength comes first, and the outcome says so. Name the models and why each is strong enough in the outcome.
 - Each hands back findings with severity (blocking, major, minor), file and line, and evidence; finding nothing is valid.
-- Where both agree, act. Where they conflict, send each the other's point once, unnamed, and ask for an answer with evidence; then you decide. No arbiter.
-- Fix round: one fresh lens on a model from peerModels rechecks every prior finding and the code the fix touched; not two.
-- Before merge: two lenses again on the final diff.
-- In the outcome, record which lens found what, what both found, and how you decided each conflict.
+- Where the lenses agree, act. Where they conflict, send each the other's point once, unnamed, and ask for an answer with evidence; then you decide. No arbiter.
+- Fix round: one fresh lens, on a strong model from peerModels, rechecks every prior finding and the code the fix touched.
+- Before merge: the lenses again, chosen the same way, on the final diff.
+- In the outcome, record the lenses and their models with the reasons, which lens found what, what more than one found, and how you decided each conflict.
 `,
 ];
 
