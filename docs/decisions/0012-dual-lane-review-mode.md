@@ -6,7 +6,8 @@ Date: 2026-10-19
 
 Accepted by Human on 2026-10-19 (ledger D20, option R1). Amends decision
 0011 item 1 (the shipped text) and adds a second one-time migration beside
-0011 item 2.
+0011 item 2. Item 1 (the shipped text, including Review mode's lenses and
+their models) is amended by 0014.
 
 ## Context
 

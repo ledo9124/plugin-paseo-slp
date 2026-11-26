@@ -1,9 +1,35 @@
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { describe, expect, it } from "vitest";
-import { DEFAULT_TEMPLATES, LEGACY_COUNCIL_TEXTS, LEGACY_DUAL_LANE_V037 } from "../shared/default-templates";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { DEFAULT_TEMPLATES, LEGACY_COUNCIL_TEXTS, LEGACY_DUAL_LANE_V037, LEGACY_DUAL_LANE_V040 } from "../shared/default-templates";
 import { TemplateStore } from "./template-store";
+
+// The store's rename can be made to fail, as Windows fails it while another
+// process holds templates.json open (D216 review, M1). Off by default.
+// With readBusyAfterRename, a read of templates.json after a refused rename
+// fails too (D216 pre-merge review, F1).
+const refuse = vi.hoisted(() => ({ code: "", times: 0, calls: 0, readBusyAfterRename: false }));
+vi.mock("node:fs", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("node:fs")>();
+  return {
+    ...actual,
+    readFileSync: ((path: string, ...rest: unknown[]) => {
+      if (refuse.readBusyAfterRename && refuse.calls > 0 && String(path).endsWith("templates.json")) {
+        throw Object.assign(new Error("EBUSY: resource busy or locked, open"), { code: "EBUSY" });
+      }
+      return (actual.readFileSync as (...args: unknown[]) => unknown)(path, ...rest);
+    }) as typeof actual.readFileSync,
+    renameSync: (from: string, to: string) => {
+      refuse.calls++;
+      if (refuse.times > 0) {
+        refuse.times--;
+        throw Object.assign(new Error(`${refuse.code}: operation not permitted, rename`), { code: refuse.code });
+      }
+      actual.renameSync(from, to);
+    },
+  };
+});
 
 const skill = (name: string) =>
   `---\nname: ${name}\ndescription: The ${name} way\n---\nWhen to use: ${name} time\nBody of ${name}\n`;
@@ -51,7 +77,7 @@ describe("TemplateStore", () => {
     expect(store.importFolder(join(root, "empty")).errors[0].error).toMatch(/No SKILL.md/);
   });
 
-  describe("one-time v0.3.7 dual-lane to Review-mode dual-lane migration (decision 0012)", () => {
+  describe("one-time v0.3.7 dual-lane to current dual-lane migration (decisions 0012, 0014)", () => {
     const backup = (where: string) => join(where, "templates.json.bak-v0.3.7");
     const seed = (where: string, templates: Array<{ name: string; text: string }>) => {
       const raw = JSON.stringify({ version: 1, templates }, null, 2);
@@ -91,6 +117,113 @@ describe("TemplateStore", () => {
       const where = dir();
       seed(where, [{ name: "council", text: LEGACY_COUNCIL_TEXTS[0] }]);
       expect(new TemplateStore(where).list().map((t) => t.text)).toEqual([DEFAULT_TEMPLATES[0]]);
+    });
+  });
+
+  describe("one-time v0.4.0 dual-lane to current dual-lane migration (decision 0014)", () => {
+    const backup = (where: string, release = "v0.4.0") => join(where, `templates.json.bak-${release}`);
+    const seed = (where: string, templates: Array<{ name: string; text: string }>) => {
+      const raw = JSON.stringify({ version: 1, templates }, null, 2);
+      writeFileSync(join(where, "templates.json"), raw);
+      return raw;
+    };
+    const stored = (where: string) => readFileSync(join(where, "templates.json"), "utf8");
+
+    it("replaces an unmodified v0.4.0 dual-lane in place, once, after backing up the original bytes", () => {
+      const where = dir();
+      const original = seed(where, [
+        { name: "first", text: skill("first") },
+        { name: "dual-lane", text: LEGACY_DUAL_LANE_V040 },
+        { name: "last", text: skill("last") },
+      ]);
+      const store = new TemplateStore(where);
+      expect(store.names()).toEqual(["first", "dual-lane", "last"]);
+      expect(store.list()[1].text).toBe(DEFAULT_TEMPLATES[0]);
+      expect(store.list()[1].text).not.toBe(LEGACY_DUAL_LANE_V040);
+      expect(readFileSync(backup(where), "utf8")).toBe(original);
+      expect(existsSync(backup(where, "v0.3.7"))).toBe(false);
+      const migrated = stored(where);
+      writeFileSync(backup(where), "kept");
+      expect(new TemplateStore(where).list()[1].text).toBe(DEFAULT_TEMPLATES[0]);
+      expect(stored(where)).toBe(migrated);
+      expect(readFileSync(backup(where), "utf8")).toBe("kept");
+    });
+
+    it("leaves an edited v0.4.0 dual-lane alone, with no backup", () => {
+      for (const edited of [
+        LEGACY_DUAL_LANE_V040.replace("Dual Lane", "Dual Lane (mine)"),
+        `${LEGACY_DUAL_LANE_V040}\n`,
+        LEGACY_DUAL_LANE_V040.replace(/\n/g, "\r\n"),
+      ]) {
+        const where = dir();
+        const original = seed(where, [{ name: "dual-lane", text: edited }]);
+        const store = new TemplateStore(where);
+        expect(store.list()[0].text).toBe(edited);
+        expect(stored(where)).toBe(original);
+        expect(existsSync(backup(where))).toBe(false);
+      }
+    });
+
+    describe("when Windows refuses the rename (M1)", () => {
+      afterEach(() => {
+        Object.assign(refuse, { code: "", times: 0, calls: 0, readBusyAfterRename: false });
+        vi.restoreAllMocks();
+      });
+
+      it("retries a refused rename and then migrates", () => {
+        const where = dir();
+        seed(where, [{ name: "dual-lane", text: LEGACY_DUAL_LANE_V040 }]);
+        Object.assign(refuse, { code: "EPERM", times: 2, calls: 0 });
+        expect(new TemplateStore(where).list()[0].text).toBe(DEFAULT_TEMPLATES[0]);
+        expect(refuse.calls).toBe(3);
+        expect(JSON.parse(stored(where)).templates[0].text).toBe(DEFAULT_TEMPLATES[0]);
+      });
+
+      it("still starts with the stored text when the rename keeps failing, and migrates on the next start", () => {
+        const where = dir();
+        const original = seed(where, [{ name: "dual-lane", text: LEGACY_DUAL_LANE_V040 }]);
+        const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+        Object.assign(refuse, { code: "EPERM", times: 99, calls: 0 });
+        const store = new TemplateStore(where);
+        expect(refuse.calls).toBe(5);
+        expect(store.list()[0].text).toBe(LEGACY_DUAL_LANE_V040);
+        expect(stored(where)).toBe(original);
+        expect(logged).toHaveBeenCalledWith(expect.stringMatching(/^\[slp\] template migration skipped until the next start: .*EPERM/));
+        Object.assign(refuse, { code: "", times: 0 });
+        expect(new TemplateStore(where).list()[0].text).toBe(DEFAULT_TEMPLATES[0]);
+        expect(readFileSync(backup(where), "utf8")).toBe(original);
+      });
+
+      it("does not retry an error that is not a busy file", () => {
+        const where = dir();
+        seed(where, [{ name: "dual-lane", text: LEGACY_DUAL_LANE_V040 }]);
+        vi.spyOn(console, "error").mockImplementation(() => {});
+        Object.assign(refuse, { code: "ENOSPC", times: 99, calls: 0 });
+        expect(new TemplateStore(where).list()[0].text).toBe(LEGACY_DUAL_LANE_V040);
+        expect(refuse.calls).toBe(1);
+      });
+
+      it("still starts on what it loaded when the file cannot be read again after a failed migration (F1)", () => {
+        const where = dir();
+        const original = seed(where, [{ name: "dual-lane", text: LEGACY_DUAL_LANE_V040 }]);
+        const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+        Object.assign(refuse, { code: "EPERM", times: 99, calls: 0, readBusyAfterRename: true });
+        const store = new TemplateStore(where);
+        expect(store.list()[0].text).toBe(LEGACY_DUAL_LANE_V040);
+        expect(logged).toHaveBeenCalledWith(expect.stringMatching(/^\[slp\] template migration skipped/));
+        Object.assign(refuse, { code: "", times: 0, readBusyAfterRename: false });
+        expect(stored(where)).toBe(original);
+      });
+    });
+
+    it("does not recreate a dual-lane Human removed", () => {
+      const where = dir();
+      const store = new TemplateStore(where);
+      expect(store.remove("dual-lane")).toBe(true);
+      const afterRemove = stored(where);
+      expect(new TemplateStore(where).names()).toEqual([]);
+      expect(stored(where)).toBe(afterRemove);
+      expect(existsSync(backup(where))).toBe(false);
     });
   });
 

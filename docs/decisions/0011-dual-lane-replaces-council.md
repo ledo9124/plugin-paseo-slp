@@ -15,6 +15,9 @@ the council ... drop the council entirely, because it does the same job).
 for one point: the default templates, and how an existing install receives a
 changed default.
 
+Two of the D16 clauses are amended by 0014: the named models, and "no Lead
+view" on the path where the lanes agree.
+
 ## Context
 
 Plan `docs/plans/completed/slp-dual-lane.md` holds the smoke-test steps,

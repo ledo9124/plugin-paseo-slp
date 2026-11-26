@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
-import { DEFAULT_TEMPLATES, LEGACY_COUNCIL_TEXTS, LEGACY_DUAL_LANE_V037 } from "./default-templates";
+import { DEFAULT_TEMPLATES, LEGACY_COUNCIL_TEXTS, LEGACY_DUAL_LANE_V037, LEGACY_DUAL_LANE_V040 } from "./default-templates";
 import { parseSkill, toTemplateView } from "./templates";
 
 const text = (front: string, body = "Body\n") => `---\n${front}\n---\n${body}`;
@@ -42,15 +42,33 @@ describe("default templates", () => {
     expect(views[0].whenToUse).toMatch(/Human cannot answer yet/);
   });
 
-  it("carry dual-lane with the Review mode Human chose (R1, ledger D20; decision 0012) byte for byte (6,809 bytes, LF)", () => {
+  it("carry dual-lane with the items Human approved in D221-D224 and D226-D227 (decision 0014) byte for byte (11,300 bytes, LF)", () => {
     const text = DEFAULT_TEMPLATES[0];
-    expect(Buffer.byteLength(text, "utf8")).toBe(6809);
+    expect(Buffer.byteLength(text, "utf8")).toBe(11300);
     expect(text).not.toContain("\r");
     expect(createHash("sha256").update(text, "utf8").digest("hex")).toBe(
+      "8cede9bc8966b3ad8695c2c09e55c219713d456aa58a2233faae04af0b79a891",
+    );
+    expect(text).toContain("Use the arbiter unless both lanes' last handbacks agree on the deciding point and the frame");
+    expect(text).toContain("a third eligible model for the independent reader");
+    expect(text).not.toMatch(/\bD\d+\b/);
+    expect(text).toContain("without the other lane in notify");
+    expect(toTemplateView(text).description).toMatch(/when the lanes agree, a reader of the Lead's synthesis/);
+    expect(text).toContain("## Review mode (a change to review)");
+    expect(text).toContain("One lens is enough for a small, local change.");
+    expect(text).toContain("never a small or fast-tier model");
+    expect(text).not.toContain("Lens A, intent");
+    expect(text).toContain("## 4. Arbiter, or a reader of your synthesis");
+    expect(text).not.toContain("in the packet.");
+    expect(text).not.toMatch(/claude-|opus|fable|sonnet/i);
+    expect(toTemplateView(text).whenToUse).toMatch(/Or a substantial change to review/);
+  });
+
+  it("keep the v0.4.0 dual-lane text unchanged, only to migrate it (6,809 bytes; decisions 0012, 0014)", () => {
+    expect(Buffer.byteLength(LEGACY_DUAL_LANE_V040, "utf8")).toBe(6809);
+    expect(createHash("sha256").update(LEGACY_DUAL_LANE_V040, "utf8").digest("hex")).toBe(
       "21db678563046ad59100b67359b8c841e220cacace8d553dd297f57ffc7ee60f",
     );
-    expect(text).toContain("## Review mode (a change to review)");
-    expect(toTemplateView(text).whenToUse).toMatch(/Or a substantial change to review/);
   });
 
   it("keep the v0.3.7 dual-lane text unchanged, only to migrate it (5,299 bytes; decisions 0011, 0012)", () => {
