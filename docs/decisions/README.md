@@ -61,15 +61,24 @@ documents here as real choices are accepted, then index them in this file.
   Accepted. Dual-lane is the only default template; an unmodified shipped
   council in an existing install is replaced once, after a backup of
   `templates.json`. Shipped on a two-use smoke test: Human's exception to
-  0007 item 3.4. Amends 0008 for the defaults.
+  0007 item 3.4. Amends 0008 for the defaults. The "no Lead view" clause
+  amended by 0014 on one path.
 - [0012 Dual-Lane Gains A Review Mode](0012-dual-lane-review-mode.md):
   Accepted. Dual-lane adds a Review mode per Human's reference: two blind
   Opus lenses (intent, claims), the Lead decides conflicts, one lens per fix
   round. An unmodified v0.3.7 dual-lane is replaced once, after a backup.
-  Amends 0011 item 1.
+  Amends 0011 item 1. Item 1 amended by 0014.
 - [0013 Steering, Context Windows, And The Lead Handoff](0013-steering-context-and-lead-handoff.md):
   Accepted. The Supervisor steers only when the Lead's work would be wasted;
   built-in sends stay banned for what they bypass; a Peer's brief comes
   from the Lead; an auto-compact window per role as Claude Code's
   `--autocompact`; `slp_handoff` to a new Lead with the Lead's own note,
   Peers kept, old Lead archived once idle. Amends 0004's reason.
+- [0014 Dual-Lane After Its Own Dual-Lane Review](0014-dual-lane-after-its-own-dual-lane-review.md):
+  Accepted (Human D221, items 3-6 and 7(b); item 1 pending). A frame
+  finding is recorded and the other lane stays blind; the outcome has a
+  line for each step; the arbiter opens the records the packet cites; a
+  new decision document after the arbiter is reviewed; when the lanes
+  agree, a fresh reader of the Lead's synthesis may replace the arbiter
+  (Human's change to 0011 D16 on that path). An unmodified v0.4.0
+  dual-lane is replaced once, after a backup. Amends 0012 item 1.
