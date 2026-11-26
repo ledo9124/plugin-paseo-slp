@@ -69,7 +69,7 @@ describe("TemplateStore", () => {
     expect(store.importFolder(join(root, "empty")).errors[0].error).toMatch(/No SKILL.md/);
   });
 
-  describe("one-time v0.3.7 dual-lane to Review-mode dual-lane migration (decision 0012)", () => {
+  describe("one-time v0.3.7 dual-lane to current dual-lane migration (decisions 0012, 0014)", () => {
     const backup = (where: string) => join(where, "templates.json.bak-v0.3.7");
     const seed = (where: string, templates: Array<{ name: string; text: string }>) => {
       const raw = JSON.stringify({ version: 1, templates }, null, 2);
@@ -112,7 +112,7 @@ describe("TemplateStore", () => {
     });
   });
 
-  describe("one-time v0.4.0 dual-lane to D221 dual-lane migration (decision 0014)", () => {
+  describe("one-time v0.4.0 dual-lane to current dual-lane migration (decision 0014)", () => {
     const backup = (where: string, release = "v0.4.0") => join(where, `templates.json.bak-${release}`);
     const seed = (where: string, templates: Array<{ name: string; text: string }>) => {
       const raw = JSON.stringify({ version: 1, templates }, null, 2);
