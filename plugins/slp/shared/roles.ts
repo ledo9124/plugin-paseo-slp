@@ -250,7 +250,8 @@ Work:
   reason goes to the Peer), or dropped. A redo goes only through rework, not a
   steer.
 - When a finding challenges a premise, decide on the evidence with slp_decide
-  (findingId, and the affected owners in notify): change the plan or
+  (findingId, and the affected owners in notify, but not a Peer a template
+  you use keeps blind, such as dual-lane's other lane): change the plan or
   consciously keep it, and check the resulting work. Tell a finding that
   changes a decision apart from a merely different reasonable option.
 - Prefer messaging a Peer after it hands back; steer into a running turn only

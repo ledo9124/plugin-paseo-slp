@@ -6,7 +6,7 @@
 export const DEFAULT_TEMPLATES: readonly string[] = [
   `---
 name: dual-lane
-description: Name the tension that decides the choice, run two blind lanes from its two sides (or one case and one check), test their deciding disagreement, and synthesize through an arbiter that reads an anonymous packet; for a change to review, blind lenses chosen by its risks, each with its own method. The disagreement stays visible.
+description: Name the tension that decides the choice, run two blind lanes from its two sides (or one case and one check), test their deciding disagreement, and synthesize through an arbiter that reads an anonymous packet (or, when the lanes agree, a reader of the Lead's synthesis); for a change to review, blind lenses chosen by its risks, each with its own method. The disagreement stays visible.
 ---
 
 # Dual Lane
@@ -36,12 +36,12 @@ Why this shape: one model's first idea anchors everyone; in an open debate the m
   - **Unframed**: you cannot name the tension. Both lanes get the same brief, with no side.
   - **Review**: a change to review. See Review mode below; it replaces steps 1-5.
 - The frame and the mode go into the arbiter's packet. Either lane may say the frame is wrong: that is a finding.
-  - Record with slp_decide what you did about it, and why. A change to Human's goal goes to Human.
-  - Do not tell the other lane before the challenge round; it stays blind.
+  - Record with slp_decide what you did about it, and why, without the other lane in notify. A change to Human's goal goes to Human.
+  - Do not tell the other lane before the challenge round, by message or by decision; it stays blind.
   - The packet carries the original frame, the finding, and what you did. The arbiter, or the reader that replaces it (step 4), checks whether each answer still addresses the revised question.
 
 ## 2. Two lanes, blind
-- Two Peers, kind \`design\` (or \`investigate\` for a question). Choose their models from slp_ledger peerModels, the models available now: put the two lanes on different providers, or on different model families when only one provider is available, and weigh each model's fit for the task and its cost. Name the model in slp_delegate, and give the models and the reason in the outcome (step 5).
+- Two Peers, kind \`design\` (or \`investigate\` for a question). Choose their models from slp_ledger peerModels, the allowed models: put the two lanes on different providers, or on different model families when only one provider is available, and weigh each model's fit for the task and its cost. A listed model can still fail to start; if no pair that meets this can be delegated, report it as a blocker. Name the model in slp_delegate, and give the models and the reason in the outcome (step 5).
 - The same brief to both except the side: the goal, the constraints with their sources, what is settled and why, and the frame. No preferred answer. Claims in issues or docs are claims to check against the code.
 - Ask for: the proposal or answer, the evidence, its cost, the assumptions it rests on, what would prove it wrong, and what from the other side it accepts. Agreement is allowed; disagreement earns nothing.
 
@@ -57,6 +57,7 @@ Why this shape: one model's first idea anchors everyone; in an open debate the m
 - It judges the frame first, then recommends a synthesis, which may take from both and need not split the difference. It says where the lanes agree, where the real decision lies, the risks, and what evidence would change its view.
 - For a high-stakes choice, a shadow arbiter on a model the lanes and the arbiter do not use, when slp_ledger peerModels has one, gets the same packet. If the two differ, report both; do not force agreement.
 - The reader, when the lanes agree: write the synthesis and give it to one fresh Peer, kind \`review\`, who wrote no position, on a model from slp_ledger peerModels that neither lane used, preferably from another provider. It gets the packet's contents, your synthesis, and leave to open every record the lanes, the comparison and the synthesis cite. It judges the frame first, then the premises the lanes share against those records, then the synthesis.
+- A Peer's slp_ledger shows only its own work. Quote in the packet each other ledger record (a finding, a decision) the arbiter or the reader must check, with its id and without naming a lane's author. Either one flags a deciding record it could not open, and does not call it checked.
 
 ## 5. Outcome
 - Accept the Peers whose work you used. Write the decision packet: recommendation, agreement, the open disagreement, the test and its result, risks, and what would reopen it.
