@@ -42,12 +42,12 @@ describe("default templates", () => {
     expect(views[0].whenToUse).toMatch(/Human cannot answer yet/);
   });
 
-  it("carry dual-lane with the items Human approved in D221 and D223 (decision 0014) byte for byte (8,943 bytes, LF)", () => {
+  it("carry dual-lane with the items Human approved in D221, D223 and D224 (decision 0014) byte for byte (9,039 bytes, LF)", () => {
     const text = DEFAULT_TEMPLATES[0];
-    expect(Buffer.byteLength(text, "utf8")).toBe(8943);
+    expect(Buffer.byteLength(text, "utf8")).toBe(9039);
     expect(text).not.toContain("\r");
     expect(createHash("sha256").update(text, "utf8").digest("hex")).toBe(
-      "82ad08dbd4ee54a464b679f6373d037aa130db75735be2fd3d3f0024311a47b7",
+      "a853d79ab3486755ec9ebf0f4519b6bd77cf41003e116eab875d346b2495ba63",
     );
     expect(text).toContain("## Review mode (a change to review)");
     expect(text).toContain("## 4. Arbiter, or a reader of your synthesis");
