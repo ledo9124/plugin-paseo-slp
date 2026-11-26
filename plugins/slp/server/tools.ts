@@ -28,7 +28,7 @@ const DelegateInput = z.object({
     .string()
     .optional()
     .describe(
-      "Omit: the default model. Name another only when Human, a template Human named, or a template you use (dual-lane, Human D223) asks for it.",
+      "Omit: the default model. Name another only when Human, a template Human named, or a template you use (dual-lane) asks for it.",
     ),
   peerAgentId: z.string().optional(),
   template: z.string().optional().describe("Name of the stored template this assignment follows."),
@@ -131,7 +131,7 @@ export function memberTools(coordination: Coordination, host: () => PaseoHost): 
     {
       name: "slp_decide",
       description:
-        'Lead or Supervisor. Record a decision with its source. status "pending" sends it to Human through the Supervisor; "settled" resolves its finding. source "human" and settling a pending decision (settles) are for the Supervisor relaying Human\'s own answer or delegation, never an inference from it. An agent decision names what it rests on in its text (a delegation\'s decision id, or the project record). notify lists the members whose work it changes, by agent id or role ("lead", "supervisor"). A Supervisor decision never notifies the Lead: tell the Lead in your slp_send message and cite the id.',
+        'Lead or Supervisor. Record a decision with its source. status "pending" sends it to Human through the Supervisor; "settled" resolves its finding. source "human" and settling a pending decision (settles) are for the Supervisor relaying Human\'s own answer or delegation, never an inference from it. An agent decision names what it rests on in its text (a delegation\'s decision id, or the project record). notify lists the members whose work it changes, by agent id or role ("lead", "supervisor"), except a Peer a template keeps blind (dual-lane\'s other lane). A Supervisor decision never notifies the Lead: tell the Lead in your slp_send message and cite the id.',
       inputSchema: schema(DecideInput),
       call: (args, secret) => coordination.decide(host(), secret, parse(DecideInput, args)),
     },

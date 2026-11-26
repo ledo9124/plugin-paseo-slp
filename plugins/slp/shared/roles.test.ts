@@ -52,11 +52,14 @@ describe("role instructions", () => {
     );
   });
 
-  it("has the Lead keep Peers on the default model, except when Human or a template asks for models (0009; Human, D223)", () => {
-    expect(flat(roleInstructions("lead", facts))).toContain(
+  it("has the Lead keep Peers on the default model, except when Human or a template asks for models (0009, 0014)", () => {
+    const text = flat(roleInstructions("lead", facts));
+    expect(text).toContain(
       "Peers run on the default model: omit model. Name another allowed model only when Human named it for this goal, " +
-        "or a template Human named requires it, or a template you use asks you to choose models (dual-lane does, Human D223), and say which.",
+        "or a template Human named requires it, or a template you use asks you to choose models (dual-lane does), and say which.",
     );
+    // Decision ids are numbered per group, so shipped text cites none (D216 pre-merge review, C1).
+    expect(text).not.toMatch(/\bD\d+\b/);
   });
 
   it("has the Lead leave a blind lane out of a decision's notify (D216 review, lens B 1)", () => {
