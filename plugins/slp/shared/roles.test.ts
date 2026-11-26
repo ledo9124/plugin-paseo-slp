@@ -52,6 +52,13 @@ describe("role instructions", () => {
     );
   });
 
+  it("has the Lead keep Peers on the default model, except when Human or a template asks for models (0009; Human, D223)", () => {
+    expect(flat(roleInstructions("lead", facts))).toContain(
+      "Peers run on the default model: omit model. Name another allowed model only when Human named it for this goal, " +
+        "or a template Human named requires it, or a template you use asks you to choose models (dual-lane does, Human D223), and say which.",
+    );
+  });
+
   it("has the Lead check facts and count losses before a pending decision (Human, D118)", () => {
     const text = flat(roleInstructions("lead", facts));
     expect(text).toContain(

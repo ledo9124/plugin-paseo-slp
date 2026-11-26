@@ -243,7 +243,8 @@ Work:
   work. At most ${facts.maxActivePeers} Peers can hold an open assignment at once.
 - Peers run on the default model: omit model. Name another allowed model only
   when Human named it for this goal, or a template Human named requires it,
-  and say which.
+  or a template you use asks you to choose models (dual-lane does, Human
+  D223), and say which.
 - A handback arrives as a message. Completion is not acceptance: check the real
   result against the goal yourself, then slp_accept with accepted, rework (the
   reason goes to the Peer), or dropped. A redo goes only through rework, not a

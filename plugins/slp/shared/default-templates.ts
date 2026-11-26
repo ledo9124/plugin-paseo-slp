@@ -41,7 +41,7 @@ Why this shape: one model's first idea anchors everyone; in an open debate the m
   - The packet carries the original frame, the finding, and what you did. The arbiter, or the reader that replaces it (step 4), checks whether each answer still addresses the revised question.
 
 ## 2. Two lanes, blind
-- Two Peers, kind \`design\` (or \`investigate\` for a question): lane A on \`claude/claude-opus-5-5\`, lane B on \`claude/claude-fable-5-1\`. Name the model in slp_delegate. If a named model is not in slp_ledger peerModels, use the default and say so in the outcome (step 5).
+- Two Peers, kind \`design\` (or \`investigate\` for a question). Choose their models from slp_ledger peerModels, the models available now: put the two lanes on different providers, or on different model families when only one provider is available, and weigh each model's fit for the task and its cost. Name the model in slp_delegate, and give the models and the reason in the outcome (step 5).
 - The same brief to both except the side: the goal, the constraints with their sources, what is settled and why, and the frame. No preferred answer. Claims in issues or docs are claims to check against the code.
 - Ask for: the proposal or answer, the evidence, its cost, the assumptions it rests on, what would prove it wrong, and what from the other side it accepts. Agreement is allowed; disagreement earns nothing.
 
@@ -53,7 +53,7 @@ Why this shape: one model's first idea anchors everyone; in an open debate the m
 
 ## 4. Arbiter, or a reader of your synthesis
 - When the lanes still disagree on the deciding point after the round, or the frame is contested and the lanes did not converge on a revised frame, the arbiter runs as written here. When the lanes agree on the deciding point and the frame, you may instead have a reader check your synthesis (last item). Skipping both is not a path, and neither is a reader limited to the lane files. Name the path you took, and why, in the outcome.
-- A fresh Peer, kind \`review\`, on \`claude/claude-sonnet-5-5\`, gets only one packet: the goal and constraints, the frame and mode, the two revised positions as A and B in random order, the test and its result, and each challenge with its reply. Label the positions only A and B (in Vet, say which is the case and which the check). Drop names, tone, and who argued harder. The packet holds nothing else, not your own view. Tell the arbiter to open the records the packet cites, to check them; it reads no lane folder.
+- A fresh Peer, kind \`review\`, on a model from slp_ledger peerModels that neither lane used, preferably from another provider, gets only one packet: the goal and constraints, the frame and mode, the two revised positions as A and B in random order, the test and its result, and each challenge with its reply. Label the positions only A and B (in Vet, say which is the case and which the check). Drop names, tone, and who argued harder. The packet holds nothing else, not your own view. Tell the arbiter to open the records the packet cites, to check them; it reads no lane folder.
 - It judges the frame first, then recommends a synthesis, which may take from both and need not split the difference. It says where the lanes agree, where the real decision lies, the risks, and what evidence would change its view.
 - For a high-stakes choice, a shadow arbiter on a model the lanes and the arbiter do not use, when slp_ledger peerModels has one, gets the same packet. If the two differ, report both; do not force agreement.
 - The reader, when the lanes agree: write the synthesis and give it to one fresh Peer, kind \`review\`, who wrote no position. It gets the packet's contents, your synthesis, and leave to open every record the lanes, the comparison and the synthesis cite. It judges the frame first, then the premises the lanes share against those records, then the synthesis.
@@ -66,12 +66,12 @@ Why this shape: one model's first idea anchors everyone; in an open debate the m
 
 ## Review mode (a change to review)
 Use it for the first review of a substantial change and for the verdict before merge; it replaces steps 1-5.
-- Two fresh Peers, kind \`review\`, both on \`claude/claude-opus-5-5\`, blind to each other; neither wrote the change. Same brief (the intent: goal, constraints, records; the diff; how to run the checks); they differ only in method:
+- Two fresh Peers, kind \`review\`, on models from slp_ledger peerModels, on different providers (or different model families when only one provider is available), with neither on the model that wrote the change, blind to each other; neither wrote the change. Same brief (the intent: goal, constraints, records; the diff; how to run the checks); they differ only in method:
   - Lens A, intent: reads the change against the intent and the records it touches: does it do what was asked and nothing else (logic, failure paths, concurrency)?
   - Lens B, claims: lists every claim the intent, docs, comments and names make, then checks every place each must hold, including code the diff did not touch (callers, contracts, docs, config).
 - Each hands back findings with severity (blocking, major, minor), file and line, and evidence; finding nothing is valid.
 - Where both agree, act. Where they conflict, send each the other's point once, unnamed, and ask for an answer with evidence; then you decide. No arbiter.
-- Fix round: one fresh lens on Opus rechecks every prior finding and the code the fix touched; not two.
+- Fix round: one fresh lens on a model from peerModels rechecks every prior finding and the code the fix touched; not two.
 - Before merge: two lenses again on the final diff.
 - In the outcome, record which lens found what, what both found, and how you decided each conflict.
 `,
