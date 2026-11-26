@@ -4,9 +4,10 @@ Date: 2026-11-26
 
 ## Status
 
-Active. Every approved item and both review fix rounds are on branch
-`d216-dual-lane-v2`. The merge (Human D229), the release and the plugin
-update are not done.
+Completed. Every approved item and both review fix rounds merged to
+`main` at 10393e0 (Human D229) and ship in release v0.5.0 (assignment
+A167). The plugin update on the main daemon is recorded with the SLP run's
+evidence, outside the repository.
 
 ## Outcome
 
@@ -92,9 +93,10 @@ Out of scope:
   Review lenses), `roles.ts`, `server/tools.ts` (D225), docs, 0014.
 - [x] Fix round (A161): D226/D227 Review mode, lens A M1-M5, lens B 1-7.
 - [x] Pre-merge review (reader, intent, claims) and fix round 2 (A165).
-- [ ] Merge (Human D229: "Sửa, review, merge luôn").
-- [ ] Release: version bump, README `--ref` and Status (C5); plugin
-  update. Each needs its own approval (D217).
+- [x] Merge (Human D229: "Sửa, review, merge luôn"): 10393e0.
+- [x] Release v0.5.0 (A167, under D217 and D229): version bump, README
+  `--ref` and Status (C5). It also ships the unreleased commits after
+  v0.4.0: D488 F10 and F10b, D505, D118.
 
 ## Decisions
 
@@ -122,4 +124,14 @@ Out of scope:
 
 ## Result
 
-Pending the pre-merge review and the release.
+The outcome is in the code: the D221-D231 dual-lane text, the role text,
+the `slp_delegate` and `slp_decide` descriptions, the Settings hint, and
+the one-time migration of an unmodified v0.3.7 or v0.4.0 dual-lane, all
+merged to `main` at 10393e0 after the pre-merge review and two fix
+rounds. Released as v0.5.0; before the tag, the full suite passed and a
+clean export compiled with Paseo's own compiler. The update of the main
+daemon to v0.5.0, the migration's result there, and the rollback command
+are recorded with the SLP run's evidence (D216, release handback).
+
+Accepted gaps: an edited installed dual-lane, or a Lead whose
+instructions Human replaced in Settings, keeps its own text (Risks).
